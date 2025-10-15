@@ -1,0 +1,44 @@
+agents:
+  - name: claude-style-coder
+    description: "An agent that mimics Claude Code's behavior for software development tasks"
+    prompt:
+      - prompts/agents/claude-style-coder.md
+      - prompts/suffixes/environments.md
+    llm: haiku-4.5
+    checkpointer: sqlite
+    default: true
+    recursion_limit: 40
+    tool_output_max_tokens: 10000
+    tools:
+      - impl:*:*
+      - internal:*:*
+      - mcp:*:*
+    subagents:
+      - general-purpose
+      - explorer
+    compression:
+      auto_compress_enabled: true
+      auto_compress_threshold: 0.8
+      compression_llm: haiku-4.5
+  - name: code-reviewer
+    description: "Code review agent focusing on quality, security, performance, and software principles"
+    prompt:
+      - prompts/agents/code-reviewer.md
+      - prompts/suffixes/environments.md
+    llm: gemini-2.5-pro-preview-06-05
+    checkpointer: sqlite
+    default: false
+    recursion_limit: 40
+    tool_output_max_tokens: 10000
+    tools:
+      - impl:file_system:read_file
+      - impl:grep_search:*
+      - internal:memory:*
+      - mcp:*:*
+    subagents:
+      - general-purpose
+      - explorer
+    compression:
+      auto_compress_enabled: true
+      auto_compress_threshold: 0.8
+      compression_llm: haiku-4.5

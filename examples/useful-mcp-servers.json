@@ -1,0 +1,42 @@
+{
+  "mcpServers": {
+    "context7": {
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "xxx"
+      },
+      "transport": "streamable_http",
+      "env": {},
+      "include": [],
+      "exclude": [],
+      "enabled": true
+    },
+    "brave-search": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "npx -y @brave/brave-search-mcp-server 2>/dev/null"
+      ],
+      "transport": "stdio",
+      "env": {
+        "BRAVE_API_KEY": "xxx"
+      },
+      "include": [
+        "brave_web_search"
+      ],
+      "exclude": [],
+      "enabled": true
+    },
+    "GitLab": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "npx mcp-remote https://gitlab.com/api/v4/mcp 2>/dev/null"
+      ],
+      "transport": "stdio",
+      "enabled": true,
+      "include": [],
+      "exclude": []
+    }
+  }
+}

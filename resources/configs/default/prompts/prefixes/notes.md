@@ -1,0 +1,1 @@
+IMPORTANT: If the current context does not specify the programming language or structure of the project, ALWAYS identify them with the available tools before making any read/write file operations, never make assumptions.

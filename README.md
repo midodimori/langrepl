@@ -21,20 +21,14 @@ https://github.com/user-attachments/assets/5d95e221-3883-44f8-9694-74c5e215b4e2
     - [Conversation Management](#conversation-management)
     - [Configuration](#configuration)
     - [Utilities](#utilities)
-- [Configuration](#configuration-1)
+- [Usage](#usage)
     - [Agents](#agents-configagentsyml)
     - [LLMs](#llms-configllmsyml)
+    - [Custom Tools](#custom-tools)
     - [MCP Servers](#mcp-servers-configmcpjson)
+    - [Sub-Agents](#sub-agents-configsubagentsyml)
     - [Tool Approval](#tool-approval-configapprovaljson)
-- [Architecture](#architecture)
-    - [Core Components](#core-components)
 - [Development](#development)
-- [Extending Langrepl](#extending-langrepl)
-    - [Add a Custom Agent](#add-a-custom-agent)
-    - [Add a Custom Tool](#add-a-custom-tool)
-    - [Add an MCP Server](#add-an-mcp-server)
-    - [Add a Sub-Agent](#add-a-sub-agent)
-- [Documentation](#documentation)
 - [License](#license)
 
 ## Features
@@ -42,12 +36,13 @@ https://github.com/user-attachments/assets/5d95e221-3883-44f8-9694-74c5e215b4e2
 - **[Deep Agent Architecture](https://blog.langchain.com/deep-agents/)** - Planning tools, virtual filesystem, and
   sub-agent delegation for complex multi-step tasks
 - **LangGraph Server Mode** - Run agents as API servers with LangGraph Studio integration for visual debugging
-- **Multi-Provider LLM Support** - OpenAI, Anthropic, Google, AWS Bedrock, Ollama, DeepSeek
+- **Multi-Provider LLM Support** - OpenAI, Anthropic, Google, AWS Bedrock, Ollama, DeepSeek, ZhipuAI, and local models (LMStudio, Ollama)
 - **Extensible Tool System** - File operations, web search, terminal access, grep search, and MCP server integration
 - **Persistent Conversations** - SQLite-backed thread storage with resume, replay, and compression
 - **User Memory** - Project-specific custom instructions and preferences that persist across conversations
 - **Human-in-the-Loop** - Configurable tool approval system with regex-based allow/deny rules
 - **Cost Tracking (Beta)** - Token usage and cost calculation per conversation
+- **MCP Server Support** - Integrate external tool servers via the MCP protocol
 
 ## Prerequisites
 
@@ -287,56 +282,36 @@ Renders in terminal (ASCII) or opens in browser with `--browser` flag.
 
 </details>
 
-## Configuration
+## Usage
 
-Configs are auto-generated in `.langrepl/` on first run. Customize by editing these files:
+Configs are auto-generated in `.langrepl/` on first run.
 
 ### Agents (`config.agents.yml`)
 
 ```yaml
 agents:
   - name: my-agent
-    prompt: prompts/my_agent.md  # Single file or array of files
+    prompt: prompts/my_agent.md  # Single file or array of files, this will look for `.langrepl/prompts/my_agent.md`
     llm: haiku-4.5
     checkpointer: sqlite
     recursion_limit: 40
-    tool_output_max_tokens: 10000 # If set, this defines max tokens from tool outputs, if exceeded, output is saved to virtual fs, the agent need to have internal:memory:read_memory_file tool to read it.
-    default: true                  # Set to true to make this the default agent
+    tool_output_max_tokens: 10000
+    default: true
     tools:
-      - impl:file_system:read_file          # Built-in tool
-      - impl:web:fetch_web_content          # Built-in tool
-      - mcp:context7:resolve-library-id     # MCP tool
-      - mcp:context7:get-library-docs       # MCP tool
+      - impl:file_system:read_file
+      - mcp:context7:resolve-library-id
     subagents:
       - general-purpose
-      - explorer
     compression:
       auto_compress_enabled: true
       auto_compress_threshold: 0.8
       compression_llm: haiku-4.5
 ```
 
-**Tool naming pattern**: `<category>:<module>:<function>`
-
-- `impl:` - Built-in user-facing tools
-- `internal:` - Agent-only tools (memory, todo)
-- `mcp:<server>:<tool>` - MCP server tools
-
-**Wildcard support**: Both `<module>` and `<function>` support wildcard patterns:
-
-- `*` - Matches everything
-- `?` - Matches any single character
-- `[seq]` - Matches any character in seq
-- `[!seq]` - Matches any character not in seq
-
-Examples:
-
-- `impl:*:*` - All impl tools
-- `impl:file_system:*` - All file_system tools
-- `impl:file_system:read_*` - All file_system read_* tools
-- `impl:*:read_*` - All read_* tools across all modules
-- `impl:*:*multiple*` - All tools with "multiple" in the name
-- `mcp:context7:*` - All tools from context7 MCP server
+**Tool naming**: `<category>:<module>:<function>` with wildcard support (`*`, `?`, `[seq]`)
+- `impl:*:*` - All built-in tools
+- `impl:file_system:read_*` - All read_* tools in file_system
+- `mcp:server:*` - All tools from MCP server
 
 ### LLMs (`config.llms.yml`)
 
@@ -352,112 +327,7 @@ llms:
     output_cost_per_mtok: 5.00
 ```
 
-### MCP Servers (`config.mcp.json`)
-
-```json
-{
-  "mcpServers": {
-    "context7": {
-      "command": "sh",
-      "args": [
-        "-c",
-        "npx -y @upstash/context7-mcp --api-key YOUR_API_KEY 2>/dev/null"
-      ],
-      "transport": "stdio",
-      "enabled": true,
-      "include": [
-        "resolve-library-id",
-        "get-library-docs"
-      ],
-      "exclude": []
-    }
-  }
-}
-```
-
-Reference MCP tools in agent config: `mcp:<server-name>:<tool-name>`
-
-### Tool Approval (`config.approval.json`)
-
-```json
-{
-  "always_allow": [
-    "impl:file_system:read_file",
-    "impl:web:fetch_web_content"
-  ],
-  "always_deny": [
-    "impl:terminal:run_command:rm -rf"
-  ]
-}
-```
-
-Approval modes:
-
-- **SEMI_ACTIVE** - Ask for approval unless whitelisted
-- **ACTIVE** - Auto-approve except denied patterns
-- **AGGRESSIVE** - Bypass all approval
-
-## Architecture
-
-### Core Components
-
-**Agents** (`src/agents/`)
-
-- ReAct Agent - Core reasoning and acting loop
-- Deep Agent - Extended with planning, memory, and sub-agents
-- Factory Pattern - Builds agents from YAML configs
-
-**Tools** (`src/tools/`)
-
-- `impl/` - User-facing: file_system, web, grep_search, terminal
-- `internal/` - Agent-only: memory (virtual fs), todo (planning)
-- `subagents/` - Task delegation
-- `mcp/` - External tools via Model Context Protocol
-
-**State** (`src/state/`)
-
-- `messages` - Conversation history
-- `todos` - Task tracking
-- `files` - Virtual filesystem
-- Token and cost tracking
-
-**Checkpointers** (`src/checkpointer/`)
-
-- SQLite - Persistent storage (`.langrepl/checkpoints.db`)
-- Memory - Ephemeral storage
-
-**MCP** (`src/mcp/`)
-
-- Tool filtering per server
-- Multiple transports (stdio, streamable_http)
-- Auto proxy injection
-
-## Development
-
-```bash
-make install      # Install dependencies + pre-commit hooks
-make lint-fix     # Format and lint code
-make test         # Run tests
-make pre-commit   # Run pre-commit on all files
-make bump-patch   # Bump version (0.1.0 → 0.1.1)
-make clean        # Remove cache/build artifacts
-```
-
-## Extending Langrepl
-
-### Add a Custom Agent
-
-1. Create prompt: `resources/configs/default/prompts/researcher.md`
-2. Add to `config.agents.yml`:
-   ```yaml
-   agents:
-     - name: researcher
-       prompt: prompts/researcher.md
-       llm: haiku-4.5
-       tools: [impl:web:fetch_web_content]
-   ```
-
-### Add a Custom Tool
+### Custom Tools
 
 1. Implement in `src/tools/impl/my_tool.py`:
    ```python
@@ -475,65 +345,79 @@ make clean        # Remove cache/build artifacts
    self.impl_tools.extend(MY_TOOLS)
    ```
 
-3. Add to agent config:
-   ```yaml
-   tools:
-     - impl:my_tool:my_tool
-   ```
+3. Reference: `impl:my_tool:my_tool`
 
-### Add an MCP Server
+### MCP Servers (`config.mcp.json`)
 
-1. Add to `config.mcp.json`:
-   ```json
-   {
-     "mcpServers": {
-       "my-server": {
-         "command": "uvx",
-         "args": ["my-mcp-package"],
-         "enabled": true
-       }
-     }
-   }
-   ```
-   For suppressing output noise, redirect stderr to `/dev/null` with `2>/dev/null` in the command:
-   ```json
-   {
-      "mcpServers": {
-        "my-server": {
-          "command": "sh",
-          "args": [
-            "-c",
-            "npx -y <my-server-lib> 2>/dev/null"
-          ]
-        }
-      }
+```json
+{
+  "mcpServers": {
+    "my-server": {
+      "command": "uvx",
+      "args": ["my-mcp-package"],
+      "transport": "stdio",
+      "enabled": true,
+      "include": ["tool1"],
+      "exclude": [],
+      "repair_command": "rm -rf .some_cache"
     }
-   ```
-   See [MCP Examples](examples/useful-mcp-servers.json) for some useful MCP server implementations.
+  }
+}
+```
 
+- `repair_command`: Runs if server fails, then run this command before retrying
+- Suppress stderr: `"command": "sh", "args": ["-c", "npx pkg 2>/dev/null"]`
+- Reference: `mcp:my-server:tool1`
+- Examples: [useful-mcp-servers.json](examples/useful-mcp-servers.json)
 
-2. Reference in agent config:
-   ```yaml
-   tools:
-     - mcp:my-server:tool_name
-   ```
+### Sub-Agents (`config.subagents.yml`)
 
-### Add a Sub-Agent
+Sub-agents use the same config structure as main agents.
 
-1. Create prompt: `resources/configs/default/prompts/code-reviewer.md`
-2. Add to `config.subagents.yml`:
-   ```yaml
-   subagents:
-     - name: code-reviewer
-       prompt: prompts/code-reviewer.md
-       tools: [impl:file_system:read_file]
-   ```
+```yaml
+subagents:
+  - name: code-reviewer
+    prompt: prompts/code-reviewer.md
+    tools: [impl:file_system:read_file]
+```
 
-3. Reference in parent agent:
-   ```yaml
-   subagents:
-     - code-reviewer
-   ```
+**Add custom**: Create prompt, add to config above, reference in parent agent's `subagents` list.
+
+### Tool Approval (`config.approval.json`)
+
+```json
+{
+  "always_allow": [
+    {
+      "name": "read_file",
+      "args": null
+    },
+    {
+      "name": "run_command",
+      "args": "pwd"
+    }
+  ],
+  "always_deny": [
+    {
+      "name": "run_command",
+      "args": "rm -rf /.*"
+    }
+  ]
+}
+```
+
+**Modes**: `SEMI_ACTIVE` (ask unless whitelisted), `ACTIVE` (auto-approve except denied), `AGGRESSIVE` (bypass all)
+
+## Development
+
+```bash
+make install      # Install dependencies + pre-commit hooks
+make lint-fix     # Format and lint code
+make test         # Run tests
+make pre-commit   # Run pre-commit on all files
+make bump-patch   # Bump version (0.1.0 → 0.1.1)
+make clean        # Remove cache/build artifacts
+```
 
 ## License
 

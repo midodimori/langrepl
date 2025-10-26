@@ -11,6 +11,7 @@ from pydantic import SecretStr
 
 from src.core.config import LLMConfig, LLMProvider
 from src.core.settings import LLMSettings
+from src.llms.wrappers.zhipuai import ChatZhipuAI
 from src.utils.rate_limiter import TokenBucketLimiter
 
 
@@ -195,6 +196,20 @@ class LLMFactory:
                 http_client=self.http_client,
                 http_async_client=self.http_async_client,
             )
+        elif config.provider == LLMProvider.ZHIPUAI:
+            kwargs = {
+                "api_key": self.llm_settings.zhipuai_api_key.get_secret_value(),
+                "model": config.model,
+                "max_tokens": config.max_tokens,
+                "temperature": config.temperature,
+                "streaming": config.streaming,
+                "rate_limiter": limiter,
+            }
+
+            if config.extended_reasoning:
+                kwargs["thinking"] = config.extended_reasoning
+
+            llm = ChatZhipuAI(**kwargs)
         else:
             raise ValueError(f"Unknown LLM provider: {config.provider}")
 

@@ -30,6 +30,9 @@ class LLMSettings(BaseModel):
     deepseek_api_key: SecretStr = Field(
         default=SecretStr("dummy"), description="The DeepSeek API key"
     )
+    zhipuai_api_key: SecretStr = Field(
+        default=SecretStr("dummy"), description="The Zhipu AI API key"
+    )
     lmstudio_base_url: str = Field(
         default="http://localhost:1234/v1", description="The LMStudio API base URL"
     )

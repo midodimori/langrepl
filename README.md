@@ -91,6 +91,7 @@ Install langrepl globally to use `langrepl` or `lg` commands anywhere:
 ```bash
 git clone https://github.com/midodimori/langrepl.git
 cd langrepl
+make install
 uv tool install --editable .
 ```
 
@@ -108,7 +109,7 @@ For local development without global installation:
 ```bash
 git clone https://github.com/midodimori/langrepl.git
 cd langrepl
-uv sync
+make install
 ```
 
 Then run with:
@@ -434,11 +435,12 @@ Approval modes:
 ## Development
 
 ```bash
-# Format and lint
-make lint-fix
-
-# Test
-make test
+make install      # Install dependencies + pre-commit hooks
+make lint-fix     # Format and lint code
+make test         # Run tests
+make pre-commit   # Run pre-commit on all files
+make bump-patch   # Bump version (0.1.0 → 0.1.1)
+make clean        # Remove cache/build artifacts
 ```
 
 ## Extending Langrepl

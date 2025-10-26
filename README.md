@@ -9,13 +9,12 @@ https://github.com/user-attachments/assets/5d95e221-3883-44f8-9694-74c5e215b4e2
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
-    - [Option 1: Install from GitHub (Quickest)](#option-1-install-from-github-quickest)
-    - [Option 2: Install Globally (For Development)](#option-2-install-globally-for-development)
-    - [Option 3: Local Development](#option-3-local-development)
+    - [From GitHub](#from-github)
+    - [From Source](#from-source)
     - [Configure API Keys](#configure-api-keys)
     - [Tracing](#tracing)
 - [Quick Start](#quick-start)
-    - [Interactive Chat Mode (Default)](#interactive-chat-mode-default)
+    - [Interactive Chat Mode](#interactive-chat-mode)
     - [LangGraph Server Mode](#langgraph-server-mode)
 - [Interactive Commands](#interactive-commands)
     - [Conversation Management](#conversation-management)
@@ -58,31 +57,31 @@ https://github.com/user-attachments/assets/5d95e221-3883-44f8-9694-74c5e215b4e2
 
 ## Installation
 
-### Option 1: Install from GitHub (Quickest)
+The `.langrepl` config directory is created in your **working directory** (or use `-w` to specify a location).
+Aliases: `langrepl` or `lg`
 
-Install directly from GitHub without cloning:
+### From GitHub
 
+**Quick try (no installation):**
 ```bash
-uvx --from git+https://github.com/midodimori/langrepl lg
+uvx --from git+https://github.com/midodimori/langrepl langrepl
+uvx --from git+https://github.com/midodimori/langrepl langrepl -w /path  # specify working dir
 ```
 
-Or for persistent installation:
-
+**Install globally:**
 ```bash
 uv tool install git+https://github.com/midodimori/langrepl
 ```
 
-After persistent installation:
-
+Then run from any directory:
 ```bash
-langrepl          # Start interactive session
-lg                # Quick alias
+langrepl              # or: lg
+langrepl -w /path     # specify working directory
 ```
 
-### Option 2: Install Globally (For Development)
+### From Source
 
-Install langrepl globally to use `langrepl` or `lg` commands anywhere:
-
+Clone and install:
 ```bash
 git clone https://github.com/midodimori/langrepl.git
 cd langrepl
@@ -90,28 +89,7 @@ make install
 uv tool install --editable .
 ```
 
-After installation, commands are available globally:
-
-```bash
-langrepl          # Start interactive session
-lg                # Quick alias
-```
-
-### Option 3: Local Development
-
-For local development without global installation:
-
-```bash
-git clone https://github.com/midodimori/langrepl.git
-cd langrepl
-make install
-```
-
-Then run with:
-
-```bash
-uv run langrepl   # or: uv run lg
-```
+Then run from any directory (same as above).
 
 ### Configure API Keys
 
@@ -145,47 +123,33 @@ Langrepl ships with multiple prebuilt agents:
 - **`claude-style-coder`** - Software development agent mimicking Claude Code's behavior
 - **`code-reviewer`** - Code review agent focusing on quality and best practices
 
-### Interactive Chat Mode (Default)
+### Interactive Chat Mode
 
 ```bash
-# Start interactive session (uses general agent by default)
-uv run langrepl
-
-# Use specific agent
-uv run langrepl -a general
-
-# Resume last conversation
-uv run langrepl -r
-
-# Set approval mode (SEMI_ACTIVE, ACTIVE, AGGRESSIVE)
-uv run langrepl -am ACTIVE
-
-# Quick alias
-uv run lg
+langrepl              # Start interactive session (general agent by default)
+langrepl -a general   # Use specific agent
+langrepl -r           # Resume last conversation
+langrepl -am ACTIVE   # Set approval mode (SEMI_ACTIVE, ACTIVE, AGGRESSIVE)
+langrepl -w /path     # Set working directory
+lg                    # Quick alias
 ```
 
 ### LangGraph Server Mode
 
-Run your agent as a LangGraph server for integration with LangGraph Studio:
-
 ```bash
-# Start LangGraph server with specific agent
-uv run langrepl -s -a general
+langrepl -s -a general                # Start LangGraph server
+langrepl -s -a general -am ACTIVE     # With approval mode
 
-# Server will start at http://localhost:2024
-# Studio UI: https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024
+# Server: http://localhost:2024
+# Studio: https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024
 # API Docs: http://localhost:2024/docs
-
-# Set approval mode for server
-uv run langrepl -s -a general -am ACTIVE
 ```
 
-The server mode:
-
-- Generates `langgraph.json` configuration automatically
-- Creates/updates assistants via the LangGraph API
-- Enables visual debugging through LangGraph Studio
-- Supports all agent configurations and MCP servers
+Server features:
+- Auto-generates `langgraph.json` configuration
+- Creates/updates assistants via LangGraph API
+- Enables visual debugging with LangGraph Studio
+- Supports all agent configs and MCP servers
 
 ## Interactive Commands
 
@@ -410,6 +374,22 @@ subagents:
 
 ## Development
 
+For local development without global install:
+
+```bash
+git clone https://github.com/midodimori/langrepl.git
+cd langrepl
+make install
+```
+
+**Run from within repository:**
+```bash
+uv run langrepl              # Start interactive session
+uv run langrepl -w /path     # Specify working directory
+uv run langrepl -s -a general  # Start LangGraph server
+```
+
+**Development commands:**
 ```bash
 make install      # Install dependencies + pre-commit hooks
 make lint-fix     # Format and lint code

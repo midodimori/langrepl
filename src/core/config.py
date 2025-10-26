@@ -20,6 +20,7 @@ class LLMProvider(str, Enum):
     LMSTUDIO = "lmstudio"
     BEDROCK = "bedrock"
     DEEPSEEK = "deepseek"
+    ZHIPUAI = "zhipuai"
 
 
 class CheckpointerProvider(str, Enum):

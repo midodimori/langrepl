@@ -7,8 +7,8 @@ from langchain_core.tools import InjectedToolCallId, ToolException
 
 from src.cli.theme import theme
 from src.core.logging import get_logger
-from src.tools.impl import execute_bash_command
 from src.tools.wrapper import approval_tool, create_field_transformer
+from src.utils.bash import execute_bash_command
 from src.utils.path import resolve_path
 
 logger = get_logger(__name__)

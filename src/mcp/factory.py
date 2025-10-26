@@ -35,6 +35,7 @@ class MCPFactory:
 
         server_config = {}
         tool_filters = {}
+        repair_commands = {}
 
         for name, server in config.servers.items():
             # Skip disabled servers
@@ -74,6 +75,10 @@ class MCPFactory:
 
             server_config[name] = server_dict
 
+            # Store repair command if available
+            if server.repair_command:
+                repair_commands[name] = server.repair_command
+
             # Tool filtering configuration
             if server.include or server.exclude:
                 tool_filters[name] = {
@@ -84,6 +89,7 @@ class MCPFactory:
         self._client = MCPClient(
             server_config,
             tool_filters,
+            repair_commands=repair_commands,
             enable_approval=self.enable_approval,
         )
         self._config_hash = config_hash

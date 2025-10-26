@@ -109,6 +109,10 @@ class MCPServerConfig(BaseModel):
     include: list[str] = Field(default_factory=list, description="Tools to include")
     exclude: list[str] = Field(default_factory=list, description="Tools to exclude")
     enabled: bool = Field(default=True, description="Whether the server is enabled")
+    repair_command: list[str] | None = Field(
+        default=None,
+        description="Command list to run if server initialization fails",
+    )
 
 
 class MCPConfig(BaseModel):

@@ -1,0 +1,44 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: debug-statements
+
+  - repo: local
+    hooks:
+      - id: pyupgrade
+        name: pyupgrade
+        entry: uv run pyupgrade --py313-plus
+        language: system
+        types: [python]
+
+      - id: autoflake
+        name: autoflake
+        entry: uv run autoflake --in-place --remove-all-unused-imports --remove-unused-variables
+        language: system
+        types: [python]
+
+      - id: isort
+        name: isort
+        entry: uv run isort --profile black
+        language: system
+        types: [python]
+
+      - id: black
+        name: black
+        entry: uv run black
+        language: system
+        types: [python]
+
+      - id: mypy
+        name: mypy
+        entry: uv run mypy src tests --check-untyped-defs
+        language: system
+        types: [python]
+        pass_filenames: false

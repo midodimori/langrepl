@@ -1,6 +1,6 @@
 [project]
 name = "langrepl"
-version = "0.1.0"
+version = "0.1.1"
 description = "A powerful interactive terminal CLI for AI-powered assistance, built with Interactive command-line chat application powered by Langchain, Langgraph, Prompt Toolkit and Rich."
 readme = "README.md"
 requires-python = ">=3.13"
@@ -60,9 +60,11 @@ dev = [
     "autoflake>=2.3.1",
     "black>=25.1.0",
     "boto3-stubs[bedrock-runtime]>=1.40.47",
+    "bump-my-version>=1.2.4",
     "isort>=6.0.1",
     "langgraph-cli[inmem]>=0.4.4",
     "mypy>=1.17.0",
+    "pre-commit>=4.3.0",
     "pytest>=8.4.1",
     "pyupgrade>=3.19.1",
 ]

@@ -122,9 +122,10 @@ uv run langrepl   # or: uv run lg
 Set API keys via `.env`:
 
 ```bash
-OPENAI_API_KEY=your_key
-ANTHROPIC_API_KEY=your_key
-GOOGLE_API_KEY=your_key
+LLM__OPENAI_API_KEY=your_openai_api_key_here
+LLM__ANTHROPIC_API_KEY=your_anthropic_api_key_here
+LLM__GOOGLE_API_KEY=your_google_api_key_here
+LLM__DEEPSEEK_API_KEY=your_deepseek_api_key_here
 ```
 
 ### Tracing

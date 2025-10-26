@@ -36,7 +36,8 @@
       "transport": "stdio",
       "enabled": true,
       "include": [],
-      "exclude": []
+      "exclude": [],
+      "repair_command": ["sh", "-c", "rm -rf ~/.mcp-auth/mcp-remote-0.1*"]
     }
   }
 }

@@ -359,7 +359,7 @@ llms:
       "enabled": true,
       "include": ["tool1"],
       "exclude": [],
-      "repair_command": "rm -rf .some_cache"
+      "repair_command": ["sh", "-c", "rm -rf .some_cache"]
     }
   }
 }

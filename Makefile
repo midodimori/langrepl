@@ -5,7 +5,7 @@ install:
 	uv run pre-commit install
 
 lint-fix:
-	find src tests -name "*.py" -type f -exec uv run pyupgrade --py313-plus {} +
+	find src tests -name "*.py" -type f -exec uv run pyupgrade --py313-plus {} + || true
 	uv run autoflake --recursive --remove-all-unused-imports --remove-unused-variables --in-place src tests
 	uv run isort src tests --profile black
 	uv run black src tests

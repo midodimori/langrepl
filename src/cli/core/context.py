@@ -13,8 +13,8 @@ from src.core.config import ApprovalMode
 class Context(BaseModel):
     """Runtime CLI context."""
 
-    agent: str | None
-    model: str | None
+    agent: str
+    model: str
     thread_id: str
     working_dir: Path
     approval_mode: ApprovalMode = ApprovalMode.SEMI_ACTIVE
@@ -53,22 +53,18 @@ class Context(BaseModel):
         if model:
             with timer("Load LLM config"):
                 llm_config = await initializer.load_llm_config(model, working_dir)
-        elif agent_config.llm:
-            llm_config = agent_config.llm
         else:
-            llm_config = None
+            llm_config = agent_config.llm
 
         return cls(
             agent=agent or agent_config.name,
-            model=model or (agent_config.llm.alias if agent_config.llm else None),
+            model=model or agent_config.llm.alias,
             thread_id=thread_id,
             working_dir=working_dir,
             approval_mode=approval_mode or ApprovalMode.SEMI_ACTIVE,
-            context_window=llm_config.context_window if llm_config else None,
-            input_cost_per_mtok=llm_config.input_cost_per_mtok if llm_config else None,
-            output_cost_per_mtok=(
-                llm_config.output_cost_per_mtok if llm_config else None
-            ),
+            context_window=llm_config.context_window,
+            input_cost_per_mtok=llm_config.input_cost_per_mtok,
+            output_cost_per_mtok=llm_config.output_cost_per_mtok,
             recursion_limit=agent_config.recursion_limit,
             tool_output_max_tokens=agent_config.tool_output_max_tokens,
         )

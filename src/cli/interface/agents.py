@@ -37,9 +37,7 @@ class AgentHandler:
             # Filter out current agent from the list
             current_agent_name = self.session.context.agent
             available_agents = [
-                agent
-                for agent in agents
-                if getattr(agent, "name", "") != current_agent_name
+                agent for agent in agents if agent.name != current_agent_name
             ]
 
             if not available_agents:
@@ -51,8 +49,21 @@ class AgentHandler:
             selected_agent_name = await self._get_agent_selection(available_agents)
 
             if selected_agent_name:
-                # Switch to the selected agent
-                self.session.update_context(agent=selected_agent_name)
+                # Load the selected agent's config to get its model
+                selected_agent_config = await initializer.load_agent_config(
+                    selected_agent_name, self.session.context.working_dir
+                )
+
+                # Update context with both agent and its configured model
+                self.session.update_context(
+                    agent=selected_agent_name,
+                    model=selected_agent_config.llm.alias,
+                )
+
+                # Mark this agent as the new default
+                await initializer.update_default_agent(
+                    selected_agent_name, self.session.context.working_dir
+                )
 
         except Exception as e:
             console.print_error(f"Error switching agents: {e}")
@@ -121,7 +132,7 @@ class AgentHandler:
                     sys.stdout.write("\033[K")
                 sys.stdout.flush()
                 agent = agents[current_index]
-                return getattr(agent, "name", "")
+                return agent.name
 
             console.print("")
             return ""
@@ -144,15 +155,10 @@ class AgentHandler:
         prompt_symbol = settings.cli.prompt_style.strip()
         lines = []
         for i, agent in enumerate(agents):
-            agent_name = getattr(agent, "name", "")
-            llm_config = getattr(agent, "llm", {})
-            model = (
-                getattr(llm_config, "model", "Unknown model")
-                if llm_config
-                else "Unknown model"
-            )
+            agent_name = agent.name
+            alias = agent.llm.alias
 
-            display_text = f"{agent_name} ({model})"
+            display_text = f"{agent_name} ({alias})"
 
             if i == selected_index:
                 # Use direct color code for selected line

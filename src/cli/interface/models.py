@@ -162,11 +162,12 @@ class ModelHandler:
             await app.run_async()
 
             if selected[0]:
-                num_lines = len(agents)
-                for _i in range(num_lines):
-                    sys.stdout.write("\033[F")
-                    sys.stdout.write("\033[K")
-                sys.stdout.flush()
+                if sys.stdout.isatty():
+                    num_lines = len(agents)
+                    for _i in range(num_lines):
+                        sys.stdout.write("\033[F")
+                        sys.stdout.write("\033[K")
+                    sys.stdout.flush()
                 return agents[current_index]
 
             console.print("")
@@ -232,12 +233,12 @@ class ModelHandler:
             await app.run_async()
 
             if selected[0]:
-                # Clear the model list from screen
-                num_lines = len(models)
-                for _i in range(num_lines):
-                    sys.stdout.write("\033[F")
-                    sys.stdout.write("\033[K")
-                sys.stdout.flush()
+                if sys.stdout.isatty():
+                    num_lines = len(models)
+                    for _i in range(num_lines):
+                        sys.stdout.write("\033[F")
+                        sys.stdout.write("\033[K")
+                    sys.stdout.flush()
                 model = models[current_index]
                 return model.alias
 

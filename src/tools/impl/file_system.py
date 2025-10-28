@@ -22,6 +22,8 @@ class EditOperation(BaseModel):
 class EditFileInput(BaseModel):
     """Input schema for edit_file."""
 
+    config: RunnableConfig
+    tool_call_id: Annotated[str, InjectedToolCallId]
     file_path: str = Field(
         ..., description="Path to the file to edit (relative to working directory)"
     )

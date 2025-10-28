@@ -395,7 +395,6 @@ make install      # Install dependencies + pre-commit hooks
 make lint-fix     # Format and lint code
 make test         # Run tests
 make pre-commit   # Run pre-commit on all files
-make bump-patch   # Bump version (0.1.0 → 0.1.1)
 make clean        # Remove cache/build artifacts
 ```
 

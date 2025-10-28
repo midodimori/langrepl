@@ -1,4 +1,4 @@
-.PHONY: install lint-fix test pre-commit bump-patch bump-minor bump-major clean
+.PHONY: install lint-fix test pre-commit clean
 
 install:
 	uv sync --all-groups
@@ -16,15 +16,6 @@ test:
 
 pre-commit:
 	uv run pre-commit run --all-files
-
-bump-patch:
-	uv run bump-my-version bump patch
-
-bump-minor:
-	uv run bump-my-version bump minor
-
-bump-major:
-	uv run bump-my-version bump major
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true

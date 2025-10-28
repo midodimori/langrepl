@@ -177,6 +177,14 @@ class Initializer:
         )
 
     @staticmethod
+    async def update_default_agent(agent_name: str, working_dir: Path):
+        """Update which agent is marked as default in the config file."""
+        target_agents_config_path = Path(working_dir) / CONFIG_AGENTS_FILE_NAME
+        await BatchAgentConfig.update_default_agent(
+            target_agents_config_path, agent_name
+        )
+
+    @staticmethod
     async def load_user_memory(working_dir: Path) -> str:
         """Load user memory from project-specific memory file.
 

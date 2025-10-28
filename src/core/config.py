@@ -312,6 +312,19 @@ class BatchAgentConfig(BaseModel):
         with open(path, "w") as f:
             yaml.dump(data, f, default_flow_style=False, sort_keys=False)
 
+    @staticmethod
+    async def update_default_agent(path: Path, agent_name: str):
+        """Update which agent is marked as default in the YAML file."""
+        yaml_content = await asyncio.to_thread(path.read_text)
+        data = yaml.unsafe_load(yaml_content)
+
+        agents: list[dict] = data.get("agents", [])
+        for agent in agents:
+            agent["default"] = agent.get("name") == agent_name
+
+        with open(path, "w") as f:
+            yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+
     @classmethod
     async def from_yaml(
         cls,

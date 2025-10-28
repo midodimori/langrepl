@@ -120,6 +120,19 @@ class Initializer:
         )
         return await BatchCheckpointerConfig.from_yaml(target_checkpointers_config_path)
 
+    async def load_subagents_config(self, working_dir: Path) -> BatchAgentConfig:
+        """Load subagents configuration."""
+        self._ensure_config_dir(working_dir)
+        target_subagents_config_path = Path(working_dir) / CONFIG_SUBAGENTS_FILE_NAME
+
+        llm_config = None
+        if (Path(working_dir) / CONFIG_LLMS_FILE_NAME).exists():
+            llm_config = await self.load_llms_config(working_dir)
+
+        return await BatchAgentConfig.from_yaml(
+            target_subagents_config_path, llm_config, None, None
+        )
+
     async def load_agents_config(self, working_dir: Path) -> BatchAgentConfig:
         """Load agents configuration with resolved subagent references."""
         self._ensure_config_dir(working_dir)
@@ -137,9 +150,7 @@ class Initializer:
         subagents_config = None
         target_subagents_config_path = Path(working_dir) / CONFIG_SUBAGENTS_FILE_NAME
         if target_subagents_config_path.exists():
-            subagents_config = await BatchAgentConfig.from_yaml(
-                target_subagents_config_path, llm_config, None, None
-            )
+            subagents_config = await self.load_subagents_config(working_dir)
 
         return await BatchAgentConfig.from_yaml(
             target_agents_config_path, llm_config, checkpointer_config, subagents_config
@@ -174,6 +185,16 @@ class Initializer:
         target_agents_config_path = Path(working_dir) / CONFIG_AGENTS_FILE_NAME
         await BatchAgentConfig.update_agent_llm(
             target_agents_config_path, agent_name, new_llm_name
+        )
+
+    @staticmethod
+    async def update_subagent_llm(
+        subagent_name: str, new_llm_name: str, working_dir: Path
+    ):
+        """Update a specific subagent's LLM in the config file."""
+        target_subagents_config_path = Path(working_dir) / CONFIG_SUBAGENTS_FILE_NAME
+        await BatchAgentConfig.update_agent_llm(
+            target_subagents_config_path, subagent_name, new_llm_name
         )
 
     @staticmethod

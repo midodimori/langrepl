@@ -38,8 +38,10 @@ class ModelHandler:
             ]
 
             if current_agent_config.subagents:
-                for subagent in current_agent_config.subagents:
-                    agents_to_show.append(("subagent", subagent.name, subagent))
+                agents_to_show.extend(
+                    ("subagent", subagent.name, subagent)
+                    for subagent in current_agent_config.subagents
+                )
 
             selected_agent = await self._get_agent_selection(agents_to_show)
             if not selected_agent:

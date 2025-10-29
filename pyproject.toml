@@ -1,6 +1,6 @@
 [project]
 name = "langrepl"
-version = "0.2.0"
+version = "0.2.1"
 description = "A powerful interactive terminal CLI for AI-powered assistance, built with Interactive command-line chat application powered by Langchain, Langgraph, Prompt Toolkit and Rich."
 readme = "README.md"
 requires-python = ">=3.13"

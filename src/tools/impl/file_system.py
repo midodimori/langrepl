@@ -19,25 +19,14 @@ class EditOperation(BaseModel):
     new_content: str = Field(..., description="The new content to replace with")
 
 
-class EditFileInput(BaseModel):
-    """Input schema for edit_file."""
+class MoveOperation(BaseModel):
+    """Represents a single file move operation."""
 
-    config: RunnableConfig
-    tool_call_id: Annotated[str, InjectedToolCallId]
-    file_path: str = Field(
-        ..., description="Path to the file to edit (relative to working directory)"
+    source: str = Field(
+        ..., description="Source file path (relative to working directory)"
     )
-    edits: list[EditOperation] = Field(
-        ..., description="List of edit operations to apply sequentially"
-    )
-
-
-class MoveMultipleFilesInput(BaseModel):
-    """Input schema for move_multiple_files."""
-
-    move_paths: list[dict[str, str]] = Field(
-        ...,
-        description='List of moves, each with "source" and "destination" path keys (relative to working directory)',
+    destination: str = Field(
+        ..., description="Destination file path (relative to working directory)"
     )
 
 
@@ -62,8 +51,16 @@ def _render_diff_args(args: dict, config: RunnableConfig) -> str:
         # Multi-edit format: generate diff for each section
         all_diff_sections = []
         for edit in edits:
-            old_content = edit.old_content
-            new_content = edit.new_content
+            old_content = (
+                edit.get("old_content", "")
+                if isinstance(edit, dict)
+                else edit.old_content
+            )
+            new_content = (
+                edit.get("new_content", "")
+                if isinstance(edit, dict)
+                else edit.new_content
+            )
             diff_lines = generate_diff(
                 old_content, new_content, context_lines=3, full_content=full_content
             )
@@ -188,9 +185,7 @@ async def write_file(
     )
 
 
-@approval_tool(
-    name_only=True, render_args_fn=_render_diff_args, args_schema=EditFileInput
-)
+@approval_tool(name_only=True, render_args_fn=_render_diff_args)
 async def edit_file(
     config: RunnableConfig,
     tool_call_id: Annotated[str, InjectedToolCallId],
@@ -202,7 +197,7 @@ async def edit_file(
 
     Args:
         file_path (str): Path to the file to edit (relative to working directory)
-        edits (list[EditOperation]): List of edit operations to apply sequentially
+        edits (list[EditOperation]): Edit operations to apply sequentially
     """
     working_dir = config.get("configurable", {}).get("working_dir")
     if not working_dir:
@@ -305,25 +300,25 @@ async def move_file(
     return f"File moved: {src} -> {dst}"
 
 
-@approval_tool(name_only=True, args_schema=MoveMultipleFilesInput)
+@approval_tool(name_only=True)
 async def move_multiple_files(
     config: RunnableConfig,
     tool_call_id: Annotated[str, InjectedToolCallId],
-    move_paths: list[dict[str, str]],
+    moves: list[MoveOperation],
 ) -> str:
     """
     Use this tool to move multiple files in one operation.
 
     Args:
-        move_paths (list[dict[str, str]]): List of moves, each with "source" and "destination" path keys (relative to working directory)
+        moves (list[MoveOperation]): List of move operations to apply
     """
     working_dir = config.get("configurable", {}).get("working_dir")
     if not working_dir:
         raise ToolException("Working directory is not configured.")
     results = []
-    for move in move_paths:
-        src = resolve_path(working_dir, move["source"])
-        dst = resolve_path(working_dir, move["destination"])
+    for move in moves:
+        src = resolve_path(working_dir, move.source)
+        dst = resolve_path(working_dir, move.destination)
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(src), str(dst))
         results.append(f"{src} -> {dst}")

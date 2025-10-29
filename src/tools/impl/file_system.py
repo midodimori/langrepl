@@ -30,6 +30,13 @@ class MoveOperation(BaseModel):
     )
 
 
+def _get_attr(obj: dict | BaseModel, attr: str, default: str = "") -> str:
+    """Extract attribute from either dict or Pydantic model instance."""
+    if isinstance(obj, dict):
+        return obj.get(attr, default)
+    return getattr(obj, attr, default)
+
+
 def _render_diff_args(args: dict, config: RunnableConfig) -> str:
     """Render arguments with colored diff preview."""
     file_path = args.get("file_path", "")
@@ -51,16 +58,8 @@ def _render_diff_args(args: dict, config: RunnableConfig) -> str:
         # Multi-edit format: generate diff for each section
         all_diff_sections = []
         for edit in edits:
-            old_content = (
-                edit.get("old_content", "")
-                if isinstance(edit, dict)
-                else edit.old_content
-            )
-            new_content = (
-                edit.get("new_content", "")
-                if isinstance(edit, dict)
-                else edit.new_content
-            )
+            old_content = _get_attr(edit, "old_content")
+            new_content = _get_attr(edit, "new_content")
             diff_lines = generate_diff(
                 old_content, new_content, context_lines=3, full_content=full_content
             )

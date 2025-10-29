@@ -110,7 +110,6 @@ def approval_tool(
     always_approve: bool = False,
     format_args_fn: Callable[[dict], dict] | None = None,
     render_args_fn: Callable[[dict, RunnableConfig], str] | None = None,
-    args_schema: type[BaseModel] | None = None,
 ):
     """Decorator to handle tool with user approval
 
@@ -121,7 +120,6 @@ def approval_tool(
                          a modified args dict for pattern matching
         render_args_fn: Optional function that takes tool args and config, returns
                          a formatted string for display purposes
-        args_schema: Optional Pydantic model for tool input schema
     """
 
     def decorator(func_or_tool: Callable | BaseTool) -> Callable | BaseTool:
@@ -214,7 +212,7 @@ def approval_tool(
         else:
             func = func_or_tool
 
-            @tool(args_schema=args_schema)
+            @tool()
             @wraps(func)
             async def wrapper(
                 config: RunnableConfig,

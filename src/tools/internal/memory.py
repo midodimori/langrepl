@@ -7,7 +7,6 @@ enabling context offloading and information persistence across agent interaction
 from typing import Annotated
 
 from langchain_core.messages import ToolMessage
-from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import InjectedToolCallId, ToolException, tool
 from langgraph.prebuilt import InjectedState
 from langgraph.types import Command
@@ -22,17 +21,6 @@ class EditOperation(BaseModel):
 
     old_content: str = Field(..., description="The content to be replaced")
     new_content: str = Field(..., description="The new content to replace with")
-
-
-class EditMemoryFileInput(BaseModel):
-    """Input schema for edit_memory_file."""
-
-    config: RunnableConfig
-    tool_call_id: Annotated[str, InjectedToolCallId]
-    file_path: str = Field(..., description="Path to the memory file to edit")
-    edits: list[EditOperation] = Field(
-        ..., description="List of edit operations to apply sequentially"
-    )
 
 
 @tool()
@@ -160,7 +148,7 @@ async def write_memory_file(
     )
 
 
-@tool(args_schema=EditMemoryFileInput)
+@tool()
 async def edit_memory_file(
     file_path: str,
     edits: list[EditOperation],

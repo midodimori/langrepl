@@ -57,7 +57,7 @@ jobs:
       - name: Bump version
         if: steps.bump-type.outputs.type != 'none'
         run: |
-          uv run bump-my-version bump ${{ steps.bump-type.outputs.type }}
+          uv run bump-my-version bump ${{ steps.bump-type.outputs.type }} --allow-dirty
           NEW_VERSION=$(uv run bump-my-version show current_version)
           echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
 

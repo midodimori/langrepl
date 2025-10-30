@@ -118,7 +118,7 @@ class InteractivePrompt:
         """Create custom key bindings."""
         kb = KeyBindings()
 
-        @kb.add("c-c")
+        @kb.add(Keys.ControlC)
         def _(event):
             """Ctrl-C: Clear input if text exists, or quit on double-press."""
             buffer = event.current_buffer
@@ -149,10 +149,10 @@ class InteractivePrompt:
 
         @kb.add(Keys.ControlJ)
         def _(event):
-            """Shift+Enter: Insert newline for multiline input."""
+            """Ctrl-J: Insert newline for multiline input."""
             event.current_buffer.insert_text("\n")
 
-        @kb.add("s-tab")
+        @kb.add(Keys.BackTab)
         def _(event):
             """Shift-Tab: Cycle approval mode."""
             if self.mode_change_callback:

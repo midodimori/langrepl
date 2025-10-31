@@ -203,6 +203,9 @@ def approval_tool(
                     except GraphInterrupt:
                         # Let LangGraph interrupts bubble up - don't catch them
                         raise
+                    except ToolException:
+                        # Let ToolExceptions bubble up so ToolNode can handle them
+                        raise
                     except Exception as e:
                         raise ToolException(f"Failed to {self.name}: {str(e)}")
 
@@ -252,6 +255,9 @@ def approval_tool(
                         )
                 except GraphInterrupt:
                     # Let LangGraph interrupts bubble up - don't catch them
+                    raise
+                except ToolException:
+                    # Let ToolExceptions bubble up so ToolNode can handle them
                     raise
                 except Exception as e:
                     raise ToolException(f"Failed to {func.__name__}: {str(e)}")

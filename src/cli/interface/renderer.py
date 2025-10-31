@@ -207,26 +207,32 @@ class Renderer:
 
         # Render main content
         content = Renderer._fix_malformed_code_blocks(content)
-        parts.append(TransparentMarkdown(content, code_theme="dracula"))
+        if content:
+            parts.append(TransparentMarkdown(content, code_theme="dracula"))
 
-        # Print content
-        console.print(Group(*parts))
+        # Print content if any
+        if parts:
+            console.print(Group(*parts))
 
-        # Render tool calls
+        # Print tool calls with separator if we had content
         if tool_calls:
-            console.print(NewLine())
+            if parts:
+                console.print(NewLine())
             for tool_call in tool_calls:
                 console.print(
                     Text(Renderer._format_tool_call(tool_call), style="muted")
                 )
-        else:
+        elif parts:
             console.print("")
 
     @staticmethod
     def render_tool_message(message: ToolMessage) -> None:
         """Render a tool execution message with Rich markup support."""
         content = getattr(message, "short_content", None) or message.text
-        is_error = getattr(message, "is_error", False)
+        is_error = (
+            getattr(message, "is_error", False)
+            or getattr(message, "status", None) == "error"
+        )
 
         formatted_lines = []
         for i, line in enumerate(content.split("\n")):

@@ -41,12 +41,6 @@ class MessageHandler:
                 "tool_output_max_tokens": ctx.tool_output_max_tokens,
             }
 
-            # If replaying, use the checkpoint_id to fork from that point
-            if self.session.replay_checkpoint_id:
-                config_dict["checkpoint_id"] = self.session.replay_checkpoint_id
-                # Clear it after using so subsequent messages don't use it
-                self.session.replay_checkpoint_id = None
-
             graph_config = RunnableConfig(
                 configurable=config_dict,
                 recursion_limit=ctx.recursion_limit,
@@ -119,7 +113,6 @@ class MessageHandler:
                     messages = node_data["messages"]
                     last_message: AnyMessage = messages[-1]
 
-                    # Create a unique identifier for this message to avoid duplicates
                     message_id = (
                         f"{last_message.id or id(last_message)}_{last_message.type}"
                     )

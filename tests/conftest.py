@@ -33,8 +33,8 @@ def create_test_graph():
 
         graph = StateGraph(BaseState)
 
-        # Add tool node
-        tool_node = ToolNode(tools)
+        # Add tool node with error handling
+        tool_node = ToolNode(tools, handle_tool_errors=True)
         graph.add_node("tools", tool_node)
 
         # Simple flow: START -> tools -> END

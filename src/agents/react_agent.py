@@ -19,12 +19,17 @@ from langchain_core.runnables import (
     Runnable,
     RunnableConfig,
 )
-from langchain_core.tools import BaseTool
+from langchain_core.tools import BaseTool, ToolException
 from langgraph._internal._runnable import RunnableCallable
 from langgraph.errors import ErrorCode, create_error_message
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.prebuilt.tool_node import ToolCall, ToolNode
+from langgraph.prebuilt.tool_node import (
+    ToolCall,
+    ToolCallWithContext,
+    ToolNode,
+    ToolRuntime,
+)
 from langgraph.store.base import BaseStore
 from langgraph.types import Command, Send
 
@@ -35,6 +40,36 @@ from src.utils.compression import calculate_message_tokens
 from src.utils.cost import calculate_cost
 
 PROMPT_RUNNABLE_NAME = "Prompt"
+
+
+def _format_tool_error(e: Exception) -> str:
+    """Custom error formatter that extracts clean error messages.
+
+    For ToolException, returns the message without wrapping.
+    For other exceptions, returns a sanitized error with type and message.
+    """
+    if isinstance(e, ToolException):
+        # ToolException already has a clean message, use it directly
+        return str(e)
+
+    # For other exceptions, sanitize the error message
+    error_msg = str(e)
+
+    # Common exceptions that are safe to show in detail
+    safe_exceptions = (
+        ValueError,
+        TypeError,
+        KeyError,
+        AttributeError,
+        IndexError,
+        RuntimeError,
+    )
+
+    if isinstance(e, safe_exceptions):
+        return f"{type(e).__name__}: {error_msg}"
+
+    # For other exceptions, show generic message with exception type
+    return f"{type(e).__name__}: An error occurred during tool execution"
 
 
 class CompressingToolNode(ToolNode):
@@ -49,14 +84,14 @@ class CompressingToolNode(ToolNode):
         super().__init__(tools, **kwargs)
         self.model = model
 
-    async def _arun_one(  # type: ignore[override]
+    async def _arun_one(
         self,
         call: ToolCall,
         input_type: Literal["list", "dict", "tool_calls"],
-        config: RunnableConfig,
+        tool_runtime: ToolRuntime,
     ) -> ToolMessage | Command:
         # Execute the tool normally
-        result = await super()._arun_one(call, input_type, config)
+        result = await super()._arun_one(call, input_type, tool_runtime)
 
         # If result is a Command, pass it through without compression
         if isinstance(result, Command):
@@ -75,8 +110,10 @@ class CompressingToolNode(ToolNode):
         if tool_msg.name == read_memory_file.name:
             return tool_msg
 
-        # Get max_tokens from config
-        max_tokens = config.get("configurable", {}).get("tool_output_max_tokens")
+        # Get max_tokens from config (LangGraph v2: config is now in tool_runtime.config)
+        max_tokens = tool_runtime.config.get("configurable", {}).get(
+            "tool_output_max_tokens"
+        )
         if not max_tokens:
             return tool_msg
 
@@ -176,9 +213,11 @@ def create_react_agent(
     # Use CompressingToolNode if memory tools available, otherwise standard ToolNode
     tool_node: ToolNode | CompressingToolNode
     if has_read_memory:
-        tool_node = CompressingToolNode([t for t in tools], model=model)
+        tool_node = CompressingToolNode(
+            list(tools), model=model, handle_tool_errors=_format_tool_error
+        )
     else:
-        tool_node = ToolNode([t for t in tools])
+        tool_node = ToolNode(list(tools), handle_tool_errors=_format_tool_error)
 
     tool_classes = list(tool_node.tools_by_name.values())
     model_with_tools = model.bind_tools(tool_classes)  # type: ignore[assignment]
@@ -264,7 +303,7 @@ def create_react_agent(
         except Exception as e:
             error_message = AIMessage(
                 name=name,
-                content=f"Error: {type(e).__name__}: {e}",
+                content=f"{type(e).__name__}: {str(e)}",
                 is_error=True,
             )
             return {"messages": [error_message]}
@@ -278,11 +317,17 @@ def create_react_agent(
             return END
         # Otherwise if there is, we continue
         else:
-            tool_calls = [
-                tool_node.inject_tool_args(call, state, store)  # type: ignore[arg-type]
+            return [
+                Send(
+                    "tools",
+                    ToolCallWithContext(
+                        __type="tool_call_with_context",
+                        tool_call=call,
+                        state=state,
+                    ),
+                )
                 for call in last_message.tool_calls
             ]
-            return [Send("tools", [tool_call]) for tool_call in tool_calls]
 
     # Define a new graph
     workflow = StateGraph(state_schema=final_state_schema, context_schema=config_schema)

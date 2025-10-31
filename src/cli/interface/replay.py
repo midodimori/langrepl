@@ -52,11 +52,17 @@ class ReplayHandler:
                 )
 
                 # Delete all checkpoints after the selected one to rewind the thread
-                async with initializer.get_checkpointer(
-                    self.session.context.agent, self.session.context.working_dir
-                ) as checkpointer:
-                    await delete_checkpoints_after(
-                        checkpointer, self.session.context.thread_id, checkpoint_id
+                try:
+                    async with initializer.get_checkpointer(
+                        self.session.context.agent, self.session.context.working_dir
+                    ) as checkpointer:
+                        await delete_checkpoints_after(
+                            checkpointer, self.session.context.thread_id, checkpoint_id
+                        )
+                except Exception as e:
+                    logger.error(f"Failed to delete checkpoints: {e}")
+                    console.print_error(
+                        f"Warning: Could not rewind conversation history: {e}"
                     )
 
                 return human_messages[selected_index]["text"]

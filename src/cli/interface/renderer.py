@@ -231,7 +231,7 @@ class Renderer:
         content = getattr(message, "short_content", None) or message.text
         is_error = (
             getattr(message, "is_error", False)
-            or getattr(message, "status", "error") == "error"
+            or getattr(message, "status", None) == "error"
         )
 
         formatted_lines = []

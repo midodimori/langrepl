@@ -70,18 +70,35 @@ async def delete_checkpoints_after(
         )
 
     cp = cast(Any, checkpointer)
+
+    by_namespace: dict[str, list[str]] = {}
+    for t in to_delete:
+        cp_id = t.checkpoint.get("id")
+        if not cp_id:
+            continue
+        ns = t.config.get("configurable", {}).get("checkpoint_ns", "")
+        if ns not in by_namespace:
+            by_namespace[ns] = []
+        by_namespace[ns].append(cp_id)
+
     async with cp.lock:
-        for t in to_delete:
-            cp_id = t.checkpoint.get("id")
-            ns = t.config.get("configurable", {}).get("checkpoint_ns", "")
+        for ns, checkpoint_ids in by_namespace.items():
+            placeholders = ",".join(["?"] * len(checkpoint_ids))
+            params = (thread_id, ns, *checkpoint_ids)
+
+            # nosec B608: Safe - placeholders are "?,?,?" built from count, not user input.
+            # All actual values passed as parameters to prevent SQL injection.
             await cp.conn.execute(
-                "DELETE FROM checkpoints WHERE thread_id = ? AND checkpoint_ns = ? AND checkpoint_id = ?",
-                (thread_id, ns, cp_id),
+                "DELETE FROM checkpoints WHERE thread_id = ? AND checkpoint_ns = ? "
+                "AND checkpoint_id IN (" + placeholders + ")",
+                params,
             )
             await cp.conn.execute(
-                "DELETE FROM writes WHERE thread_id = ? AND checkpoint_ns = ? AND checkpoint_id = ?",
-                (thread_id, ns, cp_id),
+                "DELETE FROM writes WHERE thread_id = ? AND checkpoint_ns = ? "
+                "AND checkpoint_id IN (" + placeholders + ")",
+                params,
             )
+
         await cp.conn.commit()
 
     return len(to_delete)

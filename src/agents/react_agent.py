@@ -46,13 +46,30 @@ def _format_tool_error(e: Exception) -> str:
     """Custom error formatter that extracts clean error messages.
 
     For ToolException, returns the message without wrapping.
-    For other exceptions, returns a formatted error with type and message.
+    For other exceptions, returns a sanitized error with type and message.
     """
     if isinstance(e, ToolException):
         # ToolException already has a clean message, use it directly
         return str(e)
-    # For other exceptions, include the type
-    return f"{type(e).__name__}: {str(e)}"
+
+    # For other exceptions, sanitize the error message
+    error_msg = str(e)
+
+    # Common exceptions that are safe to show in detail
+    safe_exceptions = (
+        ValueError,
+        TypeError,
+        KeyError,
+        AttributeError,
+        IndexError,
+        RuntimeError,
+    )
+
+    if isinstance(e, safe_exceptions):
+        return f"{type(e).__name__}: {error_msg}"
+
+    # For other exceptions, show generic message with exception type
+    return f"{type(e).__name__}: An error occurred during tool execution"
 
 
 class CompressingToolNode(ToolNode):
@@ -197,10 +214,10 @@ def create_react_agent(
     tool_node: ToolNode | CompressingToolNode
     if has_read_memory:
         tool_node = CompressingToolNode(
-            [t for t in tools], model=model, handle_tool_errors=_format_tool_error
+            list(tools), model=model, handle_tool_errors=_format_tool_error
         )
     else:
-        tool_node = ToolNode([t for t in tools], handle_tool_errors=_format_tool_error)
+        tool_node = ToolNode(list(tools), handle_tool_errors=_format_tool_error)
 
     tool_classes = list(tool_node.tools_by_name.values())
     model_with_tools = model.bind_tools(tool_classes)  # type: ignore[assignment]

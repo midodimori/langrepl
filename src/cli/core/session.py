@@ -42,7 +42,6 @@ class CLISession:
         self.running = False
         self.needs_reload = False
         self.prefilled_text: str | None = None
-        self.replay_checkpoint_id: str | None = None
 
     async def start(self, show_welcome: bool = True) -> None:
         """Start the interactive session."""

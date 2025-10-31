@@ -8,9 +8,6 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from src.checkpointer.impl.memory import MemoryCheckpointer
 from src.checkpointer.impl.sqlite import AsyncSqliteCheckpointer
 from src.core.config import CheckpointerConfig, CheckpointerProvider
-from src.core.logging import get_logger
-
-logger = get_logger(__name__)
 
 
 class CheckpointerFactory:
@@ -20,19 +17,7 @@ class CheckpointerFactory:
     async def create(
         self, config: CheckpointerConfig, database_url: str
     ) -> AsyncIterator[BaseCheckpointSaver]:
-        """Create a checkpointer instance based on configuration.
-
-        Args:
-            config: Checkpointer configuration
-            database_url: Database connection URL
-        Yields:
-            BaseCheckpointSaver: The created checkpointer instance
-
-        Raises:
-            ValueError: If an unknown checkpointer provider is specified
-        """
-        logger.debug(f"Creating checkpointer with provider: {config.type}")
-
+        """Create checkpointer based on config type."""
         if config.type == CheckpointerProvider.SQLITE:
             async with AsyncSqliteCheckpointer.create(
                 connection_string=database_url,

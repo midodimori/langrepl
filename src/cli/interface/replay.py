@@ -12,7 +12,7 @@ from prompt_toolkit.layout import Layout
 from prompt_toolkit.layout.containers import Window
 from prompt_toolkit.layout.controls import FormattedTextControl
 
-from src.checkpointer.utils import get_checkpoint_history
+from src.checkpointer.utils import delete_checkpoints_after, get_checkpoint_history
 from src.cli.initializer import initializer
 from src.cli.theme import console, theme
 from src.core.logging import get_logger
@@ -47,13 +47,18 @@ class ReplayHandler:
             selected_index = await self._get_message_selection(human_messages)
 
             if selected_index is not None:
-                # Clear screen and re-render history, store checkpoint to replay from
                 checkpoint_id = await self._replay_from_message(
                     human_messages, selected_index
                 )
-                # Store the checkpoint_id in session for next message
-                self.session.replay_checkpoint_id = checkpoint_id
-                # Return the message text to prefill
+
+                # Delete all checkpoints after the selected one to rewind the thread
+                async with initializer.get_checkpointer(
+                    self.session.context.agent, self.session.context.working_dir
+                ) as checkpointer:
+                    await delete_checkpoints_after(
+                        checkpointer, self.session.context.thread_id, checkpoint_id
+                    )
+
                 return human_messages[selected_index]["text"]
 
             return None
@@ -66,15 +71,12 @@ class ReplayHandler:
     async def _get_human_messages(self) -> list[dict]:
         """Get all human messages from current branch's checkpoint history.
 
-        Only returns messages from the current active branch, not from other branches.
-
         Returns:
-            List of dicts with message info: {text, timestamp, position, all_messages_before}
+            List of dicts with message info: {text, all_messages_before, channel_values, checkpoint_id}
         """
         async with initializer.get_checkpointer(
             self.session.context.agent, self.session.context.working_dir
         ) as checkpointer:
-            # Get the latest checkpoint from current thread to start from current branch
             config = RunnableConfig(
                 configurable={"thread_id": self.session.context.thread_id}
             )
@@ -83,33 +85,23 @@ class ReplayHandler:
             if not latest_checkpoint:
                 return []
 
-            # Get checkpoint history for current branch
             checkpoint_history = await get_checkpoint_history(
                 checkpointer, latest_checkpoint
             )
-
-            # Extract messages and metadata from each checkpoint
             history = []
             for checkpoint_tuple in checkpoint_history:
                 checkpoint = checkpoint_tuple.checkpoint
-                metadata = checkpoint_tuple.metadata
 
                 if checkpoint and "channel_values" in checkpoint:
                     channel_values = checkpoint["channel_values"]
                     messages = channel_values.get("messages", [])
 
                     if messages:
-                        timestamp = (
-                            metadata.get("ts") if metadata else checkpoint.get("ts", "")
-                        )
-                        timestamp_str = str(timestamp) if timestamp else ""
-                        checkpoint_id = checkpoint.get("id")
                         history.append(
                             {
-                                "timestamp": timestamp_str,
                                 "messages": messages,
                                 "channel_values": channel_values,
-                                "checkpoint_id": checkpoint_id,
+                                "checkpoint_id": checkpoint.get("id"),
                             }
                         )
 
@@ -128,30 +120,28 @@ class ReplayHandler:
                     getattr(m, "id", None) or id(m) for m in prev_messages
                 }
 
+                has_new_messages = False
                 for msg in current_messages:
                     message_id = getattr(msg, "id", None) or id(msg)
                     # This is a new message added in this checkpoint
-                    if message_id not in prev_message_ids and isinstance(
-                        msg, HumanMessage
-                    ):
-                        # Store this human message with the PREVIOUS checkpoint ID
-                        # (the state that existed before this message was sent)
-                        human_messages.append(
-                            {
-                                "text": msg.text,
-                                "timestamp": entry["timestamp"],
-                                "all_messages_before": prev_messages.copy(),
-                                "channel_values": prev_channel_values,
-                                "checkpoint_id": prev_checkpoint_id,
-                            }
-                        )
+                    if message_id not in prev_message_ids:
+                        has_new_messages = True
+                        if isinstance(msg, HumanMessage):
+                            human_messages.append(
+                                {
+                                    "text": msg.text,
+                                    "all_messages_before": prev_messages.copy(),
+                                    "channel_values": prev_channel_values,
+                                    "checkpoint_id": prev_checkpoint_id,
+                                }
+                            )
 
-                # Update for next iteration
-                prev_checkpoint_id = current_checkpoint_id
-                prev_messages = current_messages
-                prev_channel_values = entry["channel_values"]
+                # Only update tracking if this checkpoint had new messages
+                if has_new_messages:
+                    prev_checkpoint_id = current_checkpoint_id
+                    prev_messages = current_messages
+                    prev_channel_values = entry["channel_values"]
 
-            # Keep chronological order (oldest first, latest at bottom)
             return human_messages
 
     async def _get_message_selection(self, messages: list[dict]) -> int | None:
@@ -183,7 +173,7 @@ class ReplayHandler:
         kb = KeyBindings()
 
         @kb.add(Keys.Up)
-        def _(event):
+        def _(_event):
             nonlocal current_index, scroll_offset
             if current_index > 0:
                 current_index -= 1
@@ -191,7 +181,7 @@ class ReplayHandler:
                     scroll_offset = current_index
 
         @kb.add(Keys.Down)
-        def _(event):
+        def _(_event):
             nonlocal current_index, scroll_offset
             if current_index < len(messages) - 1:
                 current_index += 1

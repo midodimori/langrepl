@@ -23,10 +23,11 @@ class MoveOperation(BaseModel):
     """Represents a single file move operation."""
 
     source: str = Field(
-        ..., description="Source file path (relative to working directory)"
+        ..., description="Source file path (relative to working directory or absolute)"
     )
     destination: str = Field(
-        ..., description="Destination file path (relative to working directory)"
+        ...,
+        description="Destination file path (relative to working directory or absolute)",
     )
 
 
@@ -99,7 +100,7 @@ async def read_file(
     Use this tool to read the content of a file with line-based pagination.
 
     Args:
-        file_path (str): Path to the file to read (relative to working directory)
+        file_path (str): Path to the file to read (relative to working directory or absolute)
         start_line (int): Starting line number (0-based)
         limit (int): Maximum number of lines to read (default: 500)
     """
@@ -156,7 +157,7 @@ async def write_file(
     If the file already exists, use edit_file instead.
 
     Args:
-        file_path (str): Path to the file to write (relative to working directory)
+        file_path (str): Path to the file to write (relative to working directory or absolute)
         content (str): Content to write to the file
     """
     working_dir = config.get("configurable", {}).get("working_dir")
@@ -195,7 +196,7 @@ async def edit_file(
     Use this tool to edit a file by replacing old content with new content.
 
     Args:
-        file_path (str): Path to the file to edit (relative to working directory)
+        file_path (str): Path to the file to edit (relative to working directory or absolute)
         edits (list[EditOperation]): Edit operations to apply sequentially
     """
     working_dir = config.get("configurable", {}).get("working_dir")
@@ -263,7 +264,7 @@ async def create_dir(
     Use this tool to create a directory recursively.
 
     Args:
-        dir_path (str): Path to the directory to create (relative to working directory)
+        dir_path (str): Path to the directory to create (relative to working directory or absolute)
     """
     working_dir = config.get("configurable", {}).get("working_dir")
     if not working_dir:
@@ -285,8 +286,8 @@ async def move_file(
     Use this tool to move a file from source to destination.
 
     Args:
-        source_path (str): Path to the source file (relative to working directory)
-        destination_path (str): Path to the destination (relative to working directory)
+        source_path (str): Path to the source file (relative to working directory or absolute)
+        destination_path (str): Path to the destination (relative to working directory or absolute)
     """
     working_dir = config.get("configurable", {}).get("working_dir")
     if not working_dir:
@@ -334,7 +335,7 @@ async def delete_file(
     Use this tool to delete a file.
 
     Args:
-        file_path (str): Path to the file to delete (relative to working directory)
+        file_path (str): Path to the file to delete (relative to working directory or absolute)
     """
     working_dir = config.get("configurable", {}).get("working_dir")
     if not working_dir:
@@ -357,7 +358,7 @@ async def insert_at_line(
     Use this tool to insert content at a specific line number.
 
     Args:
-        file_path (str): Path to the file (relative to working directory)
+        file_path (str): Path to the file (relative to working directory or absolute)
         line_number (int): Line number to insert at (1-based, content inserted before this line)
         content (str): Content to insert
     """
@@ -426,7 +427,7 @@ async def delete_dir(
     Use this tool to delete a directory recursively.
 
     Args:
-        dir_path (str): Path to the directory to delete (relative to working directory)
+        dir_path (str): Path to the directory to delete (relative to working directory or absolute)
     """
     working_dir = config.get("configurable", {}).get("working_dir")
     if not working_dir:

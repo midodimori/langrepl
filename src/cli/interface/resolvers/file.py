@@ -56,14 +56,14 @@ class FileResolver(Resolver):
         safe_pattern = quote(pattern) if pattern else ""
         commands = [
             (
-                f"git ls-files | xargs -n1 dirname | sort -u | grep -i {safe_pattern} | {head}"
+                f"git ls-files -z | xargs -0 -n1 dirname | sort -u | grep -i {safe_pattern} | {head}"
                 if pattern
-                else f"git ls-files | xargs -n1 dirname | sort -u | {head}"
+                else f"git ls-files -z | xargs -0 -n1 dirname | sort -u | {head}"
             ),
             (
-                f"fd --type d {safe_pattern} | {head}"
+                f"fd --type d -0 {safe_pattern} | tr '\\0' '\\n' | {head}"
                 if pattern
-                else f"fd --type d | {head}"
+                else f"fd --type d -0 | tr '\\0' '\\n' | {head}"
             ),
         ]
 

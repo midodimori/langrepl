@@ -99,15 +99,17 @@ class FileResolver(Resolver):
                 working_dir, limit=limit, pattern=fragment
             )
 
+            directory_set = set(directories)
+
             def sort_key(path: str):
                 parent = str(Path(path).parent) if "/" in path else ""
-                return parent, path not in set(directories), path
+                return parent, path not in directory_set, path
 
             all_candidates = sorted(files + directories, key=sort_key)
             start_position = ctx.get("start_position", 0)
 
             for candidate in all_candidates:
-                is_dir = candidate in directories
+                is_dir = candidate in directory_set
                 display_text = f"@:file:{candidate}{'/' if is_dir else ''}"
                 completion_text = f"@:file:{candidate}"
 

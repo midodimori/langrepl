@@ -27,8 +27,16 @@ class MessageHandler:
     async def handle(self, content: str) -> None:
         """Handle user message and get AI response."""
         try:
-            # Create a human message
-            human_message = HumanMessage(content=content)
+            reference_mapping = self.session.prefilled_reference_mapping.copy()
+            self.session.prefilled_reference_mapping.clear()
+
+            resolved_content = self.session.prompt.completer.resolve_refs(content)
+
+            human_message = HumanMessage(
+                content=resolved_content,
+                short_content=content,
+                additional_kwargs={"reference_mapping": reference_mapping},
+            )
 
             # Prepare graph config
             ctx = self.session.context

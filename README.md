@@ -49,10 +49,15 @@ https://github.com/user-attachments/assets/5d95e221-3883-44f8-9694-74c5e215b4e2
 - **uv** - Fast Python package
   installer ([install instructions](https://docs.astral.sh/uv/getting-started/installation/))
 - **ripgrep (rg)** - Fast search tool used by the grep_search functionality:
-    - macOS: `brew install ripgrep`
-    - Ubuntu/Debian: `sudo apt install ripgrep`
-    - Arch Linux: `sudo pacman -S ripgrep`
-    - Windows: `choco install ripgrep` or download from [releases](https://github.com/BurntSushi/ripgrep/releases)
+  - macOS: `brew install ripgrep`
+  - Ubuntu/Debian: `sudo apt install ripgrep`
+  - Arch Linux: `sudo pacman -S ripgrep`
+  - Windows: `choco install ripgrep` or download from [releases](https://github.com/BurntSushi/ripgrep/releases)
+- **fd** - Fast file finder used for file/directory completion (fallback when not in a Git repository):
+  - macOS: `brew install fd`
+  - Ubuntu/Debian: `sudo apt install fd-find`
+  - Arch Linux: `sudo pacman -S fd`
+  - Windows: `choco install fd` or download from [releases](https://github.com/sharkdp/fd/releases)
 - **Node.js & npm** (optional) - Required only if using MCP servers that run via npx
 
 ## Installation

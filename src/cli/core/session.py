@@ -42,6 +42,7 @@ class CLISession:
         self.running = False
         self.needs_reload = False
         self.prefilled_text: str | None = None
+        self.prefilled_reference_mapping: dict[str, str] = {}
 
     async def start(self, show_welcome: bool = True) -> None:
         """Start the interactive session."""
@@ -66,18 +67,16 @@ class CLISession:
 
         while self.running:
             try:
-                user_input = await self.prompt.get_input()
+                content, is_slash_command = await self.prompt.get_input()
 
-                if not user_input or not user_input.strip():
+                if not content:
                     continue
 
-                if user_input.startswith("/"):
-                    result = await self.command_handler.handle(user_input)
-                    if result:
-                        self.prefilled_text = result
+                if is_slash_command:
+                    await self.command_handler.handle(content)
                     continue
 
-                await self.message_handler.handle(user_input)
+                await self.message_handler.handle(content)
 
             except EOFError:
                 break

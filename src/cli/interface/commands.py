@@ -51,38 +51,29 @@ class CommandHandler:
             "/compress": self.cmd_compress,
         }
 
-    async def handle(self, command_line: str) -> str | None:
-        """Handle a slash command.
-
-        Returns:
-            Optional prefilled text for the prompt
-        """
+    async def handle(self, command_line: str) -> None:
+        """Handle a slash command."""
         if not command_line.startswith("/"):
             console.print_error("Commands must start with '/'")
-            return None
+            return
 
-        # Parse command and arguments
         try:
             parts = shlex.split(command_line)
             if not parts:
                 console.print_error("Empty command")
-                return None
+                return
 
             command = parts[0].lower()
             args = parts[1:] if len(parts) > 1 else []
 
-            # Execute command
             if command in self.commands:
-                result = await self.commands[command](args)
-                return result if isinstance(result, str) else None
+                await self.commands[command](args)
             else:
                 console.print_error(f"Unknown command: {command}")
                 await self.cmd_help([])
-                return None
 
         except Exception as e:
             console.print_error(f"Command error: {e}")
-            return None
 
     async def cmd_help(self, args: list[str]) -> None:
         """Show help information."""
@@ -127,9 +118,9 @@ class CommandHandler:
         """Resume conversation thread with interactive selector."""
         await self.resume_handler.handle()
 
-    async def cmd_replay(self, args: list[str]) -> str | None:
+    async def cmd_replay(self, args: list[str]) -> None:
         """Replay conversation from a previous human message."""
-        return await self.replay_handler.handle()
+        await self.replay_handler.handle()
 
     async def cmd_compress(self, args: list[str]) -> None:
         """Compress conversation history to a new thread."""

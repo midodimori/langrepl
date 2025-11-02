@@ -28,12 +28,8 @@ class ReplayHandler:
         """Initialize with reference to CLI session."""
         self.session = session
 
-    async def handle(self) -> str | None:
-        """Show interactive human message selector and replay from selected point.
-
-        Returns:
-            The selected human message text to prefill, or None if canceled.
-        """
+    async def handle(self) -> None:
+        """Show interactive human message selector and replay from selected point."""
         try:
             # Get human messages from the current thread
             human_messages = await self._get_human_messages()
@@ -65,7 +61,12 @@ class ReplayHandler:
                         f"Warning: Could not rewind conversation history: {e}"
                     )
 
-                return human_messages[selected_index]["text"]
+                selected_message = human_messages[selected_index]
+                self.session.prefilled_text = selected_message["text"]
+                if "reference_mapping" in selected_message:
+                    self.session.prefilled_reference_mapping = selected_message.get(
+                        "reference_mapping", {}
+                    )
 
             return None
 
@@ -129,13 +130,16 @@ class ReplayHandler:
                 has_new_messages = False
                 for msg in current_messages:
                     message_id = getattr(msg, "id", None) or id(msg)
-                    # This is a new message added in this checkpoint
                     if message_id not in prev_message_ids:
                         has_new_messages = True
                         if isinstance(msg, HumanMessage):
                             human_messages.append(
                                 {
-                                    "text": msg.text,
+                                    "text": getattr(msg, "short_content", None)
+                                    or msg.text,
+                                    "reference_mapping": msg.additional_kwargs.get(
+                                        "reference_mapping", {}
+                                    ),
                                     "all_messages_before": prev_messages.copy(),
                                     "channel_values": prev_channel_values,
                                     "checkpoint_id": prev_checkpoint_id,

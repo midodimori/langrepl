@@ -83,7 +83,8 @@ class Renderer:
     @staticmethod
     def render_user_message(message: HumanMessage) -> None:
         """Render user message."""
-        console.print(f"[prompt]{settings.cli.prompt_style}[/prompt]{message.text}")
+        content = getattr(message, "short_content", None) or message.text
+        console.print(f"[prompt]{settings.cli.prompt_style}[/prompt]{content}")
         console.print("")
 
     @staticmethod

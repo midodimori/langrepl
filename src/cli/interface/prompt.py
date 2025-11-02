@@ -2,12 +2,13 @@
 
 import asyncio
 import os
+import re
 import time
 from pathlib import Path
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
-from prompt_toolkit.completion import CompleteEvent, WordCompleter
+from prompt_toolkit.filters import completion_is_selected
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
@@ -17,22 +18,12 @@ from prompt_toolkit.styles import Style
 from prompt_toolkit.validation import Validator
 
 from src.cli.core.context import Context
+from src.cli.interface.completers import CompleterRouter
 from src.cli.theme import theme
 from src.core.config import ApprovalMode
 from src.core.constants import CONFIG_HISTORY_FILE_NAME
 from src.core.settings import settings
 from src.utils.cost import calculate_context_percentage, format_cost, format_tokens
-
-
-class SlashCommandCompleter(WordCompleter):
-    """Auto-completer for slash commands."""
-
-    def __init__(self, commands: list[str]):
-        super().__init__(commands, ignore_case=True, sentence=True)
-
-    def get_completions(self, document, complete_event: CompleteEvent):
-        # Let WordCompleter handle all the filtering naturally
-        yield from super().get_completions(document, complete_event)
 
 
 class MultilineValidator(Validator):
@@ -74,6 +65,7 @@ class InteractivePrompt:
         history_file.parent.mkdir(parents=True, exist_ok=True)
         self.history = FileHistory(str(history_file))
         self.session: PromptSession[str]
+        self.completer: CompleterRouter
         self.mode_change_callback = None
         self._last_ctrl_c_time: float | None = None
         self._ctrl_c_timeout = 0.5  # 500ms window for double-press detection
@@ -88,8 +80,12 @@ class InteractivePrompt:
         # Create style
         style = self._create_style()
 
-        # Create completer
-        completer = SlashCommandCompleter(self.commands)
+        # Create completer router for slash commands and @ references
+        self.completer = CompleterRouter(
+            commands=self.commands,
+            working_dir=Path(self.context.working_dir),
+            max_suggestions=settings.cli.max_autocomplete_suggestions,
+        )
 
         # Create validator
         validator = MultilineValidator(settings.cli.multiline_threshold)
@@ -98,7 +94,7 @@ class InteractivePrompt:
         self.session = PromptSession(
             history=self.history,
             auto_suggest=AutoSuggestFromHistory(),
-            completer=completer,
+            completer=self.completer,
             complete_style=CompleteStyle.COLUMN,
             key_bindings=kb,
             style=style,
@@ -110,6 +106,7 @@ class InteractivePrompt:
             wrap_lines=settings.cli.enable_word_wrap,
             mouse_support=False,
             complete_while_typing=True,
+            complete_in_thread=False,
             placeholder=self._get_placeholder,
             bottom_toolbar=self._get_bottom_toolbar,
         )
@@ -157,6 +154,66 @@ class InteractivePrompt:
             """Shift-Tab: Cycle approval mode."""
             if self.mode_change_callback:
                 self.mode_change_callback()
+
+        @kb.add(Keys.Enter, filter=completion_is_selected)
+        def _(event):
+            """Enter when completion is selected: apply completion."""
+            buffer = event.current_buffer
+            if buffer.complete_state:
+                current_completion = buffer.complete_state.current_completion
+                buffer.apply_completion(current_completion)
+
+                # For slash commands, submit immediately
+                if buffer.text.lstrip().startswith("/"):
+                    buffer.validate_and_handle()
+                # For @ references, add space and save mapping
+                else:
+                    buffer.insert_text(" ")
+                    match = re.search(r"(@:\w+:\S+)\s*$", buffer.text)
+                    if match:
+                        ref = match.group(1)
+                        resolved = self.completer.resolve_refs(ref)
+                        if self.cli_session:
+                            self.cli_session.prefilled_reference_mapping[ref] = resolved
+
+        @kb.add(Keys.Tab)
+        def _(event):
+            """Tab: apply first completion immediately."""
+            buffer = event.current_buffer
+
+            # If completion is already showing and selected, apply it
+            if buffer.complete_state and buffer.complete_state.current_completion:
+                current_completion = buffer.complete_state.current_completion
+                buffer.apply_completion(current_completion)
+
+                # For @ references, add space and save mapping
+                if not buffer.text.lstrip().startswith("/"):
+                    buffer.insert_text(" ")
+                    match = re.search(r"(@:\w+:\S+)\s*$", buffer.text)
+                    if match:
+                        ref = match.group(1)
+                        resolved = self.completer.resolve_refs(ref)
+                        if self.cli_session:
+                            self.cli_session.prefilled_reference_mapping[ref] = resolved
+            else:
+                # Start completion with first item selected
+                buffer.start_completion(select_first=True)
+                # Immediately apply the first completion
+                if buffer.complete_state and buffer.complete_state.current_completion:
+                    current_completion = buffer.complete_state.current_completion
+                    buffer.apply_completion(current_completion)
+
+                    # For @ references, add space and save mapping
+                    if not buffer.text.lstrip().startswith("/"):
+                        buffer.insert_text(" ")
+                        match = re.search(r"(@:\w+:\S+)\s*$", buffer.text)
+                        if match:
+                            ref = match.group(1)
+                            resolved = self.completer.resolve_refs(ref)
+                            if self.cli_session:
+                                self.cli_session.prefilled_reference_mapping[ref] = (
+                                    resolved
+                                )
 
         return kb
 
@@ -270,6 +327,9 @@ class InteractivePrompt:
                 "completion-menu.meta.completion.current": f"{theme.primary_text} bg:{theme.prompt_color}",
                 # Thread completion styling
                 "thread-completion": f"{theme.accent_color} bg:{theme.background_light}",
+                # File/directory completion styling
+                "file-completion": f"{theme.primary_text} bg:{theme.background_light}",
+                "dir-completion": f"{theme.info_color} bg:{theme.background_light}",
                 # Auto-suggestion styling
                 "auto-suggestion": f"{theme.muted_text} italic",
                 # Validation styling
@@ -291,22 +351,23 @@ class InteractivePrompt:
             }
         )
 
-    async def get_input(self) -> str:
+    async def get_input(self) -> tuple[str, bool]:
         """Get user input asynchronously."""
         try:
             prompt_text = [
                 ("class:prompt", settings.cli.prompt_style),
             ]
 
-            # Check for prefilled text from session
             default_text = ""
             if self.cli_session and self.cli_session.prefilled_text:
                 default_text = self.cli_session.prefilled_text
-                self.cli_session.prefilled_text = None  # Clear after using
+                self.cli_session.prefilled_text = None
 
             result = await self.session.prompt_async(prompt_text, default=default_text)  # type: ignore
             print()
-            return result.strip()
+
+            content = result.strip()
+            return content, content.startswith("/")
 
         except (KeyboardInterrupt, EOFError):
             raise

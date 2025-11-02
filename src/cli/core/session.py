@@ -66,18 +66,18 @@ class CLISession:
 
         while self.running:
             try:
-                user_input = await self.prompt.get_input()
+                content, short_content, is_slash_command = await self.prompt.get_input()
 
-                if not user_input or not user_input.strip():
+                if not content or not content.strip():
                     continue
 
-                if user_input.startswith("/"):
-                    result = await self.command_handler.handle(user_input)
+                if is_slash_command:
+                    result = await self.command_handler.handle(content)
                     if result:
                         self.prefilled_text = result
                     continue
 
-                await self.message_handler.handle(user_input)
+                await self.message_handler.handle(content, short_content)
 
             except EOFError:
                 break

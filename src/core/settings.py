@@ -96,6 +96,11 @@ class CLISettings(BaseModel):
         default="nano", description="Default text editor for /memory command"
     )
 
+    # Autocomplete settings
+    max_autocomplete_suggestions: int = Field(
+        default=10, description="Maximum number of autocomplete suggestions to show"
+    )
+
 
 class ServerSettings(BaseModel):
     """LangGraph server settings."""

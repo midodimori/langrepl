@@ -24,11 +24,11 @@ class MessageHandler:
         self.session = session
         self.interrupt_handler = InterruptHandler()
 
-    async def handle(self, content: str) -> None:
+    async def handle(self, content: str, short_content: str) -> None:
         """Handle user message and get AI response."""
         try:
             # Create a human message
-            human_message = HumanMessage(content=content)
+            human_message = HumanMessage(content=content, short_content=short_content)
 
             # Prepare graph config
             ctx = self.session.context

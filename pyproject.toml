@@ -73,5 +73,5 @@ dev = [
 packages = ["src", "resources"]
 
 [project.scripts]
-langrepl = "src.cli.core.app:cli"
-lg = "src.cli.core.app:cli"
+langrepl = "src.cli.bootstrap.app:cli"
+lg = "src.cli.bootstrap.app:cli"

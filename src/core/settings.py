@@ -88,9 +88,6 @@ class CLISettings(BaseModel):
     prompt_style: str = Field(default="❯ ", description="Prompt style")
 
     # Behavior settings
-    multiline_threshold: int = Field(
-        default=2, description="Lines before multiline mode"
-    )
     enable_word_wrap: bool = Field(default=True, description="Enable word wrap")
     editor: str = Field(
         default="nano", description="Default text editor for /memory command"

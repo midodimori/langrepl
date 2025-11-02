@@ -1,16 +1,4 @@
-from typing import cast
-from unittest.mock import Mock
-
-from langchain_core.tools import BaseTool
-
 from src.agents.factory import GraphFactory
-
-
-def create_mock_tool(name: str) -> BaseTool:
-    """Create a mock tool with proper typing."""
-    mock = Mock(spec=BaseTool)
-    mock.name = name
-    return cast(BaseTool, mock)
 
 
 class TestParseToolReferences:
@@ -91,7 +79,7 @@ class TestParseToolReferences:
 
 
 class TestFilterTools:
-    def test_filter_by_exact_patterns(self):
+    def test_filter_by_exact_patterns(self, create_mock_tool):
         mock_tool1 = create_mock_tool("tool1")
         mock_tool2 = create_mock_tool("tool2")
         mock_tool3 = create_mock_tool("tool3")
@@ -106,7 +94,7 @@ class TestFilterTools:
         assert len(result) == 2
         assert {t.name for t in result} == {"tool1", "tool3"}
 
-    def test_filter_none_patterns_returns_empty(self):
+    def test_filter_none_patterns_returns_empty(self, create_mock_tool):
         mock_tool = create_mock_tool("tool1")
         all_tools = [mock_tool]
         tool_dict = GraphFactory._build_tool_dict(all_tools)
@@ -116,7 +104,7 @@ class TestFilterTools:
 
         assert result == []
 
-    def test_filter_empty_patterns_returns_empty(self):
+    def test_filter_empty_patterns_returns_empty(self, create_mock_tool):
         mock_tool = create_mock_tool("tool1")
         all_tools = [mock_tool]
         tool_dict = GraphFactory._build_tool_dict(all_tools)
@@ -126,7 +114,7 @@ class TestFilterTools:
 
         assert result == []
 
-    def test_filter_no_matches(self):
+    def test_filter_no_matches(self, create_mock_tool):
         mock_tool1 = create_mock_tool("tool1")
         mock_tool2 = create_mock_tool("tool2")
 
@@ -139,7 +127,7 @@ class TestFilterTools:
 
         assert result == []
 
-    def test_filter_wildcard_all(self):
+    def test_filter_wildcard_all(self, create_mock_tool):
         mock_tool1 = create_mock_tool("tool1")
         mock_tool2 = create_mock_tool("tool2")
 
@@ -152,7 +140,7 @@ class TestFilterTools:
 
         assert len(result) == 2
 
-    def test_filter_wildcard_module(self):
+    def test_filter_wildcard_module(self, create_mock_tool):
         mock_tool1 = create_mock_tool("read_file")
         mock_tool2 = create_mock_tool("write_file")
         mock_tool3 = create_mock_tool("fetch_url")
@@ -171,7 +159,7 @@ class TestFilterTools:
         assert len(result) == 2
         assert {t.name for t in result} == {"read_file", "write_file"}
 
-    def test_filter_wildcard_tool_name(self):
+    def test_filter_wildcard_tool_name(self, create_mock_tool):
         mock_tool1 = create_mock_tool("read_file")
         mock_tool2 = create_mock_tool("read_dir")
         mock_tool3 = create_mock_tool("write_file")

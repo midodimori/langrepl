@@ -1,11 +1,6 @@
 import pytest
 
-from src.core.config import (
-    BatchAgentConfig,
-    CheckpointerProvider,
-    LLMProvider,
-    ToolApprovalRule,
-)
+from src.core.config import BatchAgentConfig, ToolApprovalRule
 
 
 class TestToolApprovalRuleMatchesCall:
@@ -59,68 +54,28 @@ class TestToolApprovalRuleMatchesCall:
 
 
 class TestBatchAgentConfigGetDefaultAgent:
-    def test_explicit_default(self):
-        from src.core.config import AgentConfig, CheckpointerConfig, LLMConfig
-
-        config = BatchAgentConfig(
-            agents=[
-                AgentConfig(
-                    name="agent1",
-                    default=False,
-                    llm=LLMConfig(
-                        provider=LLMProvider.OPENAI,
-                        model="gpt-4",
-                        max_tokens=1000,
-                        temperature=0.7,
-                    ),
-                    checkpointer=CheckpointerConfig(type=CheckpointerProvider.MEMORY),
-                ),
-                AgentConfig(
-                    name="agent2",
-                    default=True,
-                    llm=LLMConfig(
-                        provider=LLMProvider.OPENAI,
-                        model="gpt-4",
-                        max_tokens=1000,
-                        temperature=0.7,
-                    ),
-                    checkpointer=CheckpointerConfig(type=CheckpointerProvider.MEMORY),
-                ),
-            ]
+    def test_explicit_default(self, mock_agent_config):
+        agent1 = mock_agent_config.model_copy(
+            update={"name": "agent1", "default": False}
         )
+        agent2 = mock_agent_config.model_copy(
+            update={"name": "agent2", "default": True}
+        )
+
+        config = BatchAgentConfig(agents=[agent1, agent2])
         default_agent = config.get_default_agent()
         assert default_agent is not None
         assert default_agent.name == "agent2"
 
-    def test_no_explicit_default_returns_first(self):
-        from src.core.config import AgentConfig, CheckpointerConfig, LLMConfig
-
-        config = BatchAgentConfig(
-            agents=[
-                AgentConfig(
-                    name="agent1",
-                    default=False,
-                    llm=LLMConfig(
-                        provider=LLMProvider.OPENAI,
-                        model="gpt-4",
-                        max_tokens=1000,
-                        temperature=0.7,
-                    ),
-                    checkpointer=CheckpointerConfig(type=CheckpointerProvider.MEMORY),
-                ),
-                AgentConfig(
-                    name="agent2",
-                    default=False,
-                    llm=LLMConfig(
-                        provider=LLMProvider.OPENAI,
-                        model="gpt-4",
-                        max_tokens=1000,
-                        temperature=0.7,
-                    ),
-                    checkpointer=CheckpointerConfig(type=CheckpointerProvider.MEMORY),
-                ),
-            ]
+    def test_no_explicit_default_returns_first(self, mock_agent_config):
+        agent1 = mock_agent_config.model_copy(
+            update={"name": "agent1", "default": False}
         )
+        agent2 = mock_agent_config.model_copy(
+            update={"name": "agent2", "default": False}
+        )
+
+        config = BatchAgentConfig(agents=[agent1, agent2])
         default_agent = config.get_default_agent()
         assert default_agent is not None
         assert default_agent.name == "agent1"
@@ -129,33 +84,11 @@ class TestBatchAgentConfigGetDefaultAgent:
         config = BatchAgentConfig(agents=[])
         assert config.get_default_agent() is None
 
-    def test_get_agent_by_name(self):
-        from src.core.config import AgentConfig, CheckpointerConfig, LLMConfig
+    def test_get_agent_by_name(self, mock_agent_config):
+        agent1 = mock_agent_config.model_copy(update={"name": "agent1"})
+        agent2 = mock_agent_config.model_copy(update={"name": "agent2"})
 
-        config = BatchAgentConfig(
-            agents=[
-                AgentConfig(
-                    name="agent1",
-                    llm=LLMConfig(
-                        provider=LLMProvider.OPENAI,
-                        model="gpt-4",
-                        max_tokens=1000,
-                        temperature=0.7,
-                    ),
-                    checkpointer=CheckpointerConfig(type=CheckpointerProvider.MEMORY),
-                ),
-                AgentConfig(
-                    name="agent2",
-                    llm=LLMConfig(
-                        provider=LLMProvider.OPENAI,
-                        model="gpt-4",
-                        max_tokens=1000,
-                        temperature=0.7,
-                    ),
-                    checkpointer=CheckpointerConfig(type=CheckpointerProvider.MEMORY),
-                ),
-            ]
-        )
+        config = BatchAgentConfig(agents=[agent1, agent2])
         agent2 = config.get_agent_config("agent2")
         assert agent2 is not None
         assert agent2.name == "agent2"
@@ -163,59 +96,23 @@ class TestBatchAgentConfigGetDefaultAgent:
 
 
 class TestBatchAgentConfigValidation:
-    def test_multiple_defaults_raises_error(self):
-        from src.core.config import AgentConfig, CheckpointerConfig, LLMConfig
+    def test_multiple_defaults_raises_error(self, mock_agent_config):
+        agent1 = mock_agent_config.model_copy(
+            update={"name": "agent1", "default": True}
+        )
+        agent2 = mock_agent_config.model_copy(
+            update={"name": "agent2", "default": True}
+        )
 
         with pytest.raises(ValueError, match="Multiple agents marked as default"):
-            BatchAgentConfig(
-                agents=[
-                    AgentConfig(
-                        name="agent1",
-                        default=True,
-                        llm=LLMConfig(
-                            provider=LLMProvider.OPENAI,
-                            model="gpt-4",
-                            max_tokens=1000,
-                            temperature=0.7,
-                        ),
-                        checkpointer=CheckpointerConfig(
-                            type=CheckpointerProvider.MEMORY
-                        ),
-                    ),
-                    AgentConfig(
-                        name="agent2",
-                        default=True,
-                        llm=LLMConfig(
-                            provider=LLMProvider.OPENAI,
-                            model="gpt-4",
-                            max_tokens=1000,
-                            temperature=0.7,
-                        ),
-                        checkpointer=CheckpointerConfig(
-                            type=CheckpointerProvider.MEMORY
-                        ),
-                    ),
-                ]
-            )
+            BatchAgentConfig(agents=[agent1, agent2])
 
-    def test_single_default_is_valid(self):
-        from src.core.config import AgentConfig, CheckpointerConfig, LLMConfig
-
-        config = BatchAgentConfig(
-            agents=[
-                AgentConfig(
-                    name="agent1",
-                    default=True,
-                    llm=LLMConfig(
-                        provider=LLMProvider.OPENAI,
-                        model="gpt-4",
-                        max_tokens=1000,
-                        temperature=0.7,
-                    ),
-                    checkpointer=CheckpointerConfig(type=CheckpointerProvider.MEMORY),
-                ),
-            ]
+    def test_single_default_is_valid(self, mock_agent_config):
+        agent1 = mock_agent_config.model_copy(
+            update={"name": "agent1", "default": True}
         )
+
+        config = BatchAgentConfig(agents=[agent1])
         default_agent = config.get_default_agent()
         assert default_agent is not None
         assert default_agent.name == "agent1"

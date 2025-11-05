@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 
 
@@ -7,12 +5,11 @@ import pytest
 def create_test_graph():
     """Factory fixture for creating test graphs with tools."""
 
-    def _create(tools: list, temp_dir: Path):
+    def _create(tools: list):
         """Create a simple graph with tools for testing.
 
         Args:
             tools: List of tools to include in the graph
-            temp_dir: Temporary directory for working_dir config
 
         Returns:
             Compiled LangGraph application

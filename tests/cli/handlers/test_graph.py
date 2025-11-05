@@ -19,12 +19,17 @@ class TestGraphHandler:
     """Tests for GraphHandler class."""
 
     @pytest.mark.asyncio
-    async def test_handle_with_no_graph(self, mock_session):
+    @patch("src.cli.handlers.graph.console")
+    async def test_handle_with_no_graph(self, mock_console, mock_session):
         """Test that handle shows error when no graph available."""
         handler = GraphHandler(mock_session)
         mock_session.graph = None
 
         await handler.handle()
+
+        mock_console.print_error.assert_called_once_with(
+            "No graph available. Please start a conversation first."
+        )
 
     @pytest.mark.asyncio
     async def test_handle_renders_terminal_output(
@@ -73,13 +78,18 @@ class TestGraphHandler:
             )
 
     @pytest.mark.asyncio
-    async def test_handle_with_exception(self, mock_session):
+    @patch("src.cli.handlers.graph.console")
+    async def test_handle_with_exception(self, mock_console, mock_session):
         """Test that handle handles exceptions gracefully."""
         handler = GraphHandler(mock_session)
 
         mock_session.graph.get_graph.side_effect = Exception("Test error")
 
         await handler.handle()
+
+        mock_console.print_error.assert_called_once()
+        error_message = mock_console.print_error.call_args[0][0]
+        assert "Test error" in error_message
 
     @pytest.mark.asyncio
     @patch("src.cli.handlers.graph.webbrowser.open")

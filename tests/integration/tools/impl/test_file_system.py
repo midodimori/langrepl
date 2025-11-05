@@ -21,7 +21,7 @@ from src.tools.impl.file_system import (
 @pytest.mark.asyncio
 async def test_write_and_read_file(create_test_graph, temp_dir: Path):
     """Test writing and reading a file through the graph."""
-    app = create_test_graph([write_file, read_file], temp_dir)
+    app = create_test_graph([write_file, read_file])
 
     # Simulate tool call to write file
     initial_state = {
@@ -62,7 +62,7 @@ async def test_edit_file(create_test_graph, temp_dir: Path):
     # Setup: create initial file
     (temp_dir / "edit.txt").write_text("line 1\nline 2\nline 3")
 
-    app = create_test_graph([edit_file], temp_dir)
+    app = create_test_graph([edit_file])
 
     from src.tools.impl.file_system import EditOperation
 
@@ -108,7 +108,7 @@ async def test_edit_file(create_test_graph, temp_dir: Path):
 @pytest.mark.asyncio
 async def test_create_and_delete_dir(create_test_graph, temp_dir: Path):
     """Test creating and deleting directories through the graph."""
-    app = create_test_graph([create_dir, delete_dir], temp_dir)
+    app = create_test_graph([create_dir, delete_dir])
 
     # Create directory
     initial_state = {
@@ -147,7 +147,7 @@ async def test_delete_file(create_test_graph, temp_dir: Path):
     # Setup: create file
     (temp_dir / "delete_me.txt").write_text("content")
 
-    app = create_test_graph([delete_file], temp_dir)
+    app = create_test_graph([delete_file])
 
     initial_state = {
         "messages": [
@@ -185,7 +185,7 @@ async def test_insert_at_line(create_test_graph, temp_dir: Path):
     # Setup: create file with content
     (temp_dir / "insert.txt").write_text("line 1\nline 2\nline 3\n")
 
-    app = create_test_graph([insert_at_line], temp_dir)
+    app = create_test_graph([insert_at_line])
 
     initial_state = {
         "messages": [
@@ -230,7 +230,7 @@ async def test_move_file(create_test_graph, temp_dir: Path):
     # Setup: create file
     (temp_dir / "source.txt").write_text("content")
 
-    app = create_test_graph([move_file], temp_dir)
+    app = create_test_graph([move_file])
 
     initial_state = {
         "messages": [
@@ -274,7 +274,7 @@ async def test_move_multiple_files(create_test_graph, temp_dir: Path):
     (temp_dir / "file1.txt").write_text("content1")
     (temp_dir / "file2.txt").write_text("content2")
 
-    app = create_test_graph([move_multiple_files], temp_dir)
+    app = create_test_graph([move_multiple_files])
 
     from src.tools.impl.file_system import MoveOperation
 

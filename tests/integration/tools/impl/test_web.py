@@ -19,7 +19,7 @@ async def test_fetch_web_content(
     temp_dir: Path,
 ):
     """Test fetching web content through the graph."""
-    app = create_test_graph([fetch_web_content], temp_dir)
+    app = create_test_graph([fetch_web_content])
 
     mock_fetch.return_value = (
         "<html><body><h1>Test Page</h1><p>Content</p></body></html>"
@@ -70,7 +70,7 @@ async def test_fetch_web_content_no_content(
     temp_dir: Path,
 ):
     """Test fetching web content when extraction fails."""
-    app = create_test_graph([fetch_web_content], temp_dir)
+    app = create_test_graph([fetch_web_content])
 
     mock_fetch.return_value = "<html><body></body></html>"
     mock_extract.return_value = None
@@ -116,7 +116,7 @@ async def test_fetch_web_content_network_error(
     temp_dir: Path,
 ):
     """Test fetching web content with network error."""
-    app = create_test_graph([fetch_web_content], temp_dir)
+    app = create_test_graph([fetch_web_content])
 
     mock_fetch.return_value = None
 

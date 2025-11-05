@@ -71,14 +71,22 @@ def mock_renderer():
     return renderer
 
 
+async def _empty_async_iter():
+    """Empty async iterator for mock completions."""
+    return
+    yield  # noqa: unreachable
+
+
 @pytest.fixture
-def mock_completer(temp_dir):
+def mock_completer():
     """Create a mock completer router for testing."""
     from src.cli.completers.router import CompleterRouter
 
     completer = MagicMock(spec=CompleterRouter)
     completer.resolve_refs = MagicMock(side_effect=lambda x: x)
-    completer.get_completions_async = AsyncMock(return_value=[])
+    completer.get_completions_async = MagicMock(
+        side_effect=lambda *_: _empty_async_iter()
+    )
     return completer
 
 

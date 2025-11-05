@@ -222,7 +222,6 @@ class Initializer:
         Returns:
             Formatted user memory string for prompt injection, or empty string if no memory
         """
-        import asyncio
 
         memory_path = working_dir / CONFIG_MEMORY_FILE_NAME
         if memory_path.exists():

@@ -19,9 +19,7 @@ def mock_graph(mock_checkpointer):
 
 
 @pytest.fixture
-def mock_initializer(
-    mock_agent_config, mock_llm_config, mock_checkpointer, mock_graph, temp_dir
-):
+def mock_initializer(mock_agent_config, mock_llm_config, mock_checkpointer, mock_graph):
     """Create a mock initializer for testing."""
     initializer = MagicMock()
     initializer.load_agent_config = AsyncMock(return_value=mock_agent_config)
@@ -68,5 +66,5 @@ def initializer():
 @pytest_asyncio.fixture
 async def config_dir(temp_dir, initializer):
     """Create and initialize config directory for tests."""
-    await initializer._ensure_config_dir(temp_dir)  # noqa: SLF001
+    await initializer._ensure_config_dir(temp_dir)
     return temp_dir

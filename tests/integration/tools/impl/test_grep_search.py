@@ -15,7 +15,7 @@ async def test_grep_search_content(create_test_graph, temp_dir: Path):
     (temp_dir / "test1.py").write_text('def hello():\n    print("hello world")\n')
     (temp_dir / "test2.py").write_text('def goodbye():\n    print("goodbye")\n')
 
-    app = create_test_graph([grep_search], temp_dir)
+    app = create_test_graph([grep_search])
 
     initial_state = {
         "messages": [
@@ -61,7 +61,7 @@ async def test_grep_search_files(create_test_graph, temp_dir: Path):
     (temp_dir / "hello_world.py").write_text("pass")
     (temp_dir / "test.py").write_text("pass")
 
-    app = create_test_graph([grep_search], temp_dir)
+    app = create_test_graph([grep_search])
 
     initial_state = {
         "messages": [
@@ -107,7 +107,7 @@ async def test_grep_search_both(create_test_graph, temp_dir: Path):
     (temp_dir / "hello_file.py").write_text('print("hello")')
     (temp_dir / "test.py").write_text("def hello(): pass")
 
-    app = create_test_graph([grep_search], temp_dir)
+    app = create_test_graph([grep_search])
 
     initial_state = {
         "messages": [
@@ -154,7 +154,7 @@ async def test_grep_search_no_matches(create_test_graph, temp_dir: Path):
     # Setup: create files without the search term
     (temp_dir / "test.py").write_text('print("goodbye")')
 
-    app = create_test_graph([grep_search], temp_dir)
+    app = create_test_graph([grep_search])
 
     initial_state = {
         "messages": [

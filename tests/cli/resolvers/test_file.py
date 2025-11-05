@@ -1,6 +1,7 @@
 """Tests for FileResolver."""
 
 from pathlib import Path
+from shlex import quote
 from unittest.mock import patch
 
 import pytest
@@ -71,7 +72,7 @@ class TestFileResolverGetTrackedFiles:
         await FileResolver._get_tracked_files(temp_dir, pattern="$(malicious)")
 
         call_args = mock_exec.call_args[0][0][2]
-        assert "'$(malicious)'" in call_args or '"$(malicious)"' in call_args
+        assert quote("$(malicious)") in call_args
 
 
 class TestFileResolverGetDirectories:
@@ -156,7 +157,7 @@ class TestFileResolverResolve:
         expected = str((temp_dir / ".." / "test.py").resolve())
         assert result == expected
 
-    def test_resolve_with_invalid_working_dir_returns_original(self, temp_dir):
+    def test_resolve_with_invalid_working_dir_returns_original(self):
         """Test resolve returns original ref when path resolution fails."""
         resolver = FileResolver()
         ctx = {"working_dir": ""}
@@ -208,8 +209,8 @@ class TestFileResolverComplete:
 
         completions = await resolver.complete("", ctx, limit=10)
 
-        dir_completion = [c for c in completions if "src" in c.text][0]
-        file_completion = [c for c in completions if "file.py" in c.text][0]
+        dir_completion = next(c for c in completions if "src" in c.text)
+        file_completion = next(c for c in completions if "file.py" in c.text)
 
         assert "@:file:src/" in str(dir_completion.display)
         assert dir_completion.text == "@:file:src"

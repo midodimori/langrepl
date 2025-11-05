@@ -110,7 +110,7 @@ class TestCompleterRouter:
 
         commands = ["/help"]
         router = CompleterRouter(commands, temp_dir)
-        text = f"check @:file:test.txt"
+        text = "check @:file:test.txt"
 
         result = router.resolve_refs(text)
 

@@ -137,17 +137,26 @@ class TestCompressionHandler:
             mock_session.renderer.render_message.assert_called()
 
     @pytest.mark.asyncio
+    @patch("src.cli.handlers.compress.console.console.status")
+    @patch("src.cli.handlers.compress.compress_messages")
+    @patch("src.cli.handlers.compress.calculate_message_tokens")
+    @patch("src.cli.handlers.compress.initializer.llm_factory")
     @patch("src.cli.handlers.compress.initializer.load_agents_config")
     @patch("src.cli.handlers.compress.initializer.get_checkpointer")
     async def test_handle_uses_custom_compression_config(
         self,
         mock_get_checkpointer,
         mock_load_agents,
+        mock_llm_factory,
+        mock_calc_tokens,
+        mock_compress,
+        mock_status,
         mock_session,
         mock_agent_config,
         mock_llm_config,
         mock_checkpointer,
         mock_checkpointer_tuple,
+        sample_messages,
     ):
         """Test that handle uses custom compression config when available."""
         handler = CompressionHandler(mock_session)
@@ -162,19 +171,25 @@ class TestCompressionHandler:
         mock_config_data.get_agent_config.return_value = mock_agent_config
         mock_load_agents.return_value = mock_config_data
 
-        checkpoint_2 = mock_checkpointer_tuple.checkpoint.copy()
-        checkpoint_2["channel_values"] = {"messages": []}
-        empty_checkpoint_2 = CheckpointTuple(
+        checkpoint = mock_checkpointer_tuple.checkpoint.copy()
+        checkpoint["channel_values"] = {"messages": sample_messages}
+        checkpoint_with_messages = CheckpointTuple(
             config=mock_checkpointer_tuple.config,
-            checkpoint=checkpoint_2,
+            checkpoint=checkpoint,
             metadata=mock_checkpointer_tuple.metadata,
             parent_config=mock_checkpointer_tuple.parent_config,
             pending_writes=mock_checkpointer_tuple.pending_writes,
         )
-        mock_checkpointer.aget_tuple.return_value = empty_checkpoint_2
+        mock_checkpointer.aget_tuple.return_value = checkpoint_with_messages
         mock_get_checkpointer.return_value.__aenter__.return_value = mock_checkpointer
 
+        mock_llm_factory.create.return_value = MagicMock()
+        mock_calc_tokens.return_value = 1000
+        mock_compress.return_value = [sample_messages[0]]
+
         await handler.handle()
+
+        mock_llm_factory.create.assert_called_once_with(compression_llm)
 
     @pytest.mark.asyncio
     @patch("src.cli.handlers.compress.initializer.load_agents_config")

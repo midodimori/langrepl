@@ -29,14 +29,18 @@ class TestModelHandler:
         mock_llms_config.llms = [mock_agent_config.llm]
         mock_load_llms.return_value = mock_llms_config
 
-        with patch.object(
-            handler,
-            "_get_agent_selection",
-            return_value=("agent", "test-agent", mock_agent_config),
+        with (
+            patch.object(
+                handler,
+                "_get_agent_selection",
+                return_value=("agent", "test-agent", mock_agent_config),
+            ),
+            patch("src.cli.handlers.models.console") as mock_console,
         ):
             await handler.handle()
 
             mock_load_agent.assert_called_once()
+            mock_console.print_error.assert_called_once()
 
     @pytest.mark.asyncio
     @patch("src.cli.handlers.models.initializer.update_agent_llm")
@@ -220,6 +224,10 @@ class TestModelHandler:
         formatted = ModelHandler._format_agent_list(agents, 0)
 
         assert formatted is not None
+        # Verify the formatted text contains the agent name and model
+        formatted_str = "".join(str(item[1]) for item in formatted)
+        assert "test-agent" in formatted_str
+        assert mock_agent_config.llm.alias in formatted_str
 
     def test_format_model_list_formats_correctly(self, mock_llm_config):
         """Test that _format_model_list formats models correctly."""

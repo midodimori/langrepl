@@ -18,7 +18,6 @@ async def test_memory_file_workflow(create_test_graph, temp_dir: Path):
     """Test memory file operations through the graph."""
     app = create_test_graph(
         [write_memory_file, read_memory_file, list_memory_files, edit_memory_file],
-        temp_dir,
     )
 
     # Write memory file
@@ -60,7 +59,7 @@ async def test_memory_file_workflow(create_test_graph, temp_dir: Path):
 @pytest.mark.asyncio
 async def test_memory_file_list(create_test_graph, temp_dir: Path):
     """Test listing memory files through the graph."""
-    app = create_test_graph([write_memory_file, list_memory_files], temp_dir)
+    app = create_test_graph([write_memory_file, list_memory_files])
 
     # First write some files
     initial_state = {
@@ -123,7 +122,7 @@ async def test_memory_file_list(create_test_graph, temp_dir: Path):
 @pytest.mark.asyncio
 async def test_read_nonexistent_memory_file(create_test_graph, temp_dir: Path):
     """Test reading a non-existent memory file."""
-    app = create_test_graph([read_memory_file], temp_dir)
+    app = create_test_graph([read_memory_file])
 
     initial_state = {
         "messages": [

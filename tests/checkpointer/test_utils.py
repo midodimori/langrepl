@@ -9,13 +9,13 @@ class TestGetCheckpointHistory:
     @pytest.mark.asyncio
     async def test_single_checkpoint_no_parent(self):
         mock_checkpointer = Mock()
-        mock_checkpoint = Mock()
-        mock_checkpoint.parent_config = None
+        checkpoint = Mock()
+        checkpoint.parent_config = None
 
-        result = await get_checkpoint_history(mock_checkpointer, mock_checkpoint)
+        result = await get_checkpoint_history(mock_checkpointer, checkpoint)
 
         assert len(result) == 1
-        assert result[0] == mock_checkpoint
+        assert result[0] == checkpoint
 
     @pytest.mark.asyncio
     async def test_multiple_checkpoints_linear_history(self):

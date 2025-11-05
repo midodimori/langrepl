@@ -1,7 +1,7 @@
 from unittest.mock import Mock
 
 import pytest
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.messages import HumanMessage
 
 from src.agents.react_agent import (
     _get_prompt_runnable,
@@ -10,64 +10,25 @@ from src.agents.react_agent import (
 
 
 class TestValidateChatHistory:
-    def test_valid_history_with_tool_results(self):
-        messages = [
-            HumanMessage(content="test"),
-            AIMessage(
-                content="", tool_calls=[{"id": "call_123", "name": "tool1", "args": {}}]
-            ),
-            ToolMessage(content="result", tool_call_id="call_123"),
-        ]
-        _validate_chat_history(messages)
+    def test_valid_history_with_tool_results(self, tool_call_messages):
+        _validate_chat_history(tool_call_messages["single_resolved"])
 
-    def test_invalid_history_missing_tool_result(self):
-        messages = [
-            HumanMessage(content="test"),
-            AIMessage(
-                content="", tool_calls=[{"id": "call_123", "name": "tool1", "args": {}}]
-            ),
-        ]
-
+    def test_invalid_history_missing_tool_result(self, tool_call_messages):
         with pytest.raises(ValueError, match="do not have a corresponding ToolMessage"):
-            _validate_chat_history(messages)
+            _validate_chat_history(tool_call_messages["single_unresolved"])
 
     def test_empty_history(self):
         _validate_chat_history([])
 
-    def test_no_tool_calls(self):
-        messages = [HumanMessage(content="test"), AIMessage(content="response")]
-        _validate_chat_history(messages)
+    def test_no_tool_calls(self, sample_messages):
+        _validate_chat_history(sample_messages)
 
-    def test_multiple_tool_calls_all_resolved(self):
-        messages = [
-            HumanMessage(content="test"),
-            AIMessage(
-                content="",
-                tool_calls=[
-                    {"id": "call_1", "name": "tool1", "args": {}},
-                    {"id": "call_2", "name": "tool2", "args": {}},
-                ],
-            ),
-            ToolMessage(content="result1", tool_call_id="call_1"),
-            ToolMessage(content="result2", tool_call_id="call_2"),
-        ]
-        _validate_chat_history(messages)
+    def test_multiple_tool_calls_all_resolved(self, tool_call_messages):
+        _validate_chat_history(tool_call_messages["multiple_resolved"])
 
-    def test_multiple_tool_calls_partial_resolution(self):
-        messages = [
-            HumanMessage(content="test"),
-            AIMessage(
-                content="",
-                tool_calls=[
-                    {"id": "call_1", "name": "tool1", "args": {}},
-                    {"id": "call_2", "name": "tool2", "args": {}},
-                ],
-            ),
-            ToolMessage(content="result1", tool_call_id="call_1"),
-        ]
-
+    def test_multiple_tool_calls_partial_resolution(self, tool_call_messages):
         with pytest.raises(ValueError, match="do not have a corresponding ToolMessage"):
-            _validate_chat_history(messages)
+            _validate_chat_history(tool_call_messages["multiple_partial"])
 
 
 class TestGetPromptRunnable:

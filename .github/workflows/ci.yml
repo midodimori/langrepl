@@ -35,9 +35,9 @@ jobs:
       - name: Install system dependencies
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            sudo apt-get update && sudo apt-get install -y ripgrep tree
+            sudo apt-get update && sudo apt-get install -y ripgrep tree fd-find && sudo ln -s $(which fdfind) /usr/local/bin/fd
           elif [ "$RUNNER_OS" == "macOS" ]; then
-            brew install ripgrep tree
+            brew install ripgrep tree fd
           fi
 
       - name: Run pre-commit validation

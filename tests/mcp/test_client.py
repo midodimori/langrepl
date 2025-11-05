@@ -1,29 +1,13 @@
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from langchain_core.tools import BaseTool
-from pydantic import BaseModel
 
 from src.mcp.client import MCPClient
 
 
-def create_mock_tool(name: str) -> BaseTool:
-    """Create a proper mock tool with required attributes."""
-
-    class MockToolArgs(BaseModel):
-        pass
-
-    mock_tool = Mock(spec=BaseTool)
-    mock_tool.name = name
-    mock_tool.description = f"Mock tool {name}"
-    mock_tool.args_schema = MockToolArgs
-    mock_tool.handle_tool_error = False
-    return mock_tool
-
-
 class TestMCPClientGetTools:
     @pytest.mark.asyncio
-    async def test_get_tools_without_filters(self):
+    async def test_get_tools_without_filters(self, create_mock_tool):
         mock_tool1 = create_mock_tool("tool1")
         mock_tool2 = create_mock_tool("tool2")
 
@@ -35,7 +19,7 @@ class TestMCPClientGetTools:
         assert len(tools) == 2
 
     @pytest.mark.asyncio
-    async def test_get_tools_with_include_filter(self):
+    async def test_get_tools_with_include_filter(self, create_mock_tool):
         mock_tool1 = create_mock_tool("tool1")
         mock_tool2 = create_mock_tool("tool2")
 
@@ -54,7 +38,7 @@ class TestMCPClientGetTools:
         assert tools[0].name == "tool1"
 
     @pytest.mark.asyncio
-    async def test_get_tools_with_exclude_filter(self):
+    async def test_get_tools_with_exclude_filter(self, create_mock_tool):
         mock_tool1 = create_mock_tool("tool1")
         mock_tool2 = create_mock_tool("tool2")
 
@@ -73,7 +57,7 @@ class TestMCPClientGetTools:
         assert tools[0].name == "tool1"
 
     @pytest.mark.asyncio
-    async def test_include_and_exclude_raises_error(self):
+    async def test_include_and_exclude_raises_error(self, create_mock_tool):
         mock_tool = create_mock_tool("tool1")
 
         tool_filters = {"server1": {"include": ["tool1"], "exclude": ["tool2"]}}
@@ -90,7 +74,7 @@ class TestMCPClientGetTools:
         assert len(tools) == 0
 
     @pytest.mark.asyncio
-    async def test_multiple_servers(self):
+    async def test_multiple_servers(self, create_mock_tool):
         mock_tool1 = create_mock_tool("tool1")
         mock_tool2 = create_mock_tool("tool2")
 
@@ -119,7 +103,7 @@ class TestMCPClientGetTools:
         assert len(tools) == 0
 
     @pytest.mark.asyncio
-    async def test_tools_wrapped_with_approval(self):
+    async def test_tools_wrapped_with_approval(self, create_mock_tool):
         mock_tool = create_mock_tool("tool1")
 
         client = MCPClient(connections={"server1": Mock()}, enable_approval=True)

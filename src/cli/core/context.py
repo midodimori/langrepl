@@ -5,8 +5,8 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from src.cli.initializer import initializer
-from src.cli.timer import timer
+from src.cli.bootstrap.initializer import initializer
+from src.cli.bootstrap.timer import timer
 from src.core.config import ApprovalMode
 
 

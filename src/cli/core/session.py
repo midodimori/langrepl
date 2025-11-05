@@ -4,13 +4,12 @@ from contextlib import AbstractAsyncContextManager
 
 from langgraph.graph.state import CompiledStateGraph
 
+from src.cli.bootstrap.initializer import initializer
 from src.cli.core.context import Context
-from src.cli.initializer import initializer
-from src.cli.interface.commands import CommandHandler
-from src.cli.interface.messages import MessageHandler
-from src.cli.interface.prompt import InteractivePrompt
-from src.cli.interface.renderer import Renderer
+from src.cli.dispatchers import CommandDispatcher, MessageDispatcher
 from src.cli.theme import console, theme
+from src.cli.ui.prompt import InteractivePrompt
+from src.cli.ui.renderer import Renderer
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -25,10 +24,10 @@ class CLISession:
     ):
         self.context = context
         self.renderer = Renderer()
-        self.command_handler = CommandHandler(self)
-        self.message_handler = MessageHandler(self)
+        self.command_dispatcher = CommandDispatcher(self)
+        self.message_dispatcher = MessageDispatcher(self)
         self.prompt = InteractivePrompt(
-            self.context, list(self.command_handler.commands.keys()), session=self
+            self.context, list(self.command_dispatcher.commands.keys()), session=self
         )
 
         # Set up mode change callback
@@ -73,10 +72,10 @@ class CLISession:
                     continue
 
                 if is_slash_command:
-                    await self.command_handler.handle(content)
+                    await self.command_dispatcher.dispatch(content)
                     continue
 
-                await self.message_handler.handle(content)
+                await self.message_dispatcher.dispatch(content)
 
             except EOFError:
                 break

@@ -11,7 +11,7 @@ from src.tools.impl.terminal import get_directory_structure, run_command
 @pytest.mark.asyncio
 async def test_run_command(create_test_graph, temp_dir: Path):
     """Test running a command through the graph."""
-    app = create_test_graph([run_command], temp_dir)
+    app = create_test_graph([run_command])
 
     initial_state = {
         "messages": [
@@ -53,7 +53,7 @@ async def test_directory_structure(create_test_graph, temp_dir: Path):
     (temp_dir / "file1.txt").write_text("content")
     (temp_dir / "subdir").mkdir()
 
-    app = create_test_graph([get_directory_structure], temp_dir)
+    app = create_test_graph([get_directory_structure])
 
     initial_state = {
         "messages": [
@@ -90,7 +90,7 @@ async def test_directory_structure(create_test_graph, temp_dir: Path):
 @pytest.mark.asyncio
 async def test_run_command_failure(create_test_graph, temp_dir: Path):
     """Test running an invalid command through the graph."""
-    app = create_test_graph([run_command], temp_dir)
+    app = create_test_graph([run_command])
 
     initial_state = {
         "messages": [

@@ -12,7 +12,7 @@ from src.tools.internal.todo import read_todos, write_todos
 @pytest.mark.asyncio
 async def test_todo_workflow(create_test_graph, temp_dir: Path):
     """Test write and read todos through the graph."""
-    app = create_test_graph([write_todos, read_todos], temp_dir)
+    app = create_test_graph([write_todos, read_todos])
 
     # Write todos
     todos = [

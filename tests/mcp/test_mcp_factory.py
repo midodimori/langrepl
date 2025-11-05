@@ -1,35 +1,31 @@
 import pytest
 from pydantic import SecretStr
 
-from src.core.config import MCPConfig, MCPServerConfig
 from src.core.settings import settings
 from src.mcp.factory import MCPFactory
 
 
 class TestMCPFactory:
     @pytest.mark.asyncio
-    async def test_create_with_no_servers(self):
+    async def test_create_with_no_servers(self, mock_mcp_config):
         factory = MCPFactory()
-        config = MCPConfig(servers={})
 
-        client = await factory.create(config)
+        client = await factory.create(mock_mcp_config)
 
         assert client is not None
         assert client.connections is not None
         assert len(client.connections) == 0
 
     @pytest.mark.asyncio
-    async def test_create_with_disabled_server(self):
+    async def test_create_with_disabled_server(
+        self, mock_mcp_server_config, mock_mcp_config
+    ):
         factory = MCPFactory()
 
-        server_config = MCPServerConfig(
-            command="python",
-            args=["-m", "server"],
-            transport="stdio",
-            enabled=False,
+        server_config = mock_mcp_server_config.model_copy(update={"enabled": False})
+        config = mock_mcp_config.model_copy(
+            update={"servers": {"test_server": server_config}}
         )
-
-        config = MCPConfig(servers={"test_server": server_config})
 
         client = await factory.create(config)
 
@@ -37,17 +33,14 @@ class TestMCPFactory:
         assert len(client.connections) == 0
 
     @pytest.mark.asyncio
-    async def test_create_with_enabled_stdio_server(self):
+    async def test_create_with_enabled_stdio_server(
+        self, mock_mcp_server_config, mock_mcp_config
+    ):
         factory = MCPFactory()
 
-        server_config = MCPServerConfig(
-            command="python",
-            args=["-m", "server"],
-            transport="stdio",
-            enabled=True,
+        config = mock_mcp_config.model_copy(
+            update={"servers": {"test_server": mock_mcp_server_config}}
         )
-
-        config = MCPConfig(servers={"test_server": server_config})
 
         client = await factory.create(config)
 
@@ -55,18 +48,15 @@ class TestMCPFactory:
         assert "test_server" in client.connections
 
     @pytest.mark.asyncio
-    async def test_proxy_injection_into_env(self):
+    async def test_proxy_injection_into_env(
+        self, mock_mcp_server_config, mock_mcp_config
+    ):
         factory = MCPFactory()
 
-        server_config = MCPServerConfig(
-            command="python",
-            args=["-m", "server"],
-            transport="stdio",
-            env={},
-            enabled=True,
+        server_config = mock_mcp_server_config.model_copy(update={"env": {}})
+        config = mock_mcp_config.model_copy(
+            update={"servers": {"test_server": server_config}}
         )
-
-        config = MCPConfig(servers={"test_server": server_config})
 
         original_http_proxy = settings.llm.http_proxy
         original_https_proxy = settings.llm.https_proxy
@@ -84,19 +74,17 @@ class TestMCPFactory:
             settings.llm.https_proxy = original_https_proxy
 
     @pytest.mark.asyncio
-    async def test_tool_filters_extracted(self):
+    async def test_tool_filters_extracted(
+        self, mock_mcp_server_config, mock_mcp_config
+    ):
         factory = MCPFactory()
 
-        server_config = MCPServerConfig(
-            command="python",
-            args=["-m", "server"],
-            transport="stdio",
-            include=["tool1", "tool2"],
-            exclude=[],
-            enabled=True,
+        server_config = mock_mcp_server_config.model_copy(
+            update={"include": ["tool1", "tool2"], "exclude": []}
         )
-
-        config = MCPConfig(servers={"test_server": server_config})
+        config = mock_mcp_config.model_copy(
+            update={"servers": {"test_server": server_config}}
+        )
 
         client = await factory.create(config)
 

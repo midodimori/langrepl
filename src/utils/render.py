@@ -4,7 +4,7 @@ import re
 import shutil
 from typing import Any, TypeAlias
 
-from langchain_core.messages import ToolMessage
+from langchain_core.messages import AIMessage, ToolMessage
 from rich.markup import escape
 
 from src.cli.theme import theme
@@ -92,6 +92,59 @@ def truncate_text(text: str, max_length: int) -> str:
         return text
 
     return text[:max_length] + "..."
+
+
+def create_tool_message(
+    result: Any,
+    tool_name: str,
+    tool_call_id: str,
+    is_error: bool | None = None,
+    return_direct: bool | None = None,
+) -> ToolMessage:
+    """Create a ToolMessage from a tool execution result with proper formatting.
+
+    Handles content extraction, short_content generation, and metadata extraction.
+
+    Args:
+        result: Tool result (can be string, AIMessage, ToolMessage, or any object)
+        tool_name: Name of the tool
+        tool_call_id: ID of the tool call
+        is_error: Override is_error flag (if None, extracted from result via getattr)
+        return_direct: Override return_direct flag (if None, extracted from result via getattr)
+
+    Returns:
+        Properly formatted ToolMessage with content and short_content
+    """
+    # Extract metadata from result if not explicitly provided
+    final_is_error = (
+        is_error if is_error is not None else getattr(result, "is_error", False)
+    )
+    final_return_direct = (
+        return_direct
+        if return_direct is not None
+        else getattr(result, "return_direct", False)
+    )
+
+    # Handle AIMessage specially, let format_tool_response handle everything else
+    if isinstance(result, AIMessage):
+        content = str(result.text)
+        short_content = None
+    else:
+        content, short_content = format_tool_response(result)
+
+    # Generate short_content if not available
+    if short_content is None:
+        # For errors, use full content; otherwise truncate
+        short_content = content if final_is_error else truncate_text(content, 200)
+
+    return ToolMessage(
+        name=tool_name,
+        content=content,
+        tool_call_id=tool_call_id,
+        short_content=short_content,
+        is_error=final_is_error,
+        return_direct=final_return_direct,
+    )
 
 
 def generate_diff(

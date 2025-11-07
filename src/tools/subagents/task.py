@@ -1,6 +1,6 @@
 from langchain.tools import ToolRuntime, tool
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import HumanMessage, ToolMessage
+from langchain_core.messages import AnyMessage, HumanMessage
 from langchain_core.tools import BaseTool, ToolException
 from langgraph.types import Command
 from pydantic import BaseModel, ConfigDict
@@ -9,6 +9,7 @@ from src.agents import StateSchemaType
 from src.agents.context import AgentContext
 from src.agents.react_agent import create_react_agent
 from src.agents.state import AgentState
+from src.utils.render import create_tool_message
 
 
 class SubAgent(BaseModel):
@@ -62,16 +63,25 @@ def create_task_tool(
         state = runtime.state.copy()
         state["messages"] = [HumanMessage(content=description)]
         result = await subagent.ainvoke(state)
+
+        # Check if subagent ended due to a denied action or other return_direct scenario
+        last_message: AnyMessage = result["messages"][-1]
+        final_message = create_tool_message(
+            result=last_message,
+            tool_name=task.name,
+            tool_call_id=runtime.tool_call_id or "",
+        )
+        if getattr(final_message, "return_direct", False) and getattr(
+            final_message, "is_error", False
+        ):
+            final_message.id = (
+                last_message.id
+            )  # Set the same ID for not rendering twice
+
         return Command(
             update={
                 "files": result.get("files", {}),
-                "messages": [
-                    ToolMessage(
-                        name=task.name,
-                        content=result["messages"][-1].content,
-                        tool_call_id=runtime.tool_call_id,
-                    )
-                ],
+                "messages": [final_message],
             }
         )
 
@@ -84,7 +94,7 @@ def create_task_tool(
 def think(reflection: str) -> str:
     """Tool for strategic reflection on progress and decision-making.
 
-    Use this tool after each search to analyze results and plan next steps systematically.
+    Always use this tool after each search to analyze results and plan next steps systematically.
     This creates a deliberate pause in the workflow for quality decision-making.
 
     When to use:

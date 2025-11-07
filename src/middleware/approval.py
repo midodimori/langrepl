@@ -16,7 +16,7 @@ from src.agents.context import AgentContext
 from src.core.config import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
 from src.core.constants import CONFIG_APPROVAL_FILE_NAME
 from src.core.logging import get_logger
-from src.utils.render import format_tool_response, truncate_text
+from src.utils.render import create_tool_message
 
 logger = get_logger(__name__)
 
@@ -164,25 +164,6 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
 
         return user_response
 
-    @staticmethod
-    def _create_tool_message(
-        tool_name: str,
-        tool_call_id: str,
-        content: str,
-        is_error: bool = False,
-        return_direct: bool = False,
-    ) -> ToolMessage:
-        """Create a ToolMessage with proper formatting."""
-        short_content = truncate_text(content, 200) if not is_error else content
-        return ToolMessage(
-            name=tool_name,
-            content=content,
-            tool_call_id=tool_call_id,
-            short_content=short_content,
-            is_error=is_error,
-            return_direct=return_direct,
-        )
-
     async def awrap_tool_call(
         self, request: ToolCallRequest, handler: Callable
     ) -> ToolMessage | Command:
@@ -195,32 +176,26 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
                 if isinstance(result, Command):
                     return result
 
-                content, short_content = format_tool_response(result)
-                short_content = short_content or truncate_text(content, 200)
-                tool_call_id = str(request.tool_call["id"])
-                return ToolMessage(
-                    name=request.tool_call["name"],
-                    content=content,
-                    tool_call_id=tool_call_id,
-                    short_content=short_content,
+                return create_tool_message(
+                    result=result,
+                    tool_name=request.tool_call["name"],
+                    tool_call_id=str(request.tool_call["id"]),
                 )
             else:
-                tool_call_id = str(request.tool_call["id"])
-                return self._create_tool_message(
-                    request.tool_call["name"],
-                    tool_call_id,
-                    "Action denied by user.",
+                return create_tool_message(
+                    result="Action denied by user.",
+                    tool_name=request.tool_call["name"],
+                    tool_call_id=str(request.tool_call["id"]),
                     is_error=True,
                     return_direct=True,
                 )
         except GraphInterrupt:
             raise
         except Exception as e:
-            tool_call_id = str(request.tool_call["id"])
-            return self._create_tool_message(
-                request.tool_call["name"],
-                tool_call_id,
-                f"Failed to execute tool: {str(e)}",
+            return create_tool_message(
+                result=f"Failed to execute tool: {str(e)}",
+                tool_name=request.tool_call["name"],
+                tool_call_id=str(request.tool_call["id"]),
                 is_error=True,
             )
 

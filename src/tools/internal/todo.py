@@ -9,13 +9,14 @@ from langchain.tools import ToolRuntime, tool
 from langchain_core.messages import ToolMessage
 from langgraph.types import Command
 
+from src.agents.context import AgentContext
 from src.agents.state import AgentState, Todo
 
 
 @tool()
 def write_todos(
     todos: list[Todo],
-    runtime: ToolRuntime[None, AgentState],
+    runtime: ToolRuntime[AgentContext, AgentState],
 ) -> Command:
     """Create and manage structured task lists for tracking progress through complex workflows.
 
@@ -53,9 +54,12 @@ def write_todos(
     )
 
 
+write_todos.metadata = {"approval_config": {"always_approve": True}}
+
+
 @tool()
 def read_todos(
-    runtime: ToolRuntime[None, AgentState],
+    runtime: ToolRuntime[AgentContext, AgentState],
 ) -> str:
     """Read the current TODO list from the agent state.
 
@@ -73,6 +77,9 @@ def read_todos(
         result += f"{i}. {emoji} {todo['content']} ({todo['status']})\n"
 
     return result.strip()
+
+
+read_todos.metadata = {"approval_config": {"always_approve": True}}
 
 
 TODO_TOOLS = [write_todos, read_todos]

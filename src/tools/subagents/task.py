@@ -6,6 +6,7 @@ from langgraph.types import Command
 from pydantic import BaseModel, ConfigDict
 
 from src.agents import StateSchemaType
+from src.agents.context import AgentContext
 from src.agents.react_agent import create_react_agent
 from src.agents.state import AgentState
 
@@ -49,7 +50,7 @@ def create_task_tool(
     async def task(
         description: str,
         subagent_type: str,
-        runtime: ToolRuntime[None, AgentState],
+        runtime: ToolRuntime[AgentContext, AgentState],
     ):
         if subagent_type not in agents:
             allowed = [f"`{k}`" for k in agents]
@@ -73,6 +74,8 @@ def create_task_tool(
                 ],
             }
         )
+
+    task.metadata = {"approval_config": {"always_approve": True}}
 
     return task
 
@@ -104,3 +107,6 @@ def think(reflection: str) -> str:
         Confirmation that reflection was recorded for decision-making
     """
     return f"Reflection recorded: {reflection}"
+
+
+think.metadata = {"approval_config": {"always_approve": True}}

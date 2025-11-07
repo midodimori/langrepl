@@ -49,6 +49,9 @@ async def list_memory_files(
     )
 
 
+list_memory_files.metadata = {"approval_config": {"always_approve": True}}
+
+
 @tool()
 async def read_memory_file(
     file_path: str,
@@ -101,6 +104,9 @@ async def read_memory_file(
     )
 
 
+read_memory_file.metadata = {"approval_config": {"always_approve": True}}
+
+
 @tool()
 async def write_memory_file(
     file_path: str,
@@ -137,6 +143,9 @@ async def write_memory_file(
             ],
         }
     )
+
+
+write_memory_file.metadata = {"approval_config": {"always_approve": True}}
 
 
 @tool()
@@ -201,6 +210,9 @@ async def edit_memory_file(
             ],
         }
     )
+
+
+edit_memory_file.metadata = {"approval_config": {"always_approve": True}}
 
 
 MEMORY_TOOLS = [

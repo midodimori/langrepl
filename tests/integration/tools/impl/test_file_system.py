@@ -19,7 +19,7 @@ from src.tools.impl.file_system import (
 
 
 @pytest.mark.asyncio
-async def test_write_and_read_file(create_test_graph, temp_dir: Path):
+async def test_write_and_read_file(create_test_graph, agent_context, temp_dir: Path):
     """Test writing and reading a file through the graph."""
     app = create_test_graph([write_file, read_file])
 
@@ -42,13 +42,8 @@ async def test_write_and_read_file(create_test_graph, temp_dir: Path):
 
     result = await app.ainvoke(
         initial_state,
-        config={
-            "configurable": {
-                "thread_id": "test",
-                "working_dir": str(temp_dir),
-                "approval_mode": "aggressive",
-            }
-        },
+        config={"configurable": {"thread_id": "test"}},
+        context=agent_context,
     )
 
     # Verify file was created
@@ -57,7 +52,7 @@ async def test_write_and_read_file(create_test_graph, temp_dir: Path):
 
 
 @pytest.mark.asyncio
-async def test_edit_file(create_test_graph, temp_dir: Path):
+async def test_edit_file(create_test_graph, agent_context, temp_dir: Path):
     """Test editing a file through the graph."""
     # Setup: create initial file
     (temp_dir / "edit.txt").write_text("line 1\nline 2\nline 3")
@@ -91,13 +86,8 @@ async def test_edit_file(create_test_graph, temp_dir: Path):
 
     result = await app.ainvoke(
         initial_state,
-        config={
-            "configurable": {
-                "thread_id": "test",
-                "working_dir": str(temp_dir),
-                "approval_mode": "aggressive",
-            }
-        },
+        config={"configurable": {"thread_id": "test"}},
+        context=agent_context,
     )
 
     # Verify edit was applied
@@ -106,7 +96,7 @@ async def test_edit_file(create_test_graph, temp_dir: Path):
 
 
 @pytest.mark.asyncio
-async def test_create_and_delete_dir(create_test_graph, temp_dir: Path):
+async def test_create_and_delete_dir(create_test_graph, agent_context, temp_dir: Path):
     """Test creating and deleting directories through the graph."""
     app = create_test_graph([create_dir, delete_dir])
 
@@ -129,20 +119,15 @@ async def test_create_and_delete_dir(create_test_graph, temp_dir: Path):
 
     result = await app.ainvoke(
         initial_state,
-        config={
-            "configurable": {
-                "thread_id": "test",
-                "working_dir": str(temp_dir),
-                "approval_mode": "aggressive",
-            }
-        },
+        config={"configurable": {"thread_id": "test"}},
+        context=agent_context,
     )
 
     assert (temp_dir / "test_dir").is_dir()
 
 
 @pytest.mark.asyncio
-async def test_delete_file(create_test_graph, temp_dir: Path):
+async def test_delete_file(create_test_graph, agent_context, temp_dir: Path):
     """Test deleting a file through the graph."""
     # Setup: create file
     (temp_dir / "delete_me.txt").write_text("content")
@@ -167,20 +152,15 @@ async def test_delete_file(create_test_graph, temp_dir: Path):
 
     result = await app.ainvoke(
         initial_state,
-        config={
-            "configurable": {
-                "thread_id": "test",
-                "working_dir": str(temp_dir),
-                "approval_mode": "aggressive",
-            }
-        },
+        config={"configurable": {"thread_id": "test"}},
+        context=agent_context,
     )
 
     assert not (temp_dir / "delete_me.txt").exists()
 
 
 @pytest.mark.asyncio
-async def test_insert_at_line(create_test_graph, temp_dir: Path):
+async def test_insert_at_line(create_test_graph, agent_context, temp_dir: Path):
     """Test inserting content at a specific line through the graph."""
     # Setup: create file with content
     (temp_dir / "insert.txt").write_text("line 1\nline 2\nline 3\n")
@@ -209,13 +189,8 @@ async def test_insert_at_line(create_test_graph, temp_dir: Path):
 
     result = await app.ainvoke(
         initial_state,
-        config={
-            "configurable": {
-                "thread_id": "test",
-                "working_dir": str(temp_dir),
-                "approval_mode": "aggressive",
-            }
-        },
+        config={"configurable": {"thread_id": "test"}},
+        context=agent_context,
     )
 
     content = (temp_dir / "insert.txt").read_text()
@@ -225,7 +200,7 @@ async def test_insert_at_line(create_test_graph, temp_dir: Path):
 
 
 @pytest.mark.asyncio
-async def test_move_file(create_test_graph, temp_dir: Path):
+async def test_move_file(create_test_graph, agent_context, temp_dir: Path):
     """Test moving a file through the graph."""
     # Setup: create file
     (temp_dir / "source.txt").write_text("content")
@@ -253,13 +228,8 @@ async def test_move_file(create_test_graph, temp_dir: Path):
 
     result = await app.ainvoke(
         initial_state,
-        config={
-            "configurable": {
-                "thread_id": "test",
-                "working_dir": str(temp_dir),
-                "approval_mode": "aggressive",
-            }
-        },
+        config={"configurable": {"thread_id": "test"}},
+        context=agent_context,
     )
 
     assert not (temp_dir / "source.txt").exists()
@@ -268,7 +238,7 @@ async def test_move_file(create_test_graph, temp_dir: Path):
 
 
 @pytest.mark.asyncio
-async def test_move_multiple_files(create_test_graph, temp_dir: Path):
+async def test_move_multiple_files(create_test_graph, agent_context, temp_dir: Path):
     """Test moving multiple files through the graph."""
     # Setup: create files
     (temp_dir / "file1.txt").write_text("content1")
@@ -305,13 +275,8 @@ async def test_move_multiple_files(create_test_graph, temp_dir: Path):
 
     result = await app.ainvoke(
         initial_state,
-        config={
-            "configurable": {
-                "thread_id": "test",
-                "working_dir": str(temp_dir),
-                "approval_mode": "aggressive",
-            }
-        },
+        config={"configurable": {"thread_id": "test"}},
+        context=agent_context,
     )
 
     assert not (temp_dir / "file1.txt").exists()

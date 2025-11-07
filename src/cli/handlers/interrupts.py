@@ -11,7 +11,7 @@ from prompt_toolkit.styles import Style
 from src.cli.theme import console, theme
 from src.core.logging import get_logger
 from src.core.settings import settings
-from src.tools.wrapper import InterruptPayload
+from src.middleware.approval import InterruptPayload
 
 logger = get_logger(__name__)
 

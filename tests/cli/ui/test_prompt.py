@@ -19,7 +19,7 @@ class TestInteractivePromptCtrlCBehavior:
     def prompt(self, mock_context, mock_prompt_session):
         """Create an InteractivePrompt for testing."""
         prompt = InteractivePrompt(mock_context, ["/help"])
-        prompt.session = mock_prompt_session
+        prompt.prompt_session = mock_prompt_session
         return prompt
 
     def test_ctrl_c_clears_text_when_buffer_has_content(self, prompt):
@@ -128,7 +128,7 @@ class TestInteractivePromptKeyBindings:
     def prompt(self, mock_context, mock_prompt_session):
         """Create an InteractivePrompt for testing."""
         prompt = InteractivePrompt(mock_context, ["/help", "/quit"])
-        prompt.session = mock_prompt_session
+        prompt.prompt_session = mock_prompt_session
         return prompt
 
     def test_ctrl_j_inserts_newline(self, prompt):
@@ -177,14 +177,14 @@ class TestInteractivePromptInputHandling:
     def prompt(self, mock_context, mock_prompt_session):
         """Create an InteractivePrompt for testing."""
         prompt = InteractivePrompt(mock_context, ["/help"])
-        prompt.session = mock_prompt_session
+        prompt.prompt_session = mock_prompt_session
         return prompt
 
     @pytest.mark.asyncio
     async def test_get_input_handles_keyboard_interrupt(self, prompt):
         """Test that get_input propagates KeyboardInterrupt for clean exit."""
         with patch.object(
-            prompt.session, "prompt_async", new_callable=AsyncMock
+            prompt.prompt_session, "prompt_async", new_callable=AsyncMock
         ) as mock_prompt:
             mock_prompt.side_effect = KeyboardInterrupt()
             with pytest.raises(KeyboardInterrupt):
@@ -194,7 +194,7 @@ class TestInteractivePromptInputHandling:
     async def test_get_input_handles_eof_error(self, prompt):
         """Test that get_input propagates EOFError for clean exit."""
         with patch.object(
-            prompt.session, "prompt_async", new_callable=AsyncMock
+            prompt.prompt_session, "prompt_async", new_callable=AsyncMock
         ) as mock_prompt:
             mock_prompt.side_effect = EOFError()
             with pytest.raises(EOFError):
@@ -205,10 +205,10 @@ class TestInteractivePromptInputHandling:
         """Test that prefilled text is used once and then cleared."""
         mock_cli_session = MagicMock()
         mock_cli_session.prefilled_text = "prefilled content"
-        prompt.cli_session = mock_cli_session
+        prompt.session = mock_cli_session
 
         with patch.object(
-            prompt.session, "prompt_async", new_callable=AsyncMock
+            prompt.prompt_session, "prompt_async", new_callable=AsyncMock
         ) as mock_prompt:
             mock_prompt.return_value = "prefilled content"
             await prompt.get_input()
@@ -221,7 +221,7 @@ class TestInteractivePromptInputHandling:
     async def test_get_input_identifies_commands_correctly(self, prompt):
         """Test command detection logic for slash commands."""
         with patch.object(
-            prompt.session, "prompt_async", new_callable=AsyncMock
+            prompt.prompt_session, "prompt_async", new_callable=AsyncMock
         ) as mock_prompt:
             mock_prompt.return_value = "/help"
             content, is_command = await prompt.get_input()

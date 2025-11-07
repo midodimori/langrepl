@@ -2,7 +2,7 @@ from pathlib import Path
 
 from src.cli.bootstrap.timer import enable_timer
 from src.cli.core.context import Context
-from src.cli.core.session import CLISession
+from src.cli.core.session import Session
 from src.cli.theme import console
 
 
@@ -22,7 +22,7 @@ async def handle_chat_command(args) -> int:
 
         first_start = True
         while True:
-            session = CLISession(context)
+            session = Session(context)
 
             if first_start and args.resume:
                 await session.command_dispatcher.resume_handler.handle(

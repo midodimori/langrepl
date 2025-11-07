@@ -38,6 +38,7 @@ async def test_memory_file_workflow(create_test_graph, temp_dir: Path):
                 ],
             ),
         ],
+        "files": {},
     }
 
     result = await app.ainvoke(

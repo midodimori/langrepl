@@ -3,19 +3,17 @@ from fnmatch import fnmatch
 from typing import Any, cast
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import SystemMessage
-from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.graph.state import CompiledStateGraph, StateGraph
 
-from src.agents import StateSchemaType
+from src.agents import ContextSchemaType, StateSchemaType
 from src.agents.deep_agent import create_deep_agent
 from src.core.config import AgentConfig, LLMConfig, MCPConfig
 from src.core.logging import get_logger
 from src.llms.factory import LLMFactory
 from src.mcp.factory import MCPFactory
 from src.tools.factory import ToolFactory
-from src.tools.subagents.thinking import SubAgent, think
+from src.tools.subagents.task import SubAgent, think
 from src.utils.render import render_templates
 
 logger = get_logger(__name__)
@@ -30,21 +28,21 @@ class AgentFactory:
         name: str,
         tools: list[BaseTool],
         llm: BaseChatModel,
-        prompt: SystemMessage,
+        prompt: str,
+        state_schema: StateSchemaType,
         internal_tools: list[BaseTool] | None = None,
-        state_schema: StateSchemaType | None = None,
-        config_schema: type[Any] | None = None,
+        context_schema: ContextSchemaType | None = None,
         subagents: list[SubAgent] | None = None,
     ) -> CompiledStateGraph:
 
         agent = create_deep_agent(
-            state_schema=state_schema,
             name=name,
             model=llm,
             tools=tools,
             internal_tools=internal_tools,
             prompt=prompt,
-            config_schema=config_schema,
+            state_schema=state_schema,
+            context_schema=context_schema,
             subagents=subagents,
         )
 
@@ -163,7 +161,7 @@ class GraphFactory:
         return SubAgent(
             name=subagent_config.name,
             description=subagent_config.description,
-            prompt=SystemMessage(content=rendered_sub_prompt),
+            prompt=rendered_sub_prompt,
             llm=sub_llm,
             tools=sub_impl_tools + sub_mcp_tools + [think],
             internal_tools=sub_internal_tools,
@@ -172,7 +170,8 @@ class GraphFactory:
     async def create(
         self,
         config: AgentConfig,
-        schema: StateSchemaType,
+        state_schema: StateSchemaType,
+        context_schema: ContextSchemaType | None,
         mcp_config: MCPConfig,
         llm_config: LLMConfig | None = None,
         template_context: dict[str, Any] | None = None,
@@ -181,7 +180,7 @@ class GraphFactory:
 
         Args:
             config: Agent configuration including checkpointer settings
-            schema: State schema for the graph
+            state_schema: State schema for the graph
             mcp_config: MCP configuration for tool loading
             llm_config: Optional LLM configuration to override the one in config
             template_context: Optional template variables for prompt rendering
@@ -189,7 +188,7 @@ class GraphFactory:
         Yields:
             StateGraph: The state graph
         """
-        builder = StateGraph(schema)
+        builder = StateGraph(state_schema)
         mcp_client = await self.mcp_factory.create(mcp_config)
 
         all_impl_tools = self.tool_factory.get_impl_tools()
@@ -247,9 +246,9 @@ class GraphFactory:
             tools=tools,
             internal_tools=internal_tools,
             llm=llm,
-            prompt=SystemMessage(content=rendered_prompt),
-            state_schema=schema,
-            config_schema=RunnableConfig,
+            prompt=rendered_prompt,
+            state_schema=state_schema,
+            context_schema=context_schema,
             subagents=resolved_subagents,
         )
         builder.add_node(

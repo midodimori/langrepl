@@ -1,10 +1,10 @@
-from src.state.base import file_reducer
+from src.agents.state import add_reducer, file_reducer, sum_reducer
 
 
 class TestFileReducer:
     def test_both_none(self):
         result = file_reducer(None, None)
-        assert result is None
+        assert result == {}
 
     def test_left_none(self):
         right = {"file1": "content1"}
@@ -53,3 +53,49 @@ class TestFileReducer:
         assert left == left_copy
         assert right == right_copy
         assert result == {"file1": "content1", "file2": "content2"}
+
+
+class TestAddReducer:
+    def test_both_values(self):
+        assert add_reducer(10, 20) == 30
+
+    def test_left_none(self):
+        assert add_reducer(None, 20) == 20
+
+    def test_right_none(self):
+        assert add_reducer(10, None) == 10
+
+    def test_both_none(self):
+        assert add_reducer(None, None) == 0
+
+    def test_zero_values(self):
+        assert add_reducer(0, 0) == 0
+
+    def test_mixed_zero_and_value(self):
+        assert add_reducer(0, 5) == 5
+        assert add_reducer(5, 0) == 5
+
+
+class TestSumReducer:
+    def test_both_values(self):
+        assert sum_reducer(10.5, 20.3) == 30.8
+
+    def test_left_none(self):
+        assert sum_reducer(None, 20.5) == 20.5
+
+    def test_right_none(self):
+        assert sum_reducer(10.5, None) == 10.5
+
+    def test_both_none(self):
+        assert sum_reducer(None, None) == 0.0
+
+    def test_zero_values(self):
+        assert sum_reducer(0.0, 0.0) == 0.0
+
+    def test_mixed_zero_and_value(self):
+        assert sum_reducer(0.0, 5.5) == 5.5
+        assert sum_reducer(5.5, 0.0) == 5.5
+
+    def test_precision(self):
+        result = sum_reducer(0.1, 0.2)
+        assert abs(result - 0.3) < 1e-10

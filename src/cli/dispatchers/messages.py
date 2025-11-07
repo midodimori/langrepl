@@ -25,7 +25,14 @@ class MessageDispatcher:
         self.interrupt_handler = InterruptHandler()
 
     async def dispatch(self, content: str) -> None:
-        """Dispatch user message and get AI response."""
+        """
+        Handle a user's message from input through streaming AI response rendering.
+        
+        Processes the given message by resolving any reference placeholders, packaging it as a human message, creating an agent execution context and runnable configuration, and then streaming the AI response to the session renderer. If processing fails, an error is printed to the console and a debug log is written.
+        
+        Parameters:
+            content (str): The raw user message text (unresolved references).
+        """
         try:
             reference_mapping = self.session.prefilled_reference_mapping.copy()
             self.session.prefilled_reference_mapping.clear()
@@ -112,7 +119,15 @@ class MessageDispatcher:
         return None
 
     async def _process_chunk(self, chunk, rendered_messages) -> None:
-        """Process a streaming chunk and display separate blocks."""
+        """
+        Process a streaming chunk: update token/cost tracking for each node and render any new messages.
+        
+        Expects `chunk` in the subgraphs format (a 2-tuple `(namespace, data)`) where `data` is a mapping of node names to node payloads. For each node payload that is a dict, this method updates token and cost fields in the session context and, if the payload contains a non-empty `messages` list, renders the last message. Already-rendered messages are skipped using `rendered_messages`.
+        
+        Parameters:
+            chunk (tuple | dict): A streaming chunk; typically a `(namespace, data)` tuple where `data` maps node names to node payload dicts.
+            rendered_messages (set): A set of message identifiers used to avoid rendering the same message more than once.
+        """
         if isinstance(chunk, tuple) and len(chunk) == 2:
             # Handle subgraphs=True format: (namespace, data)
             namespace, data = chunk
@@ -146,7 +161,14 @@ class MessageDispatcher:
                     self.session.renderer.render_message(last_message)
 
     async def _update_token_tracking(self, node_data: dict[str, Any]) -> None:
-        """Update session context with token tracking data if present in node."""
+        """
+        Sync token- and cost-related fields from a node into the session context and trigger an auto-compression check.
+        
+        If the provided node data contains any of the recognized fields `current_input_tokens`, `current_output_tokens`, or `total_cost`, those values are copied into the session context and an automatic compression decision is evaluated.
+        
+        Parameters:
+            node_data (dict): Node output dictionary that may contain token or cost fields to apply to the session context.
+        """
         token_fields = {
             "current_input_tokens",
             "current_output_tokens",

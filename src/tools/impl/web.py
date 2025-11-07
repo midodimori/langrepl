@@ -21,7 +21,16 @@ def _extract_host_from_url(url: str) -> str:
 
 
 def _render_url_args(args: dict, config: dict) -> str:
-    """Render URL arguments with syntax highlighting."""
+    """
+    Render the `url` entry from `args` wrapped in theme color markup for display.
+    
+    Parameters:
+        args (dict): A mapping expected to contain the "url" key with the URL string to render.
+        config (dict): Rendering configuration (not used by this implementation).
+    
+    Returns:
+        highlighted_url (str): The URL wrapped in the theme's color markup (e.g., "[color]url[/color]").
+    """
     url = args.get("url", "")
     return f"[{theme.tool_color}]{url}[/{theme.tool_color}]"
 
@@ -32,10 +41,15 @@ async def fetch_web_content(
     runtime: ToolRuntime[AgentContext],
 ) -> ToolMessage | str:
     """
-    Use this tool to fetch the main content of a webpage and return it as markdown.
-
-    Args:
-        url: The URL of the webpage to fetch
+    Fetches a webpage's main content and returns it as Markdown.
+    
+    Parameters:
+        url (str): The URL of the webpage to fetch.
+        runtime (ToolRuntime[AgentContext]): Tool runtime used to supply tool call metadata (e.g., `tool_call_id`).
+    
+    Returns:
+        ToolMessage: A message containing the extracted Markdown content and metadata on success.
+        str: An error message if no main content could be extracted from the URL.
     """
     http_proxy = settings.llm.http_proxy.get_secret_value()
     https_proxy = settings.llm.https_proxy.get_secret_value()

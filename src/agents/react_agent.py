@@ -25,7 +25,23 @@ def create_react_agent(
     store: BaseStore | None = None,
     name: str | None = None,
 ):
-    """Create a ReAct agent using LangChain's create_agent."""
+    """
+    Create and configure a ReAct-style agent using the provided model, tools, and system prompt.
+    
+    This assembles middleware for token-cost tracking, tool-approval, optional tool-output compression (if a memory read tool is present), and early return handling, then delegates agent construction to LangChain's create_agent.
+    
+    Parameters:
+        model (BaseChatModel): The chat model used by the agent.
+        tools (list[BaseTool]): Tools the agent may invoke.
+        prompt (str): The system prompt to seed the agent's behavior.
+        state_schema (StateSchemaType | None): Optional schema describing the agent's persistent state.
+        context_schema (ContextSchemaType | None): Optional schema describing contextual inputs available to the agent.
+        store (BaseStore | None): Optional persistent store for agent state and metadata.
+        name (str | None): Optional human-readable name for the agent.
+    
+    Returns:
+        CompiledStateGraph: A configured ReAct agent ready for execution.
+    """
     # Check if read_memory_file is available for compression
     has_read_memory = read_memory_file in tools
 

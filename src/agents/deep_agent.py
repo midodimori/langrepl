@@ -22,6 +22,23 @@ def create_deep_agent(
     name: str | None = None,
 ) -> CompiledStateGraph:
 
+    """
+    Assembles the provided tools (optionally including internal tools and a generated task tool from subagents) and creates a React-based agent represented as a CompiledStateGraph.
+    
+    Parameters:
+        tools (list[BaseTool]): Primary tools available to the agent.
+        prompt (str): Prompt text used to initialize the agent's behavior.
+        model (BaseChatModel): Chat model backing the agent's language capabilities.
+        subagents (list[SubAgent] | None): If provided, a task tool is created from these subagents and added to the agent's toolset.
+        state_schema (StateSchemaType | None): Schema that defines the agent's state shape.
+        context_schema (type[Any] | None): Type used to validate or shape runtime context passed to the agent.
+        internal_tools (list[BaseTool] | None): Additional tools to include before the primary tools.
+        store (BaseStore | None): Optional persistence store for the agent's state.
+        name (str | None): Optional human-readable name for the agent.
+    
+    Returns:
+        CompiledStateGraph: The configured React-based agent as a compiled state graph.
+    """
     all_tools = (internal_tools or []) + tools
     if subagents:
         task_tool = create_task_tool(

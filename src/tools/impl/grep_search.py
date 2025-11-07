@@ -42,19 +42,21 @@ async def grep_search(
     runtime: ToolRuntime[AgentContext],
     output_mode: OutputMode = OutputMode.BOTH,
 ) -> ToolMessage | str:
-    """Search for code in the codebase and file/folder names using ripgrep-compatible Rust regex patterns.
-
-    Args:
-        search_query: Rust regex pattern (e.g., "(term1|term2|term3)")
-        directory_path: Path to search directory (relative to working directory or absolute)
-        output_mode: "files" (filenames only), "content" (code snippets), or "both" (default)
-
-    Pattern Guidelines:
-    - Analyze project structure to understand codebase organization and patterns
-    - Consider technical domain, design patterns, and implementation approaches
-    - Include semantic/conceptual terms, not just literal matches
-    - Use context (e.g., 'function_name(' vs just 'function_name')
-    - Combine terms with OR operator: (term1|term2|term3)
+    """
+    Search code and filenames under a directory using ripgrep-compatible Rust regex patterns.
+    
+    Performs a content search and/or filename search rooted at directory_path (resolved relative to the runtime's working directory) and returns the results formatted for tool consumption.
+    
+    Parameters:
+        search_query (str): Rust-style regex pattern to match content or filenames (e.g., "(term1|term2)").
+        directory_path (str): Directory to search; may be relative to the runtime working directory or an absolute path.
+        output_mode (OutputMode): Which results to include: FILES (filenames only), CONTENT (matching snippets), or BOTH.
+    
+    Returns:
+        ToolMessage: A message containing the formatted search results, a short summary, and the tool call id.
+    
+    Raises:
+        ToolException: If execution of the underlying ripgrep commands fails.
     """
     context: AgentContext = runtime.context
     working_dir = str(context.working_dir)
@@ -133,7 +135,14 @@ grep_search.metadata = {
 
 
 def _format_results(results: list[GrepResult]) -> str:
-    """Format results for display."""
+    """
+    Format a list of GrepResult into a human-readable string.
+    
+    Each result is rendered as the file path or `file_path:start-end`; if a result has content, the content is placed on the following line. If any result includes content, entries are separated by a blank line; otherwise entries are separated by a single newline.
+    
+    Returns:
+        A formatted string of the results, or `"No results found."` when `results` is empty.
+    """
     if not results:
         return "No results found."
 
@@ -234,7 +243,17 @@ def _combine_results(
     filename_results: list[GrepResult],
     files_only: bool = False,
 ) -> list[GrepResult]:
-    """Combine and deduplicate content and filename search results."""
+    """
+    Merge content and filename GrepResult lists into a deduplicated list.
+    
+    Deduplicates entries by `file_path` and preserves relative ordering. If `files_only` is True, the returned list contains unique `filename_results` first, then any `content_results` whose `file_path` was not already included; those appended content entries have `start_line` and `end_line` set to `None` and `content` set to an empty string. If `files_only` is False, the returned list contains all `content_results` in order followed by any `filename_results` whose `file_path` was not already present.
+    
+    Parameters:
+        files_only (bool): When True, prioritize filename-only entries and convert unseen content results into filename-style entries (no line range or content).
+    
+    Returns:
+        list[GrepResult]: A list of deduplicated GrepResult objects, one per unique `file_path`, assembled according to the `files_only` flag.
+    """
     seen_files = set()
     combined_results = []
 

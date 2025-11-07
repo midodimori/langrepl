@@ -31,14 +31,37 @@ class MoveOperation(BaseModel):
 
 
 def _get_attr(obj: dict | BaseModel, attr: str, default: str = "") -> str:
-    """Extract attribute from either dict or Pydantic model instance."""
+    """
+    Get a string value for `attr` from either a dict or a Pydantic model.
+    
+    Parameters:
+        obj (dict | BaseModel): Source object to read the attribute from.
+        attr (str): Attribute name or dict key to retrieve.
+        default (str): Value returned when the attribute/key is missing (defaults to "").
+    
+    Returns:
+        str: The attribute or key value if present, otherwise `default`.
+    """
     if isinstance(obj, dict):
         return obj.get(attr, default)
     return getattr(obj, attr, default)
 
 
 def _render_diff_args(args: dict, config: dict) -> str:
-    """Render arguments with colored diff preview."""
+    """
+    Produce a colored diff preview for the provided file arguments.
+    
+    Generates a diff preview for either a list of edit operations (from `edits`) or a single new `content` value. When a working directory is available in `config["configurable"]["working_dir"]` and the referenced file exists, the file's full current contents are used to provide richer diffs. The returned string begins with a colored "Path" header and contains the rendered diff suitable for display to a user.
+    
+    Parameters:
+        args (dict): Input arguments containing at least `file_path` (str). Optionally includes:
+            - `edits` (list): Sequence of edit objects or dicts with `old_content` and `new_content`.
+            - `content` (str): New file content used when `edits` is not provided.
+        config (dict): Configuration dictionary that may include a `configurable` mapping with `working_dir` (str) used to resolve the file path and load full file contents for context.
+    
+    Returns:
+        str: Colored preview string that starts with a path header and contains the rendered diff.
+    """
     file_path = args.get("file_path", "")
 
     working_dir = config.get("configurable", {}).get("working_dir")
@@ -91,12 +114,16 @@ async def read_file(
     limit: int = 500,
 ) -> ToolMessage:
     """
-    Use this tool to read the content of a file with line-based pagination.
-
-    Args:
-        file_path: Path to the file to read (relative to working directory or absolute)
-        start_line: Starting line number (0-based)
-        limit: Maximum number of lines to read (default: 500)
+    Read a file and return a paginated, numbered view of its lines.
+    
+    Parameters:
+        file_path (str): Path to the file, relative to the agent working directory or absolute.
+        start_line (int): 0-based index of the first line to read.
+        limit (int): Maximum number of lines to include (default: 500).
+    
+    Returns:
+        ToolMessage: Message whose `content` contains the selected lines with line numbers and a bracketed summary
+        (`[start-end, lines_read/total_lines]`), and whose `short_content` summarizes the read range (e.g., "Read 0-9 of 100 lines from file.txt").
     """
     context: AgentContext = runtime.context
     working_dir = str(context.working_dir)
@@ -147,12 +174,18 @@ async def write_file(
     runtime: ToolRuntime[AgentContext],
 ) -> ToolMessage:
     """
-    Use this tool to create a new file with content. Only for files that don't exist yet.
-    If the file already exists, use edit_file instead.
-
-    Args:
-        file_path: Path to the file to write (relative to working directory or absolute)
-        content: Content to write to the file
+    Create a new file at the given path with the provided content if the file does not already exist.
+    
+    Parameters:
+        file_path (str): Path to the file to create; interpreted relative to the agent working directory when not absolute.
+        content (str): File contents to write.
+        runtime (ToolRuntime[AgentContext]): Execution runtime providing the agent context (working directory and tool_call_id).
+    
+    Returns:
+        ToolMessage: Confirmation message naming the written file and containing a rendered diff preview of the new file.
+    
+    Raises:
+        ToolException: If a file already exists at the resolved path.
     """
     context: AgentContext = runtime.context
     working_dir = str(context.working_dir)
@@ -191,11 +224,17 @@ async def edit_file(
     runtime: ToolRuntime[AgentContext],
 ) -> ToolMessage:
     """
-    Use this tool to edit a file by replacing old content with new content.
-
-    Args:
-        file_path: Path to the file to edit (relative to working directory or absolute)
-        edits: Edit operations to apply sequentially
+    Edit a file by applying a sequence of replacement edits in order.
+    
+    Parameters:
+        file_path (str): Path to the file to edit (relative to the agent working directory or absolute).
+        edits (list[EditOperation]): List of replacement operations applied sequentially; each operation must match existing text in the file.
+    
+    Returns:
+        ToolMessage: Confirmation message that includes the edited file path and a short diff preview of the applied edits.
+    
+    Raises:
+        ToolException: If the target file does not exist or if any edit's `old_content` is not found in the file.
     """
     context: AgentContext = runtime.context
     working_dir = str(context.working_dir)
@@ -258,10 +297,13 @@ async def create_dir(
     runtime: ToolRuntime[AgentContext],
 ) -> str:
     """
-    Use this tool to create a directory recursively.
-
-    Args:
-        dir_path: Path to the directory to create (relative to working directory or absolute)
+    Create a directory and any missing parent directories at the given path.
+    
+    Parameters:
+        dir_path (str): Path to create. If relative, it is resolved against the agent's working directory.
+    
+    Returns:
+        message (str): Confirmation message containing the created directory path, e.g. "Directory created: /abs/path".
     """
     context: AgentContext = runtime.context
     working_dir = str(context.working_dir)
@@ -285,11 +327,14 @@ async def move_file(
     runtime: ToolRuntime[AgentContext],
 ) -> str:
     """
-    Use this tool to move a file from source to destination.
-
-    Args:
-        source_path: Path to the source file (relative to working directory or absolute)
-        destination_path: Path to the destination (relative to working directory or absolute)
+    Move a file from a source path to a destination path, resolving both against the agent's working directory when relative.
+    
+    Parameters:
+        source_path (str): Source file path, either absolute or relative to the agent's working directory.
+        destination_path (str): Destination file path, either absolute or relative to the agent's working directory.
+    
+    Returns:
+        message (str): Confirmation message describing the moved source and destination paths.
     """
     context: AgentContext = runtime.context
     working_dir = str(context.working_dir)
@@ -314,10 +359,15 @@ async def move_multiple_files(
     runtime: ToolRuntime[AgentContext],
 ) -> str:
     """
-    Use this tool to move multiple files in one operation.
-
-    Args:
-        moves: List of move operations to apply
+    Move multiple files according to the provided move operations.
+    
+    Each MoveOperation's source and destination are resolved against the agent's working directory; destination parent directories are created as needed.
+    
+    Parameters:
+        moves (list[MoveOperation]): Operations specifying source and destination paths (relative or absolute).
+    
+    Returns:
+        str: A summary message listing all moved files in the form "src -> dst".
     """
     context: AgentContext = runtime.context
     working_dir = str(context.working_dir)
@@ -344,10 +394,14 @@ async def delete_file(
     runtime: ToolRuntime[AgentContext],
 ) -> str:
     """
-    Use this tool to delete a file.
-
-    Args:
-        file_path: Path to the file to delete (relative to working directory or absolute)
+    Delete the file at the given path.
+    
+    Parameters:
+        file_path (str): Path to the file to delete; resolved against the agent working directory (runtime.context.working_dir) when relative.
+        runtime (ToolRuntime[AgentContext]): Execution runtime providing the agent context used for path resolution.
+    
+    Returns:
+        str: Confirmation message containing the deleted file path.
     """
     context: AgentContext = runtime.context
     working_dir = str(context.working_dir)
@@ -372,12 +426,21 @@ async def insert_at_line(
     runtime: ToolRuntime[AgentContext],
 ) -> ToolMessage:
     """
-    Use this tool to insert content at a specific line number.
-
-    Args:
-        file_path: Path to the file (relative to working directory or absolute)
-        line_number: Line number to insert at (1-based, content inserted before this line)
-        content: Content to insert
+    Insert text into a file at the specified 1-based line number.
+    
+    If `line_number` is between 1 and the file's length, the content is inserted before that line. If `line_number` equals the file's length + 1, the content is appended. If `content` does not end with a newline and the insertion point is not at the end of the file, a newline is appended to `content` before insertion.
+    
+    Parameters:
+        file_path (str): Path to the file, relative to the agent's working directory or absolute.
+        line_number (int): 1-based line number at which to insert; insertion occurs before this line.
+        content (str): Text to insert into the file.
+        runtime (ToolRuntime[AgentContext]): Runtime providing the agent context and tool_call_id.
+    
+    Returns:
+        ToolMessage: Confirmation message describing how many lines were inserted and the target path. `short_content` contains a rendered diff between the original and updated file content.
+    
+    Raises:
+        ToolException: If the file does not exist, `line_number` is less than 1, or `line_number` exceeds the file length + 1.
     """
     context: AgentContext = runtime.context
     working_dir = str(context.working_dir)
@@ -440,10 +503,15 @@ async def delete_dir(
     runtime: ToolRuntime[AgentContext],
 ) -> str:
     """
-    Use this tool to delete a directory recursively.
-
-    Args:
-        dir_path: Path to the directory to delete (relative to working directory or absolute)
+    Delete a directory and all of its contents.
+    
+    Deletes the directory specified by `dir_path`. `dir_path` may be absolute or relative to the agent's working directory; the function resolves it before removal.
+    
+    Parameters:
+        dir_path (str): Path to the directory to delete (absolute or relative to the agent working directory).
+    
+    Returns:
+        str: Confirmation message containing the resolved path of the deleted directory.
     """
     context: AgentContext = runtime.context
     working_dir = str(context.working_dir)

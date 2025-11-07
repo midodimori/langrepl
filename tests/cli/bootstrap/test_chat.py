@@ -139,7 +139,20 @@ class TestHandleChatCommand:
 
 @pytest.fixture
 def patch_chat_dependencies(mock_context, mock_session):
-    """Patch Context.create and Session for chat tests."""
+    """
+    Provide patched chat dependencies for tests.
+    
+    Parameters:
+        mock_context: Mock returned by the patched Context.create call.
+        mock_session: Mock instance returned by the patched Session constructor.
+    
+    Yields:
+        dict: Mapping of patched objects:
+            "context_create": mock for Context.create,
+            "session_cls": mock for the Session constructor/class,
+            "session": the provided mock_session,
+            "enable_timer": mock for the enable_timer function.
+    """
     with (
         patch(
             "src.cli.bootstrap.chat.Context.create", return_value=mock_context

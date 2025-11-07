@@ -17,27 +17,16 @@ def write_todos(
     todos: list[Todo],
     runtime: ToolRuntime[None, AgentState],
 ) -> Command:
-    """Create and manage structured task lists for tracking progress through complex workflows.
-
-    ## When to Use
-    - Multi-step or non-trivial tasks requiring coordination
-    - When user provides multiple tasks or explicitly requests todo list
-    - Avoid for single, trivial actions unless directed otherwise
-
-    ## Best Practices
-    - Only one in_progress task at a time
-    - Mark completed immediately when task is fully done
-    - Always send the full updated list when making changes
-    - Prune irrelevant items to keep list focused
-
-    ## Progress Updates
-    - Call write_todos again to change task status or edit content
-    - Reflect real-time progress; don't batch completions
-    - If blocked, keep in_progress and add new task describing blocker
-
-    Args:
-        todos: List of Todo items with content and status
-
+    """
+    Create or replace the agent's TODO list and emit a tool update describing the change.
+    
+    Sets update.todos to the provided list and includes a single ToolMessage in update.messages whose name is write_todos.name, content describes the updated list, and tool_call_id is taken from runtime.tool_call_id.
+    
+    Parameters:
+        todos (list[Todo]): List of Todo items; each item should include `content` and `status`.
+    
+    Returns:
+        Command: A Command with `update.todos` set to `todos` and `update.messages` containing the single ToolMessage described above.
     """
     return Command(
         update={
@@ -57,10 +46,10 @@ def write_todos(
 def read_todos(
     runtime: ToolRuntime[None, AgentState],
 ) -> str:
-    """Read the current TODO list from the agent state.
-
-    This tool allows the agent to retrieve and review the current TODO list
-    to stay focused on remaining tasks and track progress through complex workflows.
+    """
+    Read the current TODO list from the agent state.
+    
+    Returns a human-readable string listing each todo with an index, a status emoji, the todo content, and the status in parentheses; returns "No todos currently in the list." if no todos are present.
     """
     todos = runtime.state.get("todos")
     if not todos:

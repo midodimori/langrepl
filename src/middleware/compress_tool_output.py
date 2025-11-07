@@ -24,13 +24,30 @@ class CompressToolOutputMiddleware(AgentMiddleware[AgentState, AgentContext]):
     """
 
     def __init__(self, model: BaseChatModel):
+        """
+        Initialize the middleware with the language model used for token calculations and compression decisions.
+        
+        Parameters:
+            model (BaseChatModel): Language model used to compute message token counts and drive compression logic.
+        """
         super().__init__()
         self.model = model
 
     def _compress_if_needed(
         self, tool_msg: ToolMessage, request: ToolCallRequest
     ) -> ToolMessage | Command:
-        """Compress tool message if it exceeds token limit."""
+        """
+        Decide whether a tool message should be replaced with a reference to a stored file when its content exceeds a configured token limit.
+        
+        If compression is triggered, returns a Command that updates the messages to a compressed reference and writes the full content into the virtual filesystem under the key "tool_output_{tool_call_id}.txt". Compression is skipped for tool messages that represent errors or for messages from the read_memory_file tool. The token limit is taken from request.runtime.context.tool_output_max_tokens; if that value is missing or the message content is not a non-empty string, the original ToolMessage is returned unchanged.
+        
+        Parameters:
+            tool_msg (ToolMessage): The tool result message to evaluate for compression.
+            request (ToolCallRequest): The original tool call request whose runtime context may contain token limit configuration.
+        
+        Returns:
+            ToolMessage | Command: The original ToolMessage when no compression is needed, or a Command that updates the message to a reference and stores the full content when compression is applied.
+        """
 
         # Skip compression for errors
         if getattr(tool_msg, "status", None) == "error" or getattr(
@@ -104,6 +121,18 @@ class CompressToolOutputMiddleware(AgentMiddleware[AgentState, AgentContext]):
         request: ToolCallRequest,
         handler: Callable[[ToolCallRequest], Awaitable[ToolMessage | Command]],
     ) -> ToolMessage | Command:
+        """
+        Invoke the next tool-call handler and apply compression to its ToolMessage result when needed.
+        
+        Calls the provided handler with the given request, returns Commands unchanged, and passes ToolMessage results to _compress_if_needed which may return a modified ToolMessage or a Command that updates state and stores large outputs. Any other return value from the handler is returned as-is.
+        
+        Parameters:
+            request (ToolCallRequest): The tool call request context.
+            handler (Callable[[ToolCallRequest], Awaitable[ToolMessage | Command]]): The next handler to invoke; receives the same request.
+        
+        Returns:
+            ToolMessage | Command: The original or compressed ToolMessage, a Command to update state and persist files, or any other handler return value unchanged.
+        """
         result = await handler(request)
 
         # If handler returned a Command, pass it through (tool already updated state)

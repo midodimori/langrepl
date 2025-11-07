@@ -15,7 +15,12 @@ logger = get_logger(__name__)
 
 
 def _transform_command_for_approval(command: str) -> str:
-    """Extract first 2 words from each sub-command while preserving shell operators."""
+    """
+    Transform a shell command for approval display by keeping only the first two words of each sub-command and preserving shell operators.
+    
+    Returns:
+        str: Transformed command string suitable for use in an approval UI; shell operators (&&, ||, ;, |) are preserved and spaced.
+    """
     parts = re.split(r"(&&|\|\||;|\|)", command)
     result = []
     for i, part in enumerate(parts):
@@ -31,7 +36,16 @@ def _transform_command_for_approval(command: str) -> str:
 
 
 def _render_command_args(args: dict, config: dict) -> str:
-    """Render command arguments with syntax highlighting."""
+    """
+    Format the tool's `command` argument with theme color markup for display.
+    
+    Parameters:
+        args (dict): Mapping of tool arguments; expects a `"command"` key whose value is the command string to render.
+        config (dict): Rendering configuration (unused by this implementation but accepted for compatibility).
+    
+    Returns:
+        str: The command string wrapped with theme tool color markup (e.g., "[<color>]<command>[/<color>]").
+    """
     command = args.get("command", "")
     return f"[{theme.tool_color}]{command}[/{theme.tool_color}]"
 
@@ -42,11 +56,17 @@ async def run_command(
     runtime: ToolRuntime[AgentContext],
 ) -> str:
     """
-    Use this tool to execute terminal commands. Project files should be checked first to understand
-    available commands and project structure before running unfamiliar operations.
-
-    Args:
-        command: The command to execute
+    Execute a shell command using bash in the agent's working directory.
+    
+    Parameters:
+        command (str): The shell command to run.
+        runtime (ToolRuntime[AgentContext]): Runtime whose context.working_dir is used as the command's working directory.
+    
+    Returns:
+        str: The combined stdout and stderr output if any, joined by a newline; otherwise the string "Command completed successfully".
+    
+    Raises:
+        ToolException: If the process exits with a status other than 0 or 1, containing stderr.
     """
     context: AgentContext = runtime.context
     status, stdout, stderr = await execute_bash_command(
@@ -80,10 +100,16 @@ async def get_directory_structure(
     runtime: ToolRuntime[AgentContext],
 ) -> ToolMessage:
     """
-    Use this tool to get a tree view of a directory structure showing all files and folders, highly recommended before running file operations.
-
-    Args:
-        dir_path: Path to the directory (relative to working directory or absolute)
+    Retrieve a tree view of a directory's structure including hidden files (excluding the .git directory).
+    
+    Parameters:
+        dir_path (str): Path to the directory to inspect; resolved against the tool runtime's working directory if relative.
+    
+    Returns:
+        ToolMessage: Message whose `content` is the directory tree output, `name` is the tool name, `tool_call_id` is taken from the runtime, and `short_content` is a brief summary.
+    
+    Raises:
+        ToolException: If the underlying shell command exits with a status other than 0 or 1; the exception message contains stderr.
     """
     context: AgentContext = runtime.context
     working_dir = str(context.working_dir)

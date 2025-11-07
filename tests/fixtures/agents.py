@@ -126,7 +126,19 @@ def tool_call_messages():
 
 @pytest.fixture
 def create_mock_tool():
-    """Factory fixture for creating mock tools."""
+    """
+    Provide a factory that creates typed mock BaseTool instances for tests.
+    
+    The returned callable accepts a single `name` argument and produces a BaseTool-like object with:
+    - `name`: set to the provided name
+    - `description`: "Mock tool {name}"
+    - `args_schema`: a minimal Pydantic BaseModel used as the tool's args schema
+    - `handle_tool_error`: set to False
+    - `metadata`: set to None
+    
+    Returns:
+        Callable[[str], BaseTool]: A factory function that constructs the described mock tool.
+    """
     from typing import cast
     from unittest.mock import MagicMock
 
@@ -137,7 +149,15 @@ def create_mock_tool():
         pass
 
     def _create(name: str) -> BaseTool:
-        """Create a mock tool with proper typing."""
+        """
+        Create a mock BaseTool configured for tests.
+        
+        Parameters:
+            name (str): The tool name to assign to the mock.
+        
+        Returns:
+            BaseTool: A MagicMock cast to `BaseTool` with `name`, `description`, `args_schema`, `handle_tool_error`, and `metadata` set for testing.
+        """
         mock = MagicMock(spec=BaseTool)
         mock.name = name
         mock.description = f"Mock tool {name}"
@@ -151,7 +171,15 @@ def create_mock_tool():
 
 @pytest.fixture
 def agent_context(temp_dir):
-    """Create AgentContext for tests."""
+    """
+    Create an AgentContext configured for tests with AGGRESSIVE approval mode.
+    
+    Parameters:
+        temp_dir (str | pathlib.Path): Directory to use as the agent's working directory.
+    
+    Returns:
+        AgentContext: An AgentContext instance with approval_mode set to ApprovalMode.AGGRESSIVE and working_dir set to `temp_dir`.
+    """
     from src.agents.context import AgentContext
     from src.core.config import ApprovalMode
 

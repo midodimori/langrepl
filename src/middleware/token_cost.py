@@ -28,7 +28,18 @@ class TokenCostMiddleware(AgentMiddleware[AgentState, AgentContext]):
     async def aafter_model(
         self, state: AgentState, runtime: Runtime[AgentContext]
     ) -> dict[str, Any] | None:
-        """Extract usage metadata and calculate cost after model call."""
+        """
+        Process the latest AI message to extract token usage and compute the call cost when pricing is available.
+        
+        Reads usage metadata from the last AIMessage in state.messages. If usage metadata exists, returns an update dictionary containing current_input_tokens and current_output_tokens (integers). If runtime.context provides input_cost_per_mtok and output_cost_per_mtok, also includes total_cost (float) computed via calculate_cost. Returns None when there are no messages, the last message is not an AIMessage, or usage metadata is absent.
+        
+        Returns:
+            dict[str, Any]: Update dictionary with keys:
+                - "current_input_tokens" (int): number of input tokens for the latest message.
+                - "current_output_tokens" (int): number of output tokens for the latest message.
+                - "total_cost" (float, optional): computed cost when per-mille-token pricing is available.
+            None: When no usable usage metadata is found.
+        """
         messages = state.get("messages", [])
         if not messages:
             return None

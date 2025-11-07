@@ -97,7 +97,11 @@ class TestCompressToolOutputMiddleware:
 
     @pytest.mark.asyncio
     async def test_skips_compression_for_errors(self, create_mock_tool, temp_dir):
-        """Test that error messages are not compressed."""
+        """
+        Verify that tool output marked as an error is not compressed.
+        
+        Creates a ToolMessage with status "error" and large content, invokes the middleware with a low tool_output_max_tokens setting, and asserts the returned ToolMessage content is unchanged.
+        """
         model = FakeListChatModel(responses=["test"])
         middleware = CompressToolOutputMiddleware(model)
 

@@ -6,13 +6,14 @@ def create_test_graph():
     """Factory fixture for creating test graphs with tools."""
 
     def _create(tools: list):
-        """Create a simple graph with tools for testing.
-
-        Args:
-            tools: List of tools to include in the graph
-
+        """
+        Create and compile a simple StateGraph containing a ToolNode preconfigured for testing.
+        
+        Parameters:
+            tools (list): Sequence of tool definitions (callables or tool descriptors accepted by ToolNode) to include in the graph.
+        
         Returns:
-            Compiled LangGraph application
+            compiled_graph: The compiled LangGraph application ready for execution, compiled using an in-memory checkpointer.
         """
         from langgraph.checkpoint.memory import MemorySaver
         from langgraph.graph import StateGraph

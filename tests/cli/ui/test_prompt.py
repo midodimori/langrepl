@@ -17,7 +17,16 @@ class TestInteractivePromptCtrlCBehavior:
 
     @pytest.fixture
     def prompt(self, mock_context, mock_prompt_session):
-        """Create an InteractivePrompt for testing."""
+        """
+        Create an InteractivePrompt configured for unit tests with a mocked prompt session.
+        
+        Parameters:
+            mock_context: Test double providing the prompt's execution context.
+            mock_prompt_session: Mock or stub to assign to the prompt's `prompt_session` attribute.
+        
+        Returns:
+            prompt (InteractivePrompt): An InteractivePrompt initialized with a default command list and the provided mock prompt session.
+        """
         prompt = InteractivePrompt(mock_context, ["/help"])
         prompt.prompt_session = mock_prompt_session
         return prompt
@@ -126,7 +135,16 @@ class TestInteractivePromptKeyBindings:
 
     @pytest.fixture
     def prompt(self, mock_context, mock_prompt_session):
-        """Create an InteractivePrompt for testing."""
+        """
+        Create an InteractivePrompt configured for tests and attach a mocked prompt session.
+        
+        Parameters:
+            mock_context: Context or fixture used to construct the InteractivePrompt.
+            mock_prompt_session: Mocked prompt session that will be assigned to the prompt's `prompt_session` attribute.
+        
+        Returns:
+            An InteractivePrompt instance with the mocked prompt session attached.
+        """
         prompt = InteractivePrompt(mock_context, ["/help", "/quit"])
         prompt.prompt_session = mock_prompt_session
         return prompt
@@ -175,7 +193,16 @@ class TestInteractivePromptInputHandling:
 
     @pytest.fixture
     def prompt(self, mock_context, mock_prompt_session):
-        """Create an InteractivePrompt for testing."""
+        """
+        Create an InteractivePrompt configured for unit tests with a mocked prompt session.
+        
+        Parameters:
+            mock_context: Test double providing the prompt's execution context.
+            mock_prompt_session: Mock or stub to assign to the prompt's `prompt_session` attribute.
+        
+        Returns:
+            prompt (InteractivePrompt): An InteractivePrompt initialized with a default command list and the provided mock prompt session.
+        """
         prompt = InteractivePrompt(mock_context, ["/help"])
         prompt.prompt_session = mock_prompt_session
         return prompt

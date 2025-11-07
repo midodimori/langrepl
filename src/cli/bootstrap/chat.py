@@ -7,7 +7,23 @@ from src.cli.theme import console
 
 
 async def handle_chat_command(args) -> int:
-    """Handle the chat command."""
+    """
+    Orchestrates creating a chat context and running a chat session loop according to CLI arguments.
+    
+    Initializes optional timing, creates a Context from provided CLI arguments, and runs a Session loop that may resume an existing thread, show a welcome message on first non-resume start, and reload the session if requested. Exits with 0 on successful completion or user interrupt, and 1 on unexpected errors (after printing an error).
+    
+    Parameters:
+        args: An object with CLI attributes used to configure the chat:
+            - timer: enable periodic timing when truthy
+            - agent: agent identifier for the Context
+            - model: model identifier for the Context
+            - resume: whether to resume an existing thread
+            - working_dir: path to use as the working directory
+            - approval_mode: approval mode for the Context
+    
+    Returns:
+        int: Exit code — `0` on success or KeyboardInterrupt, `1` on other exceptions.
+    """
     try:
         if args.timer:
             enable_timer()

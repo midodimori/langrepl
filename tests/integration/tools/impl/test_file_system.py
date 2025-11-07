@@ -53,7 +53,12 @@ async def test_write_and_read_file(create_test_graph, agent_context, temp_dir: P
 
 @pytest.mark.asyncio
 async def test_edit_file(create_test_graph, agent_context, temp_dir: Path):
-    """Test editing a file through the graph."""
+    """
+    Integration test that edits a file via the edit_file tool in the execution graph.
+    
+    Creates a file with three lines, invokes the graph to replace "line 2" with "modified line 2",
+    and asserts the file contains the modified line.
+    """
     # Setup: create initial file
     (temp_dir / "edit.txt").write_text("line 1\nline 2\nline 3")
 

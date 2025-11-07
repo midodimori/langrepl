@@ -251,7 +251,17 @@ class Initializer:
         model: str | None,
         working_dir: Path,
     ) -> AsyncIterator[CompiledStateGraph]:
-        """Get compiled graph for agent."""
+        """
+        Builds and yields a compiled state graph for the specified agent using configurations found in the working directory.
+        
+        Parameters:
+            agent (str | None): Name of the agent to load; if None, the default agent from configuration is used.
+            model (str | None): Name of the LLM configuration to apply; if None, the agent's LLM configuration is not applied.
+            working_dir (Path): Project working directory containing configuration files and checkpoint storage.
+        
+        Returns:
+            CompiledStateGraph: The compiled graph ready for execution, constructed from the agent configuration and optional LLM/MCP settings.
+        """
         with timer("Load configs"):
             if model:
                 agent_config, llm_config, mcp_config = await asyncio.gather(

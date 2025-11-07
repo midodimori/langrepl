@@ -22,6 +22,18 @@ class ReturnDirectMiddleware(AgentMiddleware[AgentState, AgentContext]):
     async def abefore_model(
         self, state: AgentState, runtime: Runtime[AgentContext]
     ) -> dict[str, Any] | None:
+        """
+        Check recent messages for a tool-initiated return_direct signal and request jumping to the end if found.
+        
+        Scans the state's messages in reverse order and, if it encounters a ToolMessage with a truthy `return_direct` attribute, returns a control directive to jump to "end". Scanning stops when a non-ToolMessage is encountered.
+        
+        Parameters:
+            state (AgentState): Agent state mapping containing a "messages" sequence.
+            runtime (Runtime[AgentContext]): Execution runtime context (unused by this hook).
+        
+        Returns:
+            dict[str, Any] | None: `{"jump_to": "end"}` if a qualifying ToolMessage is found, `None` otherwise.
+        """
         messages = state.get("messages", [])
 
         # Check recent tool messages for return_direct

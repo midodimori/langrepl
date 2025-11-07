@@ -29,6 +29,16 @@ class InteractivePrompt:
     """Interactive prompt interface using prompt-toolkit."""
 
     def __init__(self, context: Context, commands: list[str], session=None):
+        """
+        Initialize the interactive prompt state and prepare a prompt-toolkit session.
+        
+        Creates a persistent history file in the context's working directory, initializes internal attributes used for completion, keybinding and Ctrl+C handling, sets a 500ms window for double-Ctrl+C detection, and calls _setup_session to configure the PromptSession and related components.
+        
+        Parameters:
+            context (Context): Execution context containing configuration such as working_dir, agent/model names, and token/cost data used to build prompts and toolbars.
+            commands (list[str]): List of available command strings used to initialize the completer.
+            session: Optional external session or state object to associate with this prompt instance; stored on the instance if provided.
+        """
         self.context = context
         self.commands = commands
         self.session = session
@@ -44,7 +54,13 @@ class InteractivePrompt:
         self._setup_session()
 
     def _setup_session(self) -> None:
-        """Set up the prompt session with all configurations."""
+        """
+        Initialize interactive prompt components and create the PromptSession used for input.
+        
+        This configures key bindings and visual style, constructs the completer for slash-commands and
+        `@` references, and instantiates `self.prompt_session` with history, autosuggestion, completion
+        behavior, placeholder and bottom-toolbar providers, and other session options.
+        """
         # Create key bindings
         kb = self._create_key_bindings()
 
@@ -78,7 +94,19 @@ class InteractivePrompt:
         )
 
     def _create_key_bindings(self) -> KeyBindings:
-        """Create custom key bindings."""
+        """
+        Create and return the prompt key bindings used by the interactive session.
+        
+        Bindings:
+        - Ctrl+C: If the current buffer contains text, clear it; if empty, show a one-time "press again to quit" message and, if pressed again within the configured timeout, raise KeyboardInterrupt to quit.
+        - Ctrl+J: Insert a newline into the current buffer (supports multiline input).
+        - Shift+Tab (BackTab): Invoke the stored mode change callback, if any.
+        - Enter (when a completion is selected): Apply the selected completion; if the resulting text is a slash command (starts with "/"), submit it immediately; otherwise insert a space and, if the text ends with an @-reference, resolve it and store the mapping on the session (if available).
+        - Tab: If a completion is already selected, apply it; otherwise start completion selecting the first item and apply it; for non-slash inputs, insert a space and resolve/store @-reference mappings similarly.
+        
+        Returns:
+            KeyBindings: A configured prompt_toolkit KeyBindings instance with the above behaviors.
+        """
         kb = KeyBindings()
 
         @kb.add(Keys.ControlC)
@@ -123,7 +151,17 @@ class InteractivePrompt:
 
         @kb.add(Keys.Enter, filter=completion_is_selected)
         def _(event):
-            """Enter when completion is selected: apply completion."""
+            """
+            Apply the currently selected completion from the prompt buffer and handle post-completion side effects.
+            
+            Parameters:
+            	event: The key binding event containing the current prompt buffer.
+            
+            Behavior:
+            - If a completion is active, apply it to the buffer.
+            - If the resulting buffer text (left-stripped) begins with "/", submit the buffer immediately.
+            - Otherwise, insert a single space after the applied completion. If the buffer now ends with an `@`-style reference matching the pattern `@:<word>:<non-space>`, resolve that reference via the completer and, if a session object exists, store the mapping in `self.session.prefilled_reference_mapping`.
+            """
             buffer = event.current_buffer
             if buffer.complete_state:
                 current_completion = buffer.complete_state.current_completion
@@ -144,7 +182,14 @@ class InteractivePrompt:
 
         @kb.add(Keys.Tab)
         def _(event):
-            """Tab: apply first completion immediately."""
+            """
+            Apply the first completion for the current buffer when Tab is pressed.
+            
+            If a completion is already selected, it is applied immediately; otherwise completion is started with the first item selected and then applied. If the resulting input does not start with "/", a trailing space is inserted and any trailing `@:name:ref` reference is resolved and stored in self.session.prefilled_reference_mapping when a session exists.
+            
+            Parameters:
+                event: The prompt_toolkit key binding event whose current_buffer will be completed.
+            """
             buffer = event.current_buffer
 
             # If completion is already showing and selected, apply it
@@ -271,7 +316,12 @@ class InteractivePrompt:
             self.prompt_session.style = self._create_style()
 
     def _create_style(self) -> Style:
-        """Create prompt style based on theme and approval mode."""
+        """
+        Build a prompt_toolkit Style configured from the current theme and approval mode.
+        
+        Returns:
+            style (Style): A Style object mapping UI tokens to color and attribute strings; includes dynamic entries that reflect the current approval mode and theme.
+        """
         # Get prompt color based on approval mode
         prompt_color = self._get_prompt_color()
 
@@ -316,7 +366,18 @@ class InteractivePrompt:
         )
 
     async def get_input(self) -> tuple[str, bool]:
-        """Get user input asynchronously."""
+        """
+        Read a line of input from the prompt session and return the trimmed content and whether it starts with a slash.
+        
+        If a prefilled value is present on the session, it will be consumed as the prompt's default text.
+        
+        Returns:
+            tuple: (content, is_command) where `content` is the trimmed input string and `is_command` is `True` if `content` starts with '/', `False` otherwise.
+        
+        Raises:
+            KeyboardInterrupt: If the user cancels input (e.g., double Ctrl+C).
+            EOFError: If end-of-file is encountered while reading input.
+        """
         try:
             prompt_text = [
                 ("class:prompt", settings.cli.prompt_style),

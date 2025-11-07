@@ -25,6 +25,22 @@ def create_task_tool(
     subagents: list[SubAgent],
     state_schema: StateSchemaType | None = None,
 ):
+    """
+    Create a delegating task tool that routes a textual task description to a named sub-agent and returns that sub-agent's result as a Command.
+    
+    Parameters:
+        subagents (list[SubAgent]): Configurations for each available sub-agent (name, prompt, llm, tools).
+        state_schema (StateSchemaType | None): Optional schema used to initialize each sub-agent's state.
+    
+    Returns:
+        task (callable): A tool function with signature (description: str, subagent_type: str, runtime: ToolRuntime[None, AgentState]) that:
+            - Validates that `subagent_type` matches one of the provided subagents.
+            - Copies `runtime.state`, sets `state["messages"]` to the provided description as a HumanMessage, and invokes the chosen sub-agent with that state.
+            - Returns a Command whose `update.files` contains any files from the sub-agent result (empty dict if none) and whose `update.messages` contains a single ToolMessage with:
+                - name set to the task tool's name,
+                - content set to the last message content from the sub-agent result,
+                - tool_call_id taken from `runtime.tool_call_id`.
+    """
     agents = {
         subagent.name: create_react_agent(
             name=subagent.name,
@@ -51,6 +67,22 @@ def create_task_tool(
         subagent_type: str,
         runtime: ToolRuntime[None, AgentState],
     ):
+        """
+        Delegate a task description to a named sub-agent and return its result packaged as a Command.
+        
+        Parameters:
+        	description (str): The task prompt to send to the chosen sub-agent.
+        	subagent_type (str): The name of the sub-agent to invoke; must be one of the registered agent keys.
+        	runtime (ToolRuntime[None, AgentState]): Runtime containing the current agent state and tool call identifier; the function copies and uses runtime.state and runtime.tool_call_id.
+        
+        Returns:
+        	Command: A Command whose `update` contains:
+        		- files: mapping of files returned by the sub-agent (empty dict if none).
+        		- messages: a single ToolMessage named for this task, containing the sub-agent's final message content and the runtime's tool_call_id.
+        
+        Raises:
+        	ToolException: If `subagent_type` is not a known/registered sub-agent.
+        """
         if subagent_type not in agents:
             allowed = [f"`{k}`" for k in agents]
             raise ToolException(

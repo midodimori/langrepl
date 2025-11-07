@@ -19,6 +19,19 @@ class MCPClient(MultiServerMCPClient):
         repair_commands: dict[str, list[str]] | None = None,
         enable_approval: bool = True,
     ) -> None:
+        """
+        Initialize the MCPClient with optional server connections, per-server tool filters, repair commands, and approval behavior.
+        
+        Parameters:
+        	connections (dict[str, Connection] | None): Mapping of server name to Connection used by the underlying MultiServerMCPClient. If omitted, no initial connections are configured.
+        	tool_filters (dict[str, dict] | None): Optional per-server filter configuration. Each server key maps to a dict that may contain 'include' or 'exclude' lists of tool names used by _filter_tools.
+        	repair_commands (dict[str, list[str]] | None): Optional mapping of server name to a shell command (as a list of arguments) to run when fetching tools fails and a repair attempt is desired.
+        	enable_approval (bool): When True, tools returned by get_mcp_tools will be annotated with an approval configuration in their metadata.
+        
+        Side effects:
+        	- Initializes internal caches and state: _tools_cache, _module_map, and _init_lock.
+        	- Calls the superclass constructor with the provided connections.
+        """
         self._tool_filters = tool_filters or {}
         self._repair_commands = repair_commands or {}
         self._enable_approval = enable_approval
@@ -73,6 +86,14 @@ class MCPClient(MultiServerMCPClient):
                 return []
 
     async def get_mcp_tools(self) -> list[BaseTool]:
+        """
+        Retrieve and cache MCP tools from all connected servers, annotating each tool with server mapping and optional approval metadata.
+        
+        Fetches tools from every configured server in parallel, populates the internal module map mapping each tool's name to its server, and if approval is enabled sets tool.metadata["approval_config"] = {"name_only": True, "always_approve": False}. Results are stored in an internal cache and returned; subsequent calls return the cached list.
+        
+        Returns:
+            list[BaseTool]: A list of collected BaseTool instances with updated metadata and module map entries.
+        """
         if self._tools_cache:
             return self._tools_cache
 

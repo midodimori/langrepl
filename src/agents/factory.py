@@ -35,6 +35,22 @@ class AgentFactory:
         subagents: list[SubAgent] | None = None,
     ) -> CompiledStateGraph:
 
+        """
+        Constructs a compiled agent state graph configured with the given model, tools, prompt, and schemas.
+        
+        Parameters:
+            name: Human-readable name for the agent.
+            tools: List of implementation tools available to the agent.
+            llm: Chat model used by the agent for reasoning and generation.
+            prompt: Rendered prompt text used to initialize the agent's behavior.
+            state_schema: Schema that defines the agent's persistent state structure.
+            internal_tools: Optional list of internal-only tools (not exposed externally).
+            context_schema: Optional schema describing the agent's execution/context variables.
+            subagents: Optional list of SubAgent instances to include as child agents.
+        
+        Returns:
+            CompiledStateGraph: A compiled state graph representing the assembled agent.
+        """
         agent = create_deep_agent(
             name=name,
             model=llm,
@@ -142,6 +158,22 @@ class GraphFactory:
         internal_module_map: dict[str, str],
         template_context: dict[str, Any] | None,
     ) -> SubAgent:
+        """
+        Construct a SubAgent configured with its LLM, resolved tools, and a rendered prompt.
+        
+        Parameters:
+            subagent_config: Configuration object for the subagent (must provide `llm`, `tools`, `prompt`, `name`, and `description`).
+            impl_tool_dict (dict[str, BaseTool]): Mapping of implementation tool name to tool instance used to resolve implementation tools.
+            mcp_tool_dict (dict[str, BaseTool]): Mapping of MCP tool name to tool instance used to resolve MCP tools.
+            internal_tool_dict (dict[str, BaseTool]): Mapping of internal tool name to tool instance used to resolve internal tools.
+            impl_module_map (dict[str, str]): Mapping from implementation tool name to its module identifier for pattern matching.
+            mcp_module_map (dict[str, str]): Mapping from MCP tool name to its module identifier for pattern matching.
+            internal_module_map (dict[str, str]): Mapping from internal tool name to its module identifier for pattern matching.
+            template_context (dict[str, Any] | None): Optional context used to render the subagent's prompt templates.
+        
+        Returns:
+            SubAgent: A SubAgent with the configured name, description, rendered prompt, created LLM, combined tools (implementation + MCP + think), and resolved internal tools.
+        """
         sub_llm = self.llm_factory.create(subagent_config.llm)
         sub_impl_patterns, sub_mcp_patterns, sub_internal_patterns = (
             self._parse_tool_references(subagent_config.tools)
@@ -176,17 +208,21 @@ class GraphFactory:
         llm_config: LLMConfig | None = None,
         template_context: dict[str, Any] | None = None,
     ) -> StateGraph:
-        """Create a compiled graph with optional checkpointer support.
-
-        Args:
-            config: Agent configuration including checkpointer settings
-            state_schema: State schema for the graph
-            mcp_config: MCP configuration for tool loading
-            llm_config: Optional LLM configuration to override the one in config
-            template_context: Optional template variables for prompt rendering
-
-        Yields:
-            StateGraph: The state graph
+        """
+        Builds a StateGraph for an agent based on the provided configuration and schemas.
+        
+        Creates and returns a configured StateGraph containing the compiled agent node, with the graph's entry and finish points set and the resolved tools cached on the builder.
+        
+        Parameters:
+            config (AgentConfig): Agent configuration containing name, prompt, tools selection, optional subagents, and other agent settings.
+            state_schema (StateSchemaType): Schema describing the agent's state shape for the StateGraph.
+            context_schema (ContextSchemaType | None): Optional schema describing the agent's execution context.
+            mcp_config (MCPConfig): Configuration used to create the MCP client to load MCP-provided tools.
+            llm_config (LLMConfig | None): Optional LLM configuration to override the LLM specified in `config`.
+            template_context (dict[str, Any] | None): Optional variables for rendering prompt templates. If this contains a `user_memory` key and the prompt does not include a `{user_memory}` placeholder, a user memory placeholder will be appended to the rendered prompt.
+        
+        Returns:
+            StateGraph: The configured StateGraph builder containing the created agent node and cached tools.
         """
         builder = StateGraph(state_schema)
         mcp_client = await self.mcp_factory.create(mcp_config)

@@ -25,10 +25,11 @@ class EditOperation(BaseModel):
 async def list_memory_files(
     runtime: ToolRuntime[None, AgentState],
 ) -> ToolMessage:
-    """List all files in the virtual memory filesystem stored in agent state.
-
-    Shows what files currently exist in agent memory. Use this to orient yourself before other memory file operations
-    and maintain awareness of your memory file organization.
+    """
+    List filenames stored in the agent's in-memory virtual filesystem.
+    
+    Returns:
+        ToolMessage: Message with `content` set to either "No files in memory" or a newline-separated bullet list of filenames, and `short_content` summarizing the result.
     """
     file_list = list(runtime.state["files"].keys())
 
@@ -54,14 +55,21 @@ async def read_memory_file(
     start_line: int = 0,
     limit: int = 500,
 ) -> ToolMessage:
-    """Read memory file content from virtual filesystem with line-based pagination.
-
-    Essential before making any edits to understand existing content. Always read a memory file before editing it.
-
-    Args:
-        file_path: Path to the file to read
-        start_line: Starting line number (0-based)
-        limit: Maximum number of lines to read (default: 500)
+    """
+    Read a file from the in-memory virtual filesystem and return a paginated, numbered view of its lines.
+    
+    Parameters:
+        file_path (str): Path of the memory file to read.
+        start_line (int): Zero-based index of the first line to return.
+        limit (int): Maximum number of lines to return.
+    
+    Returns:
+        ToolMessage: Message whose `content` contains the selected lines numbered and truncated where necessary,
+                     followed by a bracketed summary "[start-end, lines_read/total_lines]". The message's `short_content`
+                     summarizes the line range and total lines (e.g., "Read 0-9 of 42 lines from /path").
+    
+    Raises:
+        ToolException: If the specified file does not exist or if the file exists but is empty.
     """
     files = runtime.state["files"]
     if file_path not in files:
@@ -105,15 +113,17 @@ async def write_memory_file(
     content: str,
     runtime: ToolRuntime[None, AgentState],
 ) -> Command:
-    """Create a new memory file or completely overwrite an existing memory file in the virtual filesystem.
-
-    This tool creates new memory files or replaces entire memory file contents. Use for initial memory file creation
-    or complete rewrites.
-    Files are stored persistently in agent state.
-
-    Args:
-        file_path: Path where the file should be created/updated
-        content: Content to write to the file
+    """
+    Create or overwrite a memory file in the agent's in-memory virtual filesystem.
+    
+    Updates the runtime's "files" mapping with the provided content and returns a Command describing the state update and a ToolMessage that summarizes the write and includes a rich diff of the change.
+    
+    Parameters:
+        file_path (str): Destination path of the memory file to create or overwrite.
+        content (str): Full content to store at `file_path`.
+    
+    Returns:
+        Command: A command whose `update` contains the updated `files` mapping and a `messages` list with a ToolMessage summarizing the write and containing a formatted diff in `short_content`.
     """
     files = runtime.state["files"].copy()
     old_content = files.get(file_path, "")
@@ -143,14 +153,20 @@ async def edit_memory_file(
     edits: list[EditOperation],
     runtime: ToolRuntime[None, AgentState],
 ) -> Command:
-    """Edit a memory file by replacing old content with new content.
-
-    This tool makes targeted edits to existing memory files using exact string matching.
-    Always read the memory file first before editing to ensure you have the exact content to match.
-
-    Args:
-        file_path: Path to the memory file to edit
-        edits: List of edit operations to apply sequentially
+    """
+    Apply a sequence of exact-match replacement edits to an existing in-memory file.
+    
+    Each EditOperation is applied sequentially by replacing its `old_content` with `new_content` in the file's content. The function updates runtime.state["files"] with the modified content and returns a Command containing the updated files mapping and a ToolMessage summarizing the edit with a combined diff.
+    
+    Parameters:
+        file_path (str): Path of the memory file to edit.
+        edits (list[EditOperation]): Edit operations applied in order; each `old_content` must match a substring of the file at the time of validation.
+    
+    Raises:
+        ToolException: If the specified file does not exist or any edit's `old_content` is not found in the current file content.
+    
+    Returns:
+        Command: Contains an `update` mapping with the new `files` state and `messages` including a ToolMessage summarizing the edit and a rich diff in `short_content`.
     """
     files = runtime.state["files"].copy()
     if file_path not in files:

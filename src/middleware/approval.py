@@ -41,7 +41,12 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
     def _check_approval_rules(
         config: ToolApprovalConfig, tool_name: str, tool_args: dict
     ) -> bool | None:
-        """Check if a tool call should be automatically approved or denied."""
+        """
+        Determine if a tool call matches configured approval rules and return the resulting decision.
+        
+        Returns:
+            `True` if an allow rule matches, `False` if a deny rule matches, `None` if no rule applies.
+        """
         for rule in config.always_deny:
             if rule.matches_call(tool_name, tool_args):
                 return False
@@ -59,7 +64,24 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
         tool_name: str,
         tool_args: dict,
     ) -> bool:
-        """Check if approval should be bypassed based on current approval mode."""
+        """
+        Determine whether the approval prompt can be bypassed for a tool call based on the current approval mode and configured deny rules.
+        
+        Parameters:
+            approval_mode (ApprovalMode): Current approval mode controlling bypass behavior.
+            config (ToolApprovalConfig): Approval configuration containing `always_deny` rules to evaluate in ACTIVE mode.
+            tool_name (str): Name of the tool being called.
+            tool_args (dict): Arguments passed to the tool, used to match against deny rules.
+        
+        Returns:
+            bool: `True` if the approval flow may be bypassed (no user interrupt required), `False` otherwise.
+        
+        Behavior:
+            - SEMI_ACTIVE: never bypass (returns `False`).
+            - ACTIVE: bypass unless any rule in `config.always_deny` matches the tool call (returns `False` if a match is found, `True` otherwise).
+            - AGGRESSIVE: always bypass (returns `True`).
+            - Any other mode: do not bypass (returns `False`).
+        """
         if approval_mode == ApprovalMode.SEMI_ACTIVE:
             return False
         elif approval_mode == ApprovalMode.ACTIVE:
@@ -79,7 +101,19 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
         tool_args: dict | None,
         allow: bool,
     ):
-        """Save an approval decision to the configuration."""
+        """
+        Persist an approval decision by updating the provided approval config and writing it to disk.
+        
+        Removes any existing rule entries for the same tool name and exact args, then appends the decision
+        to either the `always_allow` or `always_deny` list and saves the updated config to `config_file`.
+        
+        Parameters:
+            config (ToolApprovalConfig): Mutable approval configuration to update.
+            config_file (Path): Filesystem path where the updated config will be saved as JSON.
+            tool_name (str): Name of the tool the decision applies to.
+            tool_args (dict | None): Exact tool arguments to match/store; use `None` to represent name-only rules.
+            allow (bool): If `True`, add an allow rule; if `False`, add a deny rule.
+        """
         rule = ToolApprovalRule(name=tool_name, args=tool_args)
 
         config.always_allow = [
@@ -103,7 +137,17 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
         config.save_to_json_file(config_file)
 
     def _handle_approval(self, request: ToolCallRequest) -> str:
-        """Handle approval logic and return user decision."""
+        """
+        Determine whether a tool call should be allowed, denied, or requires prompting the user.
+        
+        Evaluates per-tool metadata and stored approval rules, applies approval-mode bypass logic, and—if no automatic decision is reached—constructs an interrupt question to obtain the user's choice. Persists decisions when the user selects always-allow or always-deny.
+        
+        Raises:
+            TypeError: If the runtime context is not an AgentContext.
+        
+        Returns:
+            str: One of `ALLOW`, `DENY`, `ALWAYS_ALLOW`, or `ALWAYS_DENY` indicating the approval outcome.
+        """
         context = request.runtime.context
         if not isinstance(context, AgentContext):
             raise TypeError(
@@ -172,7 +216,16 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
         is_error: bool = False,
         return_direct: bool = False,
     ) -> ToolMessage:
-        """Create a ToolMessage with proper formatting."""
+        """
+        Create a ToolMessage representing a tool invocation result.
+        
+        Parameters:
+            is_error (bool): If True, preserve the full `content` in `short_content`; otherwise `short_content` is the `content` truncated to 200 characters.
+            return_direct (bool): When True, mark the message to be returned directly to the caller.
+        
+        Returns:
+            ToolMessage: A message containing `name`, `content`, `tool_call_id`, `short_content`, `is_error`, and `return_direct`.
+        """
         short_content = truncate_text(content, 200) if not is_error else content
         return ToolMessage(
             name=tool_name,
@@ -186,7 +239,17 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
     async def awrap_tool_call(
         self, request: ToolCallRequest, handler: Callable
     ) -> ToolMessage | Command:
-        """Async tool call interception for approval."""
+        """
+        Intercept a tool call, enforce approval rules, and either execute the tool or return a ToolMessage describing denial or error.
+        
+        If approval is granted (ALLOW or ALWAYS_ALLOW) this will invoke the provided handler and return its Command result or a ToolMessage containing the formatted tool response. If approval is denied, returns an error ToolMessage indicating the action was denied. On unexpected exceptions it returns an error ToolMessage describing the failure.
+        
+        Returns:
+        	Command or ToolMessage: a Command if the handler produced one; otherwise a ToolMessage with the tool's result or an error/denial message.
+        
+        Raises:
+        	GraphInterrupt: re-raises GraphInterrupt exceptions thrown by approval handling or the handler.
+        """
         try:
             user_response = self._handle_approval(request)
 
@@ -226,28 +289,26 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
 
 
 def create_field_extractor(field_patterns: dict[str, str]) -> Callable[[dict], dict]:
-    """Create a generic pattern generator that extracts patterns from any fields.
-
-    Args:
-        field_patterns: Dict mapping field names to regex patterns with named groups
-
+    """
+    Create a pattern-based extractor function that adds regex named-group captures from specified fields into a copy of the input args.
+    
+    Parameters:
+        field_patterns (dict[str, str]): Mapping of argument field names to regex patterns. Patterns should include named groups for values to extract.
+    
     Returns:
-        A pattern generator function that extracts matched groups
-
-    Example:
-        # Extract any command base and ignore arguments
-        extractor = create_field_extractor({
-            "command": r"(?P<command>\\S+)", # First word only
-            "path": r"(?P<path>[^/]+)$" # Filename only
-        })
-
-        # Usage with tool metadata
-        tool.metadata["approval_config"] = {
-            "format_args_fn": extractor
-        }
+        extractor (Callable[[dict], dict]): A function that takes an args dict, copies it, and for each configured field that exists and matches its pattern merges the pattern's named-group captures into the returned dict. Fields with no match are left unchanged.
     """
 
     def pattern_generator(args: dict) -> dict:
+        """
+        Extract named capture groups from specified fields in `args` using the regex patterns provided when the generator was created, and merge those captures into a copy of the original arguments.
+        
+        Parameters:
+            args (dict): Mapping of argument names to values. For each field that has a corresponding pattern, the value is converted to a string and matched against the pattern.
+        
+        Returns:
+            dict: A shallow copy of `args` updated with any named groups extracted from matching fields. If a pattern matches, its named capture groups are added or overwrite existing keys in the returned dict.
+        """
         result = args.copy()
 
         for field, pattern in field_patterns.items():
@@ -265,29 +326,28 @@ def create_field_extractor(field_patterns: dict[str, str]) -> Callable[[dict], d
 def create_field_transformer(
     field_transforms: dict[str, Callable[[str], str]],
 ) -> Callable[[dict], dict]:
-    """Create a generic pattern generator using transformation functions.
-
-    Args:
-        field_transforms: Dict mapping field names to transformation functions
-
+    """
+    Create a transformer factory that applies string-based transformations to specified fields.
+    
+    Parameters:
+        field_transforms (dict[str, Callable[[str], str]]): Mapping of field names to functions that accept a string and return a transformed string.
+    
     Returns:
-        A pattern generator function that applies transformations
-
-    Example:
-        # Transform any fields generically
-        transformer = create_field_transformer({
-            "command": lambda x: x.split()[0],  # First word only
-            "file_path": lambda x: os.path.basename(x),  # Filename only
-            "url": lambda x: urlparse(x).netloc  # Domain only
-        })
-
-        # Usage with tool metadata
-        tool.metadata["approval_config"] = {
-            "format_args_fn": transformer
-        }
+        Callable[[dict], dict]: A function that, given an args dict, returns a new dict where each listed field is replaced by the result of applying its transform to the field's string value. If a transform raises an exception, the original field value is retained.
     """
 
     def pattern_generator(args: dict) -> dict:
+        """
+        Apply configured transform functions to matching fields in the given arguments dictionary.
+        
+        For each field present in `args` that has an associated transform function, the function replaces that field's value with the transform result (transform is called with the field value converted to `str`). If a transform raises an exception, the original value is left unchanged.
+        
+        Parameters:
+            args (dict): Original argument mapping whose values may be transformed.
+        
+        Returns:
+            dict: A new dictionary with the same keys as `args` where fields with configured transforms are replaced by their transformed values; all other keys remain unchanged.
+        """
         result = args.copy()
 
         for field, transform_func in field_transforms.items():

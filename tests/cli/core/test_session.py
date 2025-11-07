@@ -66,6 +66,16 @@ class TestSessionStart:
 
         @asynccontextmanager
         async def graph_context(*args, **kwargs):
+            """
+            Asynchronous generator that yields a single prepared graph instance for consumption by callers.
+            
+            Parameters:
+                *args: Optional positional arguments forwarded to the graph provider.
+                **kwargs: Optional keyword arguments forwarded to the graph provider.
+            
+            Returns:
+                graph_instance: The loaded graph object yielded by the generator.
+            """
             yield graph_instance
 
         mock_get_graph.side_effect = graph_context
@@ -89,6 +99,16 @@ class TestSessionStart:
 
         @asynccontextmanager
         async def graph_context(*args, **kwargs):
+            """
+            Asynchronous generator that yields a single prepared graph instance for consumption by callers.
+            
+            Parameters:
+                *args: Optional positional arguments forwarded to the graph provider.
+                **kwargs: Optional keyword arguments forwarded to the graph provider.
+            
+            Returns:
+                graph_instance: The loaded graph object yielded by the generator.
+            """
             yield graph_instance
 
         mock_get_graph.side_effect = graph_context
@@ -113,6 +133,16 @@ class TestSessionStart:
 
         @asynccontextmanager
         async def graph_context(*args, **kwargs):
+            """
+            Asynchronous generator that yields a single prepared graph instance for consumption by callers.
+            
+            Parameters:
+                *args: Optional positional arguments forwarded to the graph provider.
+                **kwargs: Optional keyword arguments forwarded to the graph provider.
+            
+            Returns:
+                graph_instance: The loaded graph object yielded by the generator.
+            """
             yield graph_instance
 
         mock_get_graph.side_effect = graph_context
@@ -137,6 +167,16 @@ class TestSessionStart:
 
         @asynccontextmanager
         async def graph_context(*args, **kwargs):
+            """
+            Asynchronous generator that yields a single prepared graph instance for consumption by callers.
+            
+            Parameters:
+                *args: Optional positional arguments forwarded to the graph provider.
+                **kwargs: Optional keyword arguments forwarded to the graph provider.
+            
+            Returns:
+                graph_instance: The loaded graph object yielded by the generator.
+            """
             yield graph_instance
 
         mock_get_graph.side_effect = graph_context

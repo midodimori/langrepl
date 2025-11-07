@@ -22,6 +22,14 @@ class Session:
         self,
         context: Context,
     ):
+        """
+        Initialize a Session with the given interactive context and prepare UI, dispatchers, and initial session state.
+        
+        Sets up a Renderer, CommandDispatcher, MessageDispatcher, and an InteractivePrompt (registering the approval-mode change callback), and initializes graph-related fields and runtime flags.
+        
+        Parameters:
+        	context (Context): Runtime context holding configuration, agent/model selection, and environment needed by the session.
+        """
         self.context = context
         self.renderer = Renderer()
         self.command_dispatcher = CommandDispatcher(self)

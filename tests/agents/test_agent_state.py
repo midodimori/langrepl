@@ -1,4 +1,4 @@
-from src.agents.state import add_reducer, file_reducer, sum_reducer
+from src.agents.state import add_reducer, file_reducer, replace_reducer, sum_reducer
 
 
 class TestFileReducer:
@@ -74,6 +74,40 @@ class TestAddReducer:
     def test_mixed_zero_and_value(self):
         assert add_reducer(0, 5) == 5
         assert add_reducer(5, 0) == 5
+
+
+class TestReplaceReducer:
+    def test_both_values(self):
+        """Replace should use right value, ignoring left."""
+        assert replace_reducer(10, 20) == 20
+
+    def test_left_none(self):
+        """When left is None, use right value."""
+        assert replace_reducer(None, 20) == 20
+
+    def test_right_none(self):
+        """When right is None, preserve left value."""
+        assert replace_reducer(10, None) == 10
+
+    def test_both_none(self):
+        """When both are None, return 0."""
+        assert replace_reducer(None, None) == 0
+
+    def test_zero_values(self):
+        """Replace with zero should work."""
+        assert replace_reducer(100, 0) == 0
+
+    def test_cumulative_token_scenario(self):
+        """Simulates cumulative input tokens from LLM providers.
+
+        Unlike add_reducer which would accumulate (6307 + 6322 = 12629),
+        replace_reducer correctly uses just the latest cumulative value.
+        """
+        state_tokens = 6307  # After turn 1
+        new_tokens = 6322  # Turn 2 (already includes turn 1's context)
+
+        result = replace_reducer(state_tokens, new_tokens)
+        assert result == 6322  # Should be 6322, not 12629
 
 
 class TestSumReducer:

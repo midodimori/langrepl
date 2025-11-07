@@ -137,13 +137,12 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
             return DENY
 
         question = f"Allow running {tool_name} ?"
-        if not name_only:
-            if render_args_fn:
-                rendered_config = {"configurable": {"working_dir": context.working_dir}}
-                rendered = render_args_fn(tool_args, rendered_config)
-                question += f" : {rendered}"
-            else:
-                question += f" : {tool_args}"
+        if render_args_fn:
+            rendered_config = {"configurable": {"working_dir": context.working_dir}}
+            rendered = render_args_fn(tool_args, rendered_config)
+            question += f" : {rendered}"
+        elif not name_only:
+            question += f" : {tool_args}"
 
         interrupt_payload = InterruptPayload(
             question=question,

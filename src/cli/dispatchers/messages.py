@@ -2,10 +2,11 @@
 
 from typing import Any
 
-from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
+from langchain_core.messages import AnyMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command, Interrupt
 
+from src.agents.context import AgentContext
 from src.cli.bootstrap.initializer import initializer
 from src.cli.handlers import CompressionHandler, InterruptHandler
 from src.cli.theme import console, theme
@@ -39,23 +40,23 @@ class MessageDispatcher:
 
             # Prepare graph config
             ctx = self.session.context
-            config_dict = {
-                "thread_id": ctx.thread_id,
-                "approval_mode": ctx.approval_mode.value,
-                "working_dir": ctx.working_dir,
-                "input_cost_per_mtok": ctx.input_cost_per_mtok,
-                "output_cost_per_mtok": ctx.output_cost_per_mtok,
-                "tool_output_max_tokens": ctx.tool_output_max_tokens,
-            }
+            agent_context = AgentContext(
+                approval_mode=ctx.approval_mode,
+                working_dir=ctx.working_dir,
+                input_cost_per_mtok=ctx.input_cost_per_mtok,
+                output_cost_per_mtok=ctx.output_cost_per_mtok,
+                tool_output_max_tokens=ctx.tool_output_max_tokens,
+            )
 
             graph_config = RunnableConfig(
-                configurable=config_dict,
+                configurable={"thread_id": ctx.thread_id},
                 recursion_limit=ctx.recursion_limit,
             )
 
             await self._stream_response(
                 {"messages": [human_message]},
                 graph_config,
+                agent_context,
             )
 
         except Exception as e:
@@ -66,6 +67,7 @@ class MessageDispatcher:
         self,
         input_data: dict[str, Any],
         config: RunnableConfig,
+        context: AgentContext,
     ) -> None:
         """Stream with automatic interrupt handling loop."""
         current_input: dict[str, Any] | Command = input_data
@@ -79,6 +81,7 @@ class MessageDispatcher:
                 async for chunk in self.session.graph.astream(
                     current_input,
                     config,
+                    context=context,
                     stream_mode="updates",
                     subgraphs=True,
                 ):
@@ -116,6 +119,14 @@ class MessageDispatcher:
 
             # Process different types of updates
             for node_name, node_data in data.items():
+                if not isinstance(node_data, dict):
+                    continue
+
+                # Update token/cost tracking from any node that has this data
+                # (middleware nodes emit these fields first, then get merged into agent state)
+                await self._update_token_tracking(node_data)
+
+                # Render messages if present
                 if node_data and "messages" in node_data and node_data["messages"]:
                     messages = node_data["messages"]
                     last_message: AnyMessage = messages[-1]
@@ -126,7 +137,7 @@ class MessageDispatcher:
 
                     # Skip if we've already rendered this message
                     if message_id in rendered_messages:
-                        return
+                        continue
 
                     # Mark this message as rendered
                     rendered_messages.add(message_id)
@@ -134,18 +145,27 @@ class MessageDispatcher:
                     # Render the message
                     self.session.renderer.render_message(last_message)
 
-                    # Sync context from state (updated by agent)
-                    if isinstance(last_message, AIMessage):
-                        self.session.update_context(
-                            current_input_tokens=node_data.get("current_input_tokens"),
-                            current_output_tokens=node_data.get(
-                                "current_output_tokens"
-                            ),
-                            total_cost=node_data.get("total_cost"),
-                        )
+    async def _update_token_tracking(self, node_data: dict[str, Any]) -> None:
+        """Update session context with token tracking data if present in node."""
+        token_fields = {
+            "current_input_tokens",
+            "current_output_tokens",
+            "total_cost",
+        }
 
-                        # Check for auto-compression
-                        await self._check_auto_compression()
+        # Check if any token tracking fields are present
+        if not any(field in node_data for field in token_fields):
+            return
+
+        # Extract and update context
+        updates = {
+            field: node_data.get(field) for field in token_fields if field in node_data
+        }
+
+        if updates:
+            self.session.update_context(**updates)
+            # Check if auto-compression should be triggered after token update
+            await self._check_auto_compression()
 
     async def _check_auto_compression(self) -> None:
         """Check if auto-compression should be triggered and execute if needed."""

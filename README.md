@@ -300,9 +300,9 @@ llms:
 
 1. Implement in `src/tools/impl/my_tool.py`:
    ```python
-   from src.tools.wrapper import approval_tool
+   from langchain.tools import tool
 
-   @approval_tool()
+   @tool()
    def my_tool(query: str) -> str:
        """Tool description."""
        return result

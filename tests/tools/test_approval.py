@@ -1,7 +1,6 @@
 from src.core.config import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
-from src.tools.wrapper import (
-    check_approval,
-    check_approval_mode_bypass,
+from src.middleware.approval import (
+    ApprovalMiddleware,
     create_field_extractor,
     create_field_transformer,
 )
@@ -14,7 +13,9 @@ class TestCheckApproval:
             always_deny=[ToolApprovalRule(name="read_file", args={"path": "/tmp/.*"})],
         )
 
-        result = check_approval(config, "read_file", {"path": "/tmp/test"})
+        result = ApprovalMiddleware._check_approval_rules(
+            config, "read_file", {"path": "/tmp/test"}
+        )
         assert result is False
 
     def test_always_allow_when_no_deny(self):
@@ -22,7 +23,9 @@ class TestCheckApproval:
             always_allow=[ToolApprovalRule(name="read_file", args=None)], always_deny=[]
         )
 
-        result = check_approval(config, "read_file", {"path": "/any/path"})
+        result = ApprovalMiddleware._check_approval_rules(
+            config, "read_file", {"path": "/any/path"}
+        )
         assert result is True
 
     def test_no_match_returns_none(self):
@@ -31,12 +34,16 @@ class TestCheckApproval:
             always_deny=[],
         )
 
-        result = check_approval(config, "read_file", {"path": "/tmp/test"})
+        result = ApprovalMiddleware._check_approval_rules(
+            config, "read_file", {"path": "/tmp/test"}
+        )
         assert result is None
 
     def test_empty_config_returns_none(self):
         config = ToolApprovalConfig(always_allow=[], always_deny=[])
-        result = check_approval(config, "read_file", {"path": "/tmp/test"})
+        result = ApprovalMiddleware._check_approval_rules(
+            config, "read_file", {"path": "/tmp/test"}
+        )
         assert result is None
 
     def test_deny_overrides_allow_same_tool(self):
@@ -47,17 +54,21 @@ class TestCheckApproval:
             ],
         )
 
-        result = check_approval(config, "read_file", {"path": "/etc/passwd"})
+        result = ApprovalMiddleware._check_approval_rules(
+            config, "read_file", {"path": "/etc/passwd"}
+        )
         assert result is False
 
-        result = check_approval(config, "read_file", {"path": "/tmp/safe"})
+        result = ApprovalMiddleware._check_approval_rules(
+            config, "read_file", {"path": "/tmp/safe"}
+        )
         assert result is True
 
 
 class TestCheckApprovalModeBypass:
     def test_semi_active_never_bypasses(self):
         config = ToolApprovalConfig(always_allow=[], always_deny=[])
-        result = check_approval_mode_bypass(
+        result = ApprovalMiddleware._check_approval_mode_bypass(
             ApprovalMode.SEMI_ACTIVE, config, "any_tool", {}
         )
         assert result is False
@@ -68,12 +79,12 @@ class TestCheckApprovalModeBypass:
             always_deny=[ToolApprovalRule(name="dangerous_tool", args=None)],
         )
 
-        result = check_approval_mode_bypass(
+        result = ApprovalMiddleware._check_approval_mode_bypass(
             ApprovalMode.ACTIVE, config, "safe_tool", {}
         )
         assert result is True
 
-        result = check_approval_mode_bypass(
+        result = ApprovalMiddleware._check_approval_mode_bypass(
             ApprovalMode.ACTIVE, config, "dangerous_tool", {}
         )
         assert result is False
@@ -84,12 +95,12 @@ class TestCheckApprovalModeBypass:
             always_deny=[ToolApprovalRule(name="dangerous_tool", args=None)],
         )
 
-        result = check_approval_mode_bypass(
+        result = ApprovalMiddleware._check_approval_mode_bypass(
             ApprovalMode.AGGRESSIVE, config, "dangerous_tool", {}
         )
         assert result is True
 
-        result = check_approval_mode_bypass(
+        result = ApprovalMiddleware._check_approval_mode_bypass(
             ApprovalMode.AGGRESSIVE, config, "any_tool", {}
         )
         assert result is True

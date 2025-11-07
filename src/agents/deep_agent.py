@@ -1,29 +1,26 @@
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import SystemMessage
 from langchain_core.tools import BaseTool
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.store.base import BaseStore
 
 from src.agents import StateSchemaType
 from src.agents.react_agent import create_react_agent
-from src.state.base import BaseState
-from src.tools.subagents.thinking import SubAgent, create_task_tool
+from src.tools.subagents.task import SubAgent, create_task_tool
 
 
 def create_deep_agent(
     tools: list[BaseTool],
-    prompt: SystemMessage,
+    prompt: str,
     model: BaseChatModel,
     subagents: list[SubAgent] | None = None,
     state_schema: StateSchemaType | None = None,
+    context_schema: type[Any] | None = None,
     internal_tools: list[BaseTool] | None = None,
-    config_schema: type[Any] | None = None,
     store: BaseStore | None = None,
     name: str | None = None,
 ) -> CompiledStateGraph:
-    state_schema = state_schema or BaseState
 
     all_tools = (internal_tools or []) + tools
     if subagents:
@@ -38,7 +35,7 @@ def create_deep_agent(
         prompt=prompt,
         tools=all_tools,
         state_schema=state_schema,
-        config_schema=config_schema,
+        context_schema=context_schema,
         store=store,
         name=name,
     )

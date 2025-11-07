@@ -1,21 +1,19 @@
-from typing import Annotated
-
+from langchain.tools import ToolRuntime, tool
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
-from langchain_core.tools import BaseTool, InjectedToolCallId, ToolException, tool
-from langgraph.prebuilt import InjectedState
+from langchain_core.messages import HumanMessage, ToolMessage
+from langchain_core.tools import BaseTool, ToolException
 from langgraph.types import Command
 from pydantic import BaseModel, ConfigDict
 
 from src.agents import StateSchemaType
 from src.agents.react_agent import create_react_agent
-from src.state.base import BaseState
+from src.agents.state import AgentState
 
 
 class SubAgent(BaseModel):
     name: str
     description: str
-    prompt: SystemMessage
+    prompt: str
     llm: BaseChatModel
     tools: list[BaseTool]
     internal_tools: list[BaseTool]
@@ -51,8 +49,7 @@ def create_task_tool(
     async def task(
         description: str,
         subagent_type: str,
-        state: Annotated[BaseState, InjectedState],
-        tool_call_id: Annotated[str, InjectedToolCallId],
+        runtime: ToolRuntime[None, AgentState],
     ):
         if subagent_type not in agents:
             allowed = [f"`{k}`" for k in agents]
@@ -61,14 +58,17 @@ def create_task_tool(
                 f"the only allowed types are {allowed}"
             )
         subagent = agents[subagent_type]
-        state.messages = [HumanMessage(content=description)]
+        state = runtime.state.copy()
+        state["messages"] = [HumanMessage(content=description)]
         result = await subagent.ainvoke(state)
         return Command(
             update={
                 "files": result.get("files", {}),
                 "messages": [
                     ToolMessage(
-                        result["messages"][-1].content, tool_call_id=tool_call_id
+                        name=task.name,
+                        content=result["messages"][-1].content,
+                        tool_call_id=runtime.tool_call_id,
                     )
                 ],
             }

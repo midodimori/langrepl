@@ -18,9 +18,10 @@ def create_test_graph():
         from langgraph.graph import StateGraph
         from langgraph.prebuilt import ToolNode
 
-        from src.state.base import BaseState
+        from src.agents.context import AgentContext
+        from src.agents.state import AgentState
 
-        graph = StateGraph(BaseState)
+        graph = StateGraph(AgentState, context_schema=AgentContext)
 
         # Add tool node with error handling
         tool_node = ToolNode(tools, handle_tool_errors=True)

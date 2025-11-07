@@ -1,13 +1,14 @@
 import re
-from typing import Annotated
+import shlex
 
+from langchain.tools import ToolRuntime, tool
 from langchain_core.messages import ToolMessage
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import InjectedToolCallId, ToolException
+from langchain_core.tools import ToolException
 
+from src.agents.context import AgentContext
 from src.cli.theme import theme
 from src.core.logging import get_logger
-from src.tools.wrapper import approval_tool, create_field_transformer
+from src.middleware.approval import create_field_transformer
 from src.utils.bash import execute_bash_command
 from src.utils.path import resolve_path
 
@@ -30,38 +31,31 @@ def _transform_command_for_approval(command: str) -> str:
     return "".join(result).strip()
 
 
-def _render_command_args(args: dict, config: RunnableConfig) -> str:
+def _render_command_args(args: dict, config: dict) -> str:
     """Render command arguments with syntax highlighting."""
     command = args.get("command", "")
     return f"[{theme.tool_color}]{command}[/{theme.tool_color}]"
 
 
-@approval_tool(
-    format_args_fn=create_field_transformer(
-        {"command": _transform_command_for_approval}
-    ),
-    render_args_fn=_render_command_args,
-)
+@tool
 async def run_command(
-    config: RunnableConfig,
-    tool_call_id: Annotated[str, InjectedToolCallId],
     command: str,
+    runtime: ToolRuntime[AgentContext],
 ) -> str:
     """
     Use this tool to execute terminal commands. Project files should be checked first to understand
     available commands and project structure before running unfamiliar operations.
 
     Args:
-        command (str): The command to execute
+        command: The command to execute
     """
-    working_dir = config.get("configurable", {}).get("working_dir")
+    context: AgentContext = runtime.context
     status, stdout, stderr = await execute_bash_command(
-        ["bash", "-c", command], cwd=working_dir
+        ["bash", "-c", command], cwd=str(context.working_dir)
     )
     if status not in (0, 1):
         raise ToolException(stderr)
 
-    # Combine stdout and stderr, as many commands write useful output to stderr
     output_parts = []
     if stdout.strip():
         output_parts.append(stdout.strip())
@@ -71,29 +65,38 @@ async def run_command(
     return "\n".join(output_parts) if output_parts else "Command completed successfully"
 
 
-@approval_tool(name_only=True, always_approve=True)
+run_command.metadata = {
+    "approval_config": {
+        "format_args_fn": create_field_transformer(
+            {"command": _transform_command_for_approval}
+        ),
+        "render_args_fn": _render_command_args,
+    }
+}
+
+
+@tool
 async def get_directory_structure(
-    config: RunnableConfig,
-    tool_call_id: Annotated[str, InjectedToolCallId],
     dir_path: str,
+    runtime: ToolRuntime[AgentContext],
 ) -> ToolMessage:
     """
     Use this tool to get a tree view of a directory structure showing all files and folders, highly recommended before running file operations.
 
     Args:
-        dir_path (str): Path to the directory (relative to working directory or absolute)
+        dir_path: Path to the directory (relative to working directory or absolute)
     """
-    working_dir = config.get("configurable", {}).get("working_dir")
-    if not working_dir:
-        raise ToolException("Working directory is not configured.")
+    context: AgentContext = runtime.context
+    working_dir = str(context.working_dir)
 
     resolved_path = resolve_path(working_dir, dir_path)
     absolute_dir_path = str(resolved_path)
 
+    safe_dir = shlex.quote(absolute_dir_path)
     cmd = [
         "bash",
         "-c",
-        f"cd {absolute_dir_path} && rg --files --hidden --ignore --glob '!.git/' | tree --fromfile -a",
+        f"cd {safe_dir} && rg --files --hidden --ignore --glob '!.git/' | tree --fromfile -a",
     ]
     status, stdout, stderr = await execute_bash_command(cmd, cwd=working_dir)
     if status not in (0, 1):
@@ -104,10 +107,17 @@ async def get_directory_structure(
     return ToolMessage(
         name=get_directory_structure.name,
         content=stdout,
-        tool_call_id=tool_call_id,
+        tool_call_id=runtime.tool_call_id,
         short_content=short_content,
     )
 
 
-# Export all tools for the factory
+get_directory_structure.metadata = {
+    "approval_config": {
+        "name_only": True,
+        "always_approve": True,
+    }
+}
+
+
 TERMINAL_TOOLS = [run_command, get_directory_structure]

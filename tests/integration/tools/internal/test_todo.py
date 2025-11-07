@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
-from src.state.base import Todo
+from src.agents.state import Todo
 from src.tools.internal.todo import read_todos, write_todos
 
 

@@ -1,16 +1,15 @@
 import os
-from typing import Annotated
 from urllib.parse import urlparse
 
 import trafilatura
 import trafilatura.downloads
+from langchain.tools import ToolRuntime, tool
 from langchain_core.messages import ToolMessage
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import InjectedToolCallId
 
+from src.agents.context import AgentContext
 from src.cli.theme import theme
 from src.core.settings import settings
-from src.tools.wrapper import approval_tool, create_field_transformer
+from src.middleware.approval import create_field_transformer
 
 
 def _extract_host_from_url(url: str) -> str:
@@ -21,26 +20,22 @@ def _extract_host_from_url(url: str) -> str:
         return url
 
 
-def _render_url_args(args: dict, config: RunnableConfig) -> str:
+def _render_url_args(args: dict, config: dict) -> str:
     """Render URL arguments with syntax highlighting."""
     url = args.get("url", "")
     return f"[{theme.tool_color}]{url}[/{theme.tool_color}]"
 
 
-@approval_tool(
-    format_args_fn=create_field_transformer({"url": _extract_host_from_url}),
-    render_args_fn=_render_url_args,
-)
+@tool
 async def fetch_web_content(
-    config: RunnableConfig,
-    tool_call_id: Annotated[str, InjectedToolCallId],
-    url: Annotated[str, "The URL of the webpage to fetch."],
+    url: str,
+    runtime: ToolRuntime[AgentContext],
 ) -> ToolMessage | str:
     """
     Use this tool to fetch the main content of a webpage and return it as markdown.
 
     Args:
-        url (str): The URL of the webpage to fetch
+        url: The URL of the webpage to fetch
     """
     http_proxy = settings.llm.http_proxy.get_secret_value()
     https_proxy = settings.llm.https_proxy.get_secret_value()
@@ -63,12 +58,19 @@ async def fetch_web_content(
     return ToolMessage(
         name=fetch_web_content.name,
         content=content,
-        tool_call_id=tool_call_id,
+        tool_call_id=runtime.tool_call_id,
         short_content=short_content,
     )
 
 
-# Export all tools for the factory
+fetch_web_content.metadata = {
+    "approval_config": {
+        "format_args_fn": create_field_transformer({"url": _extract_host_from_url}),
+        "render_args_fn": _render_url_args,
+    }
+}
+
+
 WEB_TOOLS = [
     fetch_web_content,
 ]

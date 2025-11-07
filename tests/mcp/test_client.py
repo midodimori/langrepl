@@ -103,7 +103,7 @@ class TestMCPClientGetTools:
         assert len(tools) == 0
 
     @pytest.mark.asyncio
-    async def test_tools_wrapped_with_approval(self, create_mock_tool):
+    async def test_tools_have_approval_metadata(self, create_mock_tool):
         mock_tool = create_mock_tool("tool1")
 
         client = MCPClient(connections={"server1": Mock()}, enable_approval=True)
@@ -112,4 +112,7 @@ class TestMCPClientGetTools:
         tools = await client.get_mcp_tools()
 
         assert len(tools) == 1
-        assert tools[0].__class__.__name__ == "ApprovedBaseTool"
+        assert tools[0].metadata is not None
+        assert "approval_config" in tools[0].metadata
+        assert tools[0].metadata["approval_config"]["name_only"] is True
+        assert tools[0].metadata["approval_config"]["always_approve"] is False

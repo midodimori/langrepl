@@ -139,13 +139,13 @@ class TestHandleChatCommand:
 
 @pytest.fixture
 def patch_chat_dependencies(mock_context, mock_session):
-    """Patch Context.create and CLISession for chat tests."""
+    """Patch Context.create and Session for chat tests."""
     with (
         patch(
             "src.cli.bootstrap.chat.Context.create", return_value=mock_context
         ) as mock_create,
         patch(
-            "src.cli.bootstrap.chat.CLISession", return_value=mock_session
+            "src.cli.bootstrap.chat.Session", return_value=mock_session
         ) as mock_session_cls,
         patch("src.cli.bootstrap.chat.enable_timer") as mock_enable_timer,
     ):

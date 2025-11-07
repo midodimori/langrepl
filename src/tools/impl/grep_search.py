@@ -1,16 +1,16 @@
 import re
+import shlex
 from enum import Enum
 from pathlib import Path
-from typing import Annotated
 
+from langchain.tools import ToolRuntime, tool
 from langchain_core.messages import ToolMessage
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import InjectedToolCallId, ToolException
+from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 
+from src.agents.context import AgentContext
 from src.core.logging import get_logger
 from src.core.settings import settings
-from src.tools.wrapper import approval_tool
 from src.utils.bash import execute_bash_command
 from src.utils.file import get_file_language
 from src.utils.path import resolve_path
@@ -36,12 +36,11 @@ class GrepResult(BaseModel):
     content: str = Field(..., description="Matched content")
 
 
-@approval_tool(name_only=True)
+@tool
 async def grep_search(
-    config: RunnableConfig,
-    tool_call_id: Annotated[str, InjectedToolCallId],
     search_query: str,
     directory_path: str,
+    runtime: ToolRuntime[AgentContext],
     output_mode: OutputMode = OutputMode.BOTH,
 ) -> ToolMessage | str:
     """Search for code in the codebase and file/folder names using ripgrep-compatible Rust regex patterns.
@@ -58,14 +57,12 @@ async def grep_search(
     - Use context (e.g., 'function_name(' vs just 'function_name')
     - Combine terms with OR operator: (term1|term2|term3)
     """
-    working_dir = config.get("configurable", {}).get("working_dir")
-    if not working_dir:
-        raise ToolException("Working directory is not configured.")
+    context: AgentContext = runtime.context
+    working_dir = str(context.working_dir)
 
-    # Resolve the search path relative to working directory
     resolved_path = resolve_path(working_dir, directory_path)
     absolute_directory_path = str(resolved_path)
-    # Build commands
+
     content_cmd = [
         "rg",
         "--line-number",
@@ -83,10 +80,9 @@ async def grep_search(
     filename_cmd = [
         "sh",
         "-c",
-        f"rg --files --hidden --glob '!.git' {absolute_directory_path} | rg -i '{search_query}'",
+        f"rg --files --hidden --glob '!.git' {shlex.quote(absolute_directory_path)} | rg -i {shlex.quote(search_query)}",
     ]
 
-    # Execute searches
     content_status, content_stdout, content_stderr = await execute_bash_command(
         content_cmd, cwd=working_dir
     )
@@ -105,7 +101,6 @@ async def grep_search(
             raise ToolException(filename_stderr)
         filename_results = _parse_filename_results(filename_stdout)
 
-    # Combine results
     all_results = (
         _combine_results(content_results, filename_results, files_only=True)
         if output_mode == OutputMode.FILES
@@ -116,7 +111,6 @@ async def grep_search(
         )
     )
 
-    # Format output
     dir_name = Path(absolute_directory_path).name
     short_content = {
         OutputMode.FILES: f"Found {len(all_results)} filename matches for '{search_query}' in {dir_name}",
@@ -127,9 +121,16 @@ async def grep_search(
     return ToolMessage(
         name=grep_search.name,
         content=_format_results(all_results),
-        tool_call_id=tool_call_id,
+        tool_call_id=runtime.tool_call_id,
         short_content=short_content,
     )
+
+
+grep_search.metadata = {
+    "approval_config": {
+        "name_only": True,
+    }
+}
 
 
 def _format_results(results: list[GrepResult]) -> str:
@@ -239,13 +240,11 @@ def _combine_results(
     combined_results = []
 
     if files_only:
-        # Add filename matches first
         for result in filename_results:
             if result.file_path not in seen_files:
                 combined_results.append(result)
                 seen_files.add(result.file_path)
 
-        # Add files from content matches (convert to filename-only format)
         for result in content_results:
             if result.file_path not in seen_files:
                 combined_results.append(
@@ -259,12 +258,10 @@ def _combine_results(
                 )
                 seen_files.add(result.file_path)
     else:
-        # Add content results first (prioritize content matches)
         for result in content_results:
             combined_results.append(result)
             seen_files.add(result.file_path)
 
-        # Add filename results for files we haven't seen yet
         for result in filename_results:
             if result.file_path not in seen_files:
                 combined_results.append(result)

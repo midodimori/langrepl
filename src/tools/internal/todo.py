@@ -5,19 +5,17 @@ that enable agents to plan complex workflows and track progress through
 multi-step operations.
 """
 
-from typing import Annotated
-
+from langchain.tools import ToolRuntime, tool
 from langchain_core.messages import ToolMessage
-from langchain_core.tools import InjectedToolCallId, tool
-from langgraph.prebuilt import InjectedState
 from langgraph.types import Command
 
-from src.state.base import BaseState, Todo
+from src.agents.state import AgentState, Todo
 
 
 @tool()
 def write_todos(
-    todos: list[Todo], tool_call_id: Annotated[str, InjectedToolCallId]
+    todos: list[Todo],
+    runtime: ToolRuntime[None, AgentState],
 ) -> Command:
     """Create and manage structured task lists for tracking progress through complex workflows.
 
@@ -38,14 +36,18 @@ def write_todos(
     - If blocked, keep in_progress and add new task describing blocker
 
     Args:
-        todos (list[Todo]): List of Todo items with content and status
+        todos: List of Todo items with content and status
 
     """
     return Command(
         update={
             "todos": todos,
             "messages": [
-                ToolMessage(f"Updated todo list to {todos}", tool_call_id=tool_call_id)
+                ToolMessage(
+                    name=write_todos.name,
+                    content=f"Updated todo list to {todos}",
+                    tool_call_id=runtime.tool_call_id,
+                )
             ],
         }
     )
@@ -53,14 +55,14 @@ def write_todos(
 
 @tool()
 def read_todos(
-    state: Annotated[BaseState, InjectedState],
+    runtime: ToolRuntime[None, AgentState],
 ) -> str:
     """Read the current TODO list from the agent state.
 
     This tool allows the agent to retrieve and review the current TODO list
     to stay focused on remaining tasks and track progress through complex workflows.
     """
-    todos = state.todos
+    todos = runtime.state.get("todos")
     if not todos:
         return "No todos currently in the list."
 

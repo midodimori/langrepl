@@ -1,5 +1,4 @@
 import asyncio
-from typing import Any
 
 from langchain_core.tools import BaseTool
 from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -7,32 +6,9 @@ from langchain_mcp_adapters.sessions import Connection
 
 from mcp.shared.exceptions import McpError
 from src.core.logging import get_logger
-from src.tools.wrapper import approval_tool
 from src.utils.bash import execute_bash_command
 
 logger = get_logger(__name__)
-
-
-class MCPToolWrapper(BaseTool):
-    original_tool: BaseTool
-
-    def __init__(self, tool: BaseTool, **kwargs: Any):
-        super().__init__(
-            name=tool.name,
-            description=tool.description,
-            args_schema=tool.args_schema,
-            handle_tool_error=tool.handle_tool_error,
-            original_tool=tool,
-            **kwargs,
-        )
-
-    def _run(self, *args: Any, **kwargs: Any) -> Any:
-        kwargs = {k: v for k, v in kwargs.items() if k != "tool_call_id"}
-        return self.original_tool._run(*args, **kwargs)
-
-    async def _arun(self, *args: Any, **kwargs: Any) -> Any:
-        kwargs = {k: v for k, v in kwargs.items() if k != "tool_call_id"}
-        return await self.original_tool._arun(*args, **kwargs)
 
 
 class MCPClient(MultiServerMCPClient):
@@ -113,15 +89,16 @@ class MCPClient(MultiServerMCPClient):
                 self.connections.keys(), server_tools
             ):
                 for tool in server_tool_list:
-                    wrapped_tool = MCPToolWrapper(tool)
-                    self._module_map[wrapped_tool.name] = server_name
-                    tools.append(wrapped_tool)
+                    self._module_map[tool.name] = server_name
 
-            if self._enable_approval:
-                tools = [
-                    approval_tool(name_only=True, always_approve=False)(t)
-                    for t in tools
-                ]
+                    if self._enable_approval:
+                        tool.metadata = tool.metadata or {}
+                        tool.metadata["approval_config"] = {
+                            "name_only": True,
+                            "always_approve": False,
+                        }
+
+                    tools.append(tool)
 
             self._tools_cache = tools
             return self._tools_cache

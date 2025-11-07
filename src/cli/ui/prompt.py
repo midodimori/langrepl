@@ -31,11 +31,11 @@ class InteractivePrompt:
     def __init__(self, context: Context, commands: list[str], session=None):
         self.context = context
         self.commands = commands
-        self.cli_session = session
+        self.session = session
         history_file = Path(context.working_dir) / CONFIG_HISTORY_FILE_NAME
         history_file.parent.mkdir(parents=True, exist_ok=True)
         self.history = FileHistory(str(history_file))
-        self.session: PromptSession[str]
+        self.prompt_session: PromptSession[str]
         self.completer: CompleterRouter
         self.mode_change_callback = None
         self._last_ctrl_c_time: float | None = None
@@ -59,7 +59,7 @@ class InteractivePrompt:
         )
 
         # Create session
-        self.session = PromptSession(
+        self.prompt_session = PromptSession(
             history=self.history,
             auto_suggest=AutoSuggestFromHistory(),
             completer=self.completer,
@@ -139,8 +139,8 @@ class InteractivePrompt:
                     if match:
                         ref = match.group(1)
                         resolved = self.completer.resolve_refs(ref)
-                        if self.cli_session:
-                            self.cli_session.prefilled_reference_mapping[ref] = resolved
+                        if self.session:
+                            self.session.prefilled_reference_mapping[ref] = resolved
 
         @kb.add(Keys.Tab)
         def _(event):
@@ -159,8 +159,8 @@ class InteractivePrompt:
                     if match:
                         ref = match.group(1)
                         resolved = self.completer.resolve_refs(ref)
-                        if self.cli_session:
-                            self.cli_session.prefilled_reference_mapping[ref] = resolved
+                        if self.session:
+                            self.session.prefilled_reference_mapping[ref] = resolved
             else:
                 # Start completion with first item selected
                 buffer.start_completion(select_first=True)
@@ -176,10 +176,8 @@ class InteractivePrompt:
                         if match:
                             ref = match.group(1)
                             resolved = self.completer.resolve_refs(ref)
-                            if self.cli_session:
-                                self.cli_session.prefilled_reference_mapping[ref] = (
-                                    resolved
-                                )
+                            if self.session:
+                                self.session.prefilled_reference_mapping[ref] = resolved
 
         return kb
 
@@ -268,9 +266,9 @@ class InteractivePrompt:
 
     def refresh_style(self) -> None:
         """Refresh the prompt style after approval mode change."""
-        if self.session:
+        if self.prompt_session:
             # Update the session style
-            self.session.style = self._create_style()
+            self.prompt_session.style = self._create_style()
 
     def _create_style(self) -> Style:
         """Create prompt style based on theme and approval mode."""
@@ -325,11 +323,11 @@ class InteractivePrompt:
             ]
 
             default_text = ""
-            if self.cli_session and self.cli_session.prefilled_text:
-                default_text = self.cli_session.prefilled_text
-                self.cli_session.prefilled_text = None
+            if self.session and self.session.prefilled_text:
+                default_text = self.session.prefilled_text
+                self.session.prefilled_text = None
 
-            result = await self.session.prompt_async(prompt_text, default=default_text)  # type: ignore
+            result = await self.prompt_session.prompt_async(prompt_text, default=default_text)  # type: ignore
             print()
 
             content = result.strip()

@@ -15,7 +15,7 @@ from src.core.logging import get_logger
 logger = get_logger(__name__)
 
 
-class CLISession:
+class Session:
     """Main CLI session manager for interactive chat."""
 
     def __init__(

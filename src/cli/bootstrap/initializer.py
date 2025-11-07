@@ -13,7 +13,9 @@ from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
 
+from src.agents.context import AgentContext
 from src.agents.factory import AgentFactory, GraphFactory
+from src.agents.state import AgentState
 from src.checkpointer.factory import CheckpointerFactory
 from src.cli.bootstrap.timer import timer
 from src.core.config import (
@@ -39,7 +41,6 @@ from src.core.constants import (
 from src.core.settings import settings
 from src.llms.factory import LLMFactory
 from src.mcp.factory import MCPFactory
-from src.state.base import BaseState
 from src.tools.factory import ToolFactory
 
 
@@ -285,7 +286,12 @@ class Initializer:
         async with checkpointer_ctx as checkpointer:
             with timer("Create graph"):
                 graph = await self.graph_factory.create(
-                    agent_config, BaseState, mcp_config, llm_config, template_context
+                    config=agent_config,
+                    state_schema=AgentState,
+                    context_schema=AgentContext,
+                    mcp_config=mcp_config,
+                    llm_config=llm_config,
+                    template_context=template_context,
                 )
 
             with timer("Compile graph"):

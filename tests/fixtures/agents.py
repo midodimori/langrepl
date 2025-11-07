@@ -143,6 +143,19 @@ def create_mock_tool():
         mock.description = f"Mock tool {name}"
         mock.args_schema = MockToolArgs
         mock.handle_tool_error = False
+        mock.metadata = None
         return cast(BaseTool, mock)
 
     return _create
+
+
+@pytest.fixture
+def agent_context(temp_dir):
+    """Create AgentContext for tests."""
+    from src.agents.context import AgentContext
+    from src.core.config import ApprovalMode
+
+    return AgentContext(
+        approval_mode=ApprovalMode.AGGRESSIVE,
+        working_dir=temp_dir,
+    )

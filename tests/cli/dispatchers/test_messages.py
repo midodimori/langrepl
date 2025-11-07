@@ -121,7 +121,7 @@ class TestMessageDispatcher:
         mock_session,
         mock_context,
     ):
-        """Test dispatch creates proper graph config."""
+        """Test dispatch creates proper graph config and context."""
         mock_session.context = mock_context
         dispatcher = MessageDispatcher(mock_session)
         mock_session.prompt.completer.resolve_refs = MagicMock(side_effect=lambda x: x)
@@ -130,12 +130,16 @@ class TestMessageDispatcher:
 
         call_args = mock_stream_response.call_args[0]
         config = call_args[1]
+        agent_context = call_args[2]
+
+        # Check config structure
         assert "configurable" in config
         assert config["configurable"]["thread_id"] == mock_context.thread_id
-        assert (
-            config["configurable"]["approval_mode"] == mock_context.approval_mode.value
-        )
         assert config["recursion_limit"] == mock_context.recursion_limit
+
+        # Check agent context (approval_mode moved here in v1)
+        assert agent_context.approval_mode == mock_context.approval_mode
+        assert agent_context.working_dir == mock_context.working_dir
 
     @pytest.mark.asyncio
     @patch.object(
@@ -263,12 +267,22 @@ class TestMessageDispatcher:
         mock_auto_compress,
         mock_session,
     ):
-        """Test _process_chunk checks auto compression for AI messages."""
+        """Test _process_chunk checks auto compression when token fields present."""
         dispatcher = MessageDispatcher(mock_session)
         mock_session.renderer.render_message = MagicMock()
+        mock_session.update_context = MagicMock()
 
         message = AIMessage(content="test", id="msg1")
-        chunk = ((), {"agent": {"messages": [message]}})
+        # Include token fields to trigger auto-compression check
+        chunk = (
+            (),
+            {
+                "agent": {
+                    "messages": [message],
+                    "current_input_tokens": 100,
+                }
+            },
+        )
         rendered_messages: set[str] = set()
 
         await dispatcher._process_chunk(chunk, rendered_messages)

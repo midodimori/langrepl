@@ -6,7 +6,7 @@ import pytest
 from langgraph.types import Interrupt
 
 from src.cli.handlers.interrupts import InterruptHandler
-from src.tools.wrapper import InterruptPayload
+from src.middleware.approval import InterruptPayload
 
 
 class TestInterruptHandler:

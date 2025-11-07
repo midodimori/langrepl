@@ -5,15 +5,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.cli.core.session import CLISession
+from src.cli.core.session import Session
 
 
-class TestCLISessionInit:
-    """Tests for CLISession initialization."""
+class TestSessionInit:
+    """Tests for Session initialization."""
 
     def test_init_creates_all_components(self, mock_context):
         """Test that __init__ creates all required components."""
-        session = CLISession(mock_context)
+        session = Session(mock_context)
 
         assert session.context == mock_context
         assert session.renderer is not None
@@ -23,7 +23,7 @@ class TestCLISessionInit:
 
     def test_init_sets_default_state(self, mock_context):
         """Test that __init__ sets default session state."""
-        session = CLISession(mock_context)
+        session = Session(mock_context)
 
         assert session.graph is None
         assert session.graph_context is None
@@ -42,18 +42,18 @@ class TestCLISessionInit:
         mock_prompt = MagicMock()
         mock_prompt_cls.return_value = mock_prompt
 
-        CLISession(mock_context)
+        Session(mock_context)
 
         mock_prompt.set_mode_change_callback.assert_called_once()
         callback = mock_prompt.set_mode_change_callback.call_args[0][0]
         assert callable(callback)
 
 
-class TestCLISessionStart:
-    """Tests for CLISession.start() method."""
+class TestSessionStart:
+    """Tests for Session.start() method."""
 
     @pytest.mark.asyncio
-    @patch.object(CLISession, "_main_loop", new_callable=AsyncMock)
+    @patch.object(Session, "_main_loop", new_callable=AsyncMock)
     @patch("src.cli.core.session.initializer.get_graph")
     async def test_start_loads_graph(
         self,
@@ -69,14 +69,14 @@ class TestCLISessionStart:
             yield graph_instance
 
         mock_get_graph.side_effect = graph_context
-        session = CLISession(mock_context)
+        session = Session(mock_context)
 
         await session.start()
 
         assert session.graph is graph_instance
 
     @pytest.mark.asyncio
-    @patch.object(CLISession, "_main_loop", new_callable=AsyncMock)
+    @patch.object(Session, "_main_loop", new_callable=AsyncMock)
     @patch("src.cli.core.session.initializer.get_graph")
     async def test_start_shows_welcome_by_default(
         self,
@@ -92,7 +92,7 @@ class TestCLISessionStart:
             yield graph_instance
 
         mock_get_graph.side_effect = graph_context
-        session = CLISession(mock_context)
+        session = Session(mock_context)
         session.renderer = MagicMock()
 
         await session.start()
@@ -100,7 +100,7 @@ class TestCLISessionStart:
         session.renderer.show_welcome.assert_called_once_with(mock_context)
 
     @pytest.mark.asyncio
-    @patch.object(CLISession, "_main_loop", new_callable=AsyncMock)
+    @patch.object(Session, "_main_loop", new_callable=AsyncMock)
     @patch("src.cli.core.session.initializer.get_graph")
     async def test_start_hides_welcome_when_requested(
         self,
@@ -116,7 +116,7 @@ class TestCLISessionStart:
             yield graph_instance
 
         mock_get_graph.side_effect = graph_context
-        session = CLISession(mock_context)
+        session = Session(mock_context)
         session.renderer = MagicMock()
 
         await session.start(show_welcome=False)
@@ -124,7 +124,7 @@ class TestCLISessionStart:
         session.renderer.show_welcome.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch.object(CLISession, "_main_loop", new_callable=AsyncMock)
+    @patch.object(Session, "_main_loop", new_callable=AsyncMock)
     @patch("src.cli.core.session.initializer.get_graph")
     async def test_start_calls_main_loop(
         self,
@@ -140,19 +140,19 @@ class TestCLISessionStart:
             yield graph_instance
 
         mock_get_graph.side_effect = graph_context
-        session = CLISession(mock_context)
+        session = Session(mock_context)
 
         await session.start()
 
         mock_main_loop.assert_called_once()
 
 
-class TestCLISessionUpdateContext:
-    """Tests for CLISession.update_context() method."""
+class TestSessionUpdateContext:
+    """Tests for Session.update_context() method."""
 
     def test_update_context_updates_single_field(self, mock_context):
         """Test that update_context() updates a single field."""
-        session = CLISession(mock_context)
+        session = Session(mock_context)
         original_value = mock_context.current_input_tokens
 
         session.update_context(current_input_tokens=1000)
@@ -162,7 +162,7 @@ class TestCLISessionUpdateContext:
 
     def test_update_context_updates_multiple_fields(self, mock_context):
         """Test that update_context() updates multiple fields at once."""
-        session = CLISession(mock_context)
+        session = Session(mock_context)
 
         session.update_context(
             current_input_tokens=1000, current_output_tokens=2000, total_cost=3.5
@@ -174,7 +174,7 @@ class TestCLISessionUpdateContext:
 
     def test_update_context_with_agent_triggers_reload(self, mock_context):
         """Test that updating agent triggers reload."""
-        session = CLISession(mock_context)
+        session = Session(mock_context)
         session.running = True
         session.needs_reload = False
 
@@ -185,7 +185,7 @@ class TestCLISessionUpdateContext:
 
     def test_update_context_with_model_triggers_reload(self, mock_context):
         """Test that updating model triggers reload."""
-        session = CLISession(mock_context)
+        session = Session(mock_context)
         session.running = True
         session.needs_reload = False
 
@@ -198,7 +198,7 @@ class TestCLISessionUpdateContext:
         self, mock_context
     ):
         """Test that updating both agent and model triggers reload."""
-        session = CLISession(mock_context)
+        session = Session(mock_context)
         session.running = True
         session.needs_reload = False
 
@@ -209,7 +209,7 @@ class TestCLISessionUpdateContext:
 
     def test_update_context_with_tokens_does_not_trigger_reload(self, mock_context):
         """Test that updating tokens doesn't trigger reload."""
-        session = CLISession(mock_context)
+        session = Session(mock_context)
         session.running = True
         session.needs_reload = False
 
@@ -220,7 +220,7 @@ class TestCLISessionUpdateContext:
 
     def test_update_context_ignores_invalid_fields(self, mock_context):
         """Test that update_context() ignores fields not in context."""
-        session = CLISession(mock_context)
+        session = Session(mock_context)
 
         session.update_context(invalid_field="value")
 
@@ -228,7 +228,7 @@ class TestCLISessionUpdateContext:
 
     def test_update_context_with_thread_id(self, mock_context):
         """Test that update_context() can update thread_id."""
-        session = CLISession(mock_context)
+        session = Session(mock_context)
         new_thread_id = "new-thread-123"
 
         session.update_context(thread_id=new_thread_id)
@@ -236,12 +236,12 @@ class TestCLISessionUpdateContext:
         assert mock_context.thread_id == new_thread_id
 
 
-class TestCLISessionHandleApprovalModeChange:
-    """Tests for CLISession._handle_approval_mode_change() method."""
+class TestSessionHandleApprovalModeChange:
+    """Tests for Session._handle_approval_mode_change() method."""
 
     def test_handle_approval_mode_change_cycles_mode(self, mock_context):
         """Test that _handle_approval_mode_change cycles approval mode."""
-        session = CLISession(mock_context)
+        session = Session(mock_context)
         original_mode = mock_context.approval_mode
 
         session._handle_approval_mode_change()
@@ -250,7 +250,7 @@ class TestCLISessionHandleApprovalModeChange:
 
     def test_handle_approval_mode_change_refreshes_prompt_style(self, mock_context):
         """Test that _handle_approval_mode_change refreshes prompt style."""
-        session = CLISession(mock_context)
+        session = Session(mock_context)
         session.prompt = MagicMock()
 
         session._handle_approval_mode_change()

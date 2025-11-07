@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0](https://github.com/midodimori/langrepl/compare/v0.3.1...v1.0.0) (2025-11-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* Major upgrade from LangChain 0.x to 1.x with architectural changes
+
+### Features
+
+* migrate to LangChain v1.0 with context-based architecture ([#20](https://github.com/midodimori/langrepl/issues/20)) ([d003cce](https://github.com/midodimori/langrepl/commit/d003cce49694ce0140249386db96b655dbe58fa0))
+
+
+### Bug Fixes
+
+* correct ToolRuntime context type and auto-approve internal tools ([8d17619](https://github.com/midodimori/langrepl/commit/8d176190a4499dd3d66b74d56fda8643154ef623))
+
 ## [0.3.1](https://github.com/midodimori/langrepl/compare/v0.3.0...v0.3.1) (2025-11-05)
 
 

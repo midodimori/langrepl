@@ -55,8 +55,7 @@ class InterruptHandler:
             console.print_error(f"Error handling interrupt: {e}")
             return None
 
-    @staticmethod
-    async def _get_choice(interrupt: Interrupt) -> str | None:
+    async def _get_choice(self, interrupt: Interrupt) -> str | None:
         """Choice selector with tab completion and Enter key support."""
         value: InterruptPayload = interrupt.value
         question = value.question
@@ -66,11 +65,8 @@ class InterruptHandler:
         with console.capture() as capture:
             console.print(f"[accent]{question}[/accent]")
         rendered_text = capture.get()
-        # Count actual newlines in the rendered output (not stripping)
-        # This gives us the exact number of line breaks
         lines_to_clear = rendered_text.count("\n")
 
-        # Now print for real
         console.print(f"[accent]{question}[/accent]")
         completer = WordCompleter(options, ignore_case=True)
 

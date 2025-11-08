@@ -34,7 +34,7 @@ def _transform_command_for_approval(command: str) -> str:
 def _render_command_args(args: dict, config: dict) -> str:
     """Render command arguments with syntax highlighting."""
     command = args.get("command", "")
-    return f"[{theme.tool_color}]{command}[/{theme.tool_color}]"
+    return f"[{theme.indicator_color}]{command}[/{theme.indicator_color}]"
 
 
 @tool

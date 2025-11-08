@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from rich.style import Style
 from rich.theme import Theme
 
+from src.cli.theme.base import BaseTheme
 from src.cli.theme.registry import register_theme
 
 
@@ -37,7 +38,7 @@ class TokyoNightColors:
 
 
 @register_theme("tokyo-night")
-class TokyoNightTheme:
+class TokyoNightTheme(BaseTheme):
     """Tokyo Night theme implementation."""
 
     def __init__(self):
@@ -70,7 +71,7 @@ class TokyoNightTheme:
                 "prompt": Style(color=c.bright_blue, bold=True),
                 "command": Style(color=c.purple),
                 "option": Style(color=c.cyan),
-                "tool": Style(color=c.teal),
+                "indicator": Style(color=c.teal),
                 # Code syntax highlighting
                 "code": Style(color=c.teal, bold=False),
                 "code.keyword": Style(color=c.purple, bold=True),
@@ -131,7 +132,7 @@ class TokyoNightTheme:
         return self.colors.cyan
 
     @property
-    def tool_color(self) -> str:
+    def indicator_color(self) -> str:
         return self.colors.teal
 
     @property

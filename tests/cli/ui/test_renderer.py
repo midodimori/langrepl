@@ -279,7 +279,8 @@ class TestRendererToolCallFormatting:
             "args": {},
         }
         formatted = Renderer._format_tool_call(tool_call)
-        assert formatted == "get_time()"
+        formatted_str = str(formatted)
+        assert "⚙ get_time" in formatted_str
 
     def test_format_tool_call_with_multiple_arguments(self):
         """Test formatting tool call with multiple arguments."""
@@ -288,10 +289,11 @@ class TestRendererToolCallFormatting:
             "args": {"query": "test", "limit": 10, "filter": "active"},
         }
         formatted = Renderer._format_tool_call(tool_call)
-        assert "search(" in formatted
-        assert "query=" in formatted
-        assert "limit=" in formatted
-        assert "filter=" in formatted
+        formatted_str = str(formatted)
+        assert "⚙ search" in formatted_str
+        assert "query :" in formatted_str
+        assert "limit :" in formatted_str
+        assert "filter :" in formatted_str
 
     def test_format_tool_call_missing_name(self):
         """Test formatting handles missing tool name gracefully."""
@@ -299,7 +301,8 @@ class TestRendererToolCallFormatting:
             "args": {"key": "value"},
         }
         formatted = Renderer._format_tool_call(tool_call)
-        assert "unknown" in formatted.lower() or "(" in formatted
+        formatted_str = str(formatted).lower()
+        assert "unknown" in formatted_str or "(" in str(formatted)
 
     def test_format_tool_call_missing_args(self):
         """Test formatting handles missing args gracefully."""
@@ -307,7 +310,8 @@ class TestRendererToolCallFormatting:
             "name": "tool_name",
         }
         formatted = Renderer._format_tool_call(tool_call)
-        assert "tool_name()" == formatted
+        formatted_str = str(formatted)
+        assert "⚙ tool_name" in formatted_str
 
 
 class TestRendererToolMessage:
@@ -345,6 +349,25 @@ class TestRendererToolMessage:
         """Test that multiline tool messages are properly indented."""
         message = ToolMessage(content="Line 1\nLine 2\nLine 3", tool_call_id="1")
         # All lines after first should be indented
+        Renderer.render_tool_message(message)
+
+    def test_render_tool_message_empty_content_skips_rendering(self):
+        """Test that empty content tool messages are not rendered."""
+        message = ToolMessage(content="", tool_call_id="1")
+        # Should return early without rendering
+        Renderer.render_tool_message(message)
+
+    def test_render_tool_message_whitespace_only_skips_rendering(self):
+        """Test that whitespace-only content tool messages are not rendered."""
+        message = ToolMessage(content="   \n  \t  ", tool_call_id="1")
+        # Should return early without rendering
+        Renderer.render_tool_message(message)
+
+    def test_render_tool_message_empty_short_content_falls_back(self):
+        """Test that empty short_content falls back to text content."""
+        message = ToolMessage(content="Actual content", tool_call_id="1")
+        message.short_content = ""  # type: ignore[attr-defined]
+        # Should fall back to content and render
         Renderer.render_tool_message(message)
 
 

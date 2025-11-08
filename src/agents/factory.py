@@ -191,7 +191,7 @@ class GraphFactory:
             llm_config: Optional LLM configuration to override the one in config
             template_context: Optional template variables for prompt rendering
 
-        Yields:
+        Returns:
             CompiledStateGraph: The state graph
         """
         mcp_client = await self.mcp_factory.create(mcp_config)

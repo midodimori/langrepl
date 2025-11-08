@@ -105,6 +105,9 @@ class PrefixedMarkdown:
 class Renderer:
     """Handles rendering of UI elements using Rich."""
 
+    def __init__(self):
+        self.pending_tool_calls: dict[str, dict] = {}
+
     @staticmethod
     def show_welcome(context: Context) -> None:
         """Display ASCII logo and session information."""
@@ -179,7 +182,9 @@ class Renderer:
         return texts, thinking_blocks
 
     @staticmethod
-    def _format_tool_call(tool_call: dict[str, Any]) -> Text:
+    def _format_tool_call(
+        tool_call: dict[str, Any], position: int | None = None, total: int | None = None
+    ) -> Text:
         """Format a single tool call with improved readability."""
         tool_name = tool_call.get("name", UNKNOWN)
         tool_args = cast(dict[str, Any], tool_call.get("args", {}))
@@ -188,6 +193,10 @@ class Renderer:
         result = Text()
         result.append("⚙ ", style="indicator")
         result.append(tool_name, style="bold")
+
+        # Add position/total if multiple tools
+        if position is not None and total is not None and total > 1:
+            result.append(f" ({position}/{total})", style="dim")
 
         if tool_args:
             result.append("\n")
@@ -203,8 +212,7 @@ class Renderer:
 
         return result
 
-    @staticmethod
-    def render_assistant_message(message: AIMessage) -> None:
+    def render_assistant_message(self, message: AIMessage) -> None:
         """Render an assistant message with optional tool calls."""
         if not message.content and not message.tool_calls:
             return
@@ -214,12 +222,21 @@ class Renderer:
         is_error = getattr(message, "is_error", False)
 
         if not content:
-            # Only tool calls, no content
+            # Only tool calls, no content - buffer them for pairing with results
             if tool_calls:
-                for i, tool_call in enumerate(tool_calls):
-                    console.print(Renderer._format_tool_call(tool_call))
-                    if i < len(tool_calls) - 1:
-                        console.print("")
+                total = len(tool_calls)
+                for i, tool_call in enumerate(tool_calls, 1):
+                    tool_call_id = tool_call.get("id")
+                    if tool_call_id is None:
+                        console.print_error(
+                            f"Tool call '{tool_call.get('name')}' has no ID, skipping pairing"
+                        )
+                        continue
+                    self.pending_tool_calls[str(tool_call_id)] = {
+                        "call": tool_call,
+                        "position": i,
+                        "total": total,
+                    }
             return
 
         if is_error:
@@ -267,18 +284,39 @@ class Renderer:
         if parts:
             console.print(Group(*parts))
 
-        # Print tool calls with separator if we had content
+        # Print tool calls with separator if we had content - buffer for pairing with results
         if tool_calls:
             if parts:
                 console.print(NewLine())
-            for tool_call in tool_calls:
-                console.print(Renderer._format_tool_call(tool_call))
+            total = len(tool_calls)
+            for i, tool_call in enumerate(tool_calls, 1):
+                tool_call_id = tool_call.get("id")
+                if tool_call_id is None:
+                    console.print_error(
+                        f"Tool call '{tool_call.get('name')}' has no ID, skipping pairing"
+                    )
+                    continue
+                self.pending_tool_calls[str(tool_call_id)] = {
+                    "call": tool_call,
+                    "position": i,
+                    "total": total,
+                }
         elif parts:
             console.print("")
 
-    @staticmethod
-    def render_tool_message(message: ToolMessage) -> None:
+    def render_tool_message(self, message: ToolMessage) -> None:
         """Render a tool execution message with Rich markup support."""
+        tool_call_id = message.tool_call_id
+        lookup_key = str(tool_call_id)
+
+        # Render paired tool call first if pending
+        if lookup_key in self.pending_tool_calls:
+            tool_data = self.pending_tool_calls.pop(lookup_key)
+            tool_call = tool_data["call"]
+            position = tool_data["position"]
+            total = tool_data["total"]
+            console.print(Renderer._format_tool_call(tool_call, position, total))
+
         content = getattr(message, "short_content", None) or message.text
 
         # Skip rendering if content is empty or None
@@ -474,14 +512,13 @@ class Renderer:
         except Exception as e:
             console.print_error(f"Could not generate Mermaid diagram: {e}")
 
-    @staticmethod
-    def render_message(message: AnyMessage) -> None:
+    def render_message(self, message: AnyMessage) -> None:
         """Render any message."""
         if isinstance(message, HumanMessage):
             Renderer.render_user_message(message)
 
         elif isinstance(message, AIMessage):
-            Renderer.render_assistant_message(message)
+            self.render_assistant_message(message)
 
         elif isinstance(message, ToolMessage):
-            Renderer.render_tool_message(message)
+            self.render_tool_message(message)

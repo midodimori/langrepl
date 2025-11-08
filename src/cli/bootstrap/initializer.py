@@ -284,21 +284,18 @@ class Initializer:
             )
 
         async with checkpointer_ctx as checkpointer:
-            with timer("Create graph"):
-                graph = await self.graph_factory.create(
+            with timer("Create and compile graph"):
+                compiled_graph = await self.graph_factory.create(
                     config=agent_config,
                     state_schema=AgentState,
                     context_schema=AgentContext,
+                    checkpointer=checkpointer,
                     mcp_config=mcp_config,
                     llm_config=llm_config,
                     template_context=template_context,
                 )
 
-            with timer("Compile graph"):
-                # Cache tools from graph
-                self.cached_tools = getattr(graph, "_tools", [])
-                compiled_graph = graph.compile(checkpointer=checkpointer)
-
+            self.cached_tools = getattr(compiled_graph, "_tools", [])
             yield compiled_graph
 
     async def get_threads(self, agent: str, working_dir: Path) -> list[dict]:

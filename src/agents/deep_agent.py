@@ -2,6 +2,7 @@ from typing import Any
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.store.base import BaseStore
 
@@ -17,6 +18,7 @@ def create_deep_agent(
     subagents: list[SubAgent] | None = None,
     state_schema: StateSchemaType | None = None,
     context_schema: type[Any] | None = None,
+    checkpointer: BaseCheckpointSaver | None = None,
     internal_tools: list[BaseTool] | None = None,
     store: BaseStore | None = None,
     name: str | None = None,
@@ -36,6 +38,7 @@ def create_deep_agent(
         tools=all_tools,
         state_schema=state_schema,
         context_schema=context_schema,
+        checkpointer=checkpointer,
         store=store,
         name=name,
     )

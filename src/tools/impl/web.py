@@ -23,7 +23,7 @@ def _extract_host_from_url(url: str) -> str:
 def _render_url_args(args: dict, config: dict) -> str:
     """Render URL arguments with syntax highlighting."""
     url = args.get("url", "")
-    return f"[{theme.tool_color}]{url}[/{theme.tool_color}]"
+    return f"[{theme.indicator_color}]{url}[/{theme.indicator_color}]"
 
 
 @tool

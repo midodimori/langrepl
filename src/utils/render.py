@@ -2,6 +2,7 @@ import difflib
 import json
 import re
 import shutil
+import uuid
 from typing import Any, TypeAlias
 
 from langchain_core.messages import AIMessage, ToolMessage
@@ -138,6 +139,7 @@ def create_tool_message(
         short_content = content if final_is_error else truncate_text(content, 200)
 
     return ToolMessage(
+        id=str(uuid.uuid4()),
         name=tool_name,
         content=content,
         tool_call_id=tool_call_id,

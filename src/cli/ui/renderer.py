@@ -8,7 +8,7 @@ from rich.console import Console, ConsoleOptions, Group, NewLine, RenderableType
 from rich.markdown import CodeBlock, Markdown
 from rich.panel import Panel
 from rich.style import Style
-from rich.syntax import Syntax
+from rich.syntax import Syntax, SyntaxTheme
 from rich.table import Table
 from rich.text import Text
 
@@ -24,8 +24,6 @@ class TransparentSyntax(Syntax):
     @classmethod
     def get_theme(cls, name):
         """Wrap theme to strip background colors from all token styles."""
-        from rich.syntax import SyntaxTheme
-
         base_theme = super().get_theme(name)
 
         class TransparentThemeWrapper(SyntaxTheme):
@@ -64,6 +62,44 @@ class TransparentMarkdown(Markdown):
         "code_block": TransparentCodeBlock,
         "fence": TransparentCodeBlock,
     }
+
+
+class PrefixedMarkdown:
+    """Markdown with a styled prefix on the first line."""
+
+    def __init__(
+        self,
+        prefix: str,
+        content: str,
+        prefix_style: str = "success",
+        code_theme: str = "dracula",
+    ):
+        self.prefix = prefix
+        self.prefix_style = prefix_style
+        self.content = content
+        self.code_theme = code_theme
+
+    def __rich_console__(self, console: Console, options: ConsoleOptions):
+        """Render markdown with prefix on first line by prepending to content."""
+        # Split content into lines
+        lines = self.content.split("\n")
+
+        if lines:
+            # Prepend the styled prefix to the first line
+            first_line = lines[0]
+            # Create styled text for the first line with symbol
+            styled_first = Text()
+            styled_first.append(self.prefix, style=self.prefix_style)
+            styled_first.append(first_line)
+            yield styled_first
+
+            # Render remaining lines as markdown if any
+            if len(lines) > 1:
+                remaining_content = "\n".join(lines[1:])
+                markdown = TransparentMarkdown(
+                    remaining_content, code_theme=self.code_theme
+                )
+                yield from console.render(markdown, options)
 
 
 class Renderer:
@@ -143,17 +179,29 @@ class Renderer:
         return texts, thinking_blocks
 
     @staticmethod
-    def _format_tool_call(tool_call: dict[str, Any]) -> str:
-        """Format a single tool call as a string."""
+    def _format_tool_call(tool_call: dict[str, Any]) -> Text:
+        """Format a single tool call with improved readability."""
         tool_name = tool_call.get("name", UNKNOWN)
         tool_args = cast(dict[str, Any], tool_call.get("args", {}))
-        args_str = ", ".join(
-            [
-                f"{k}={str(v)[:200]}{'...' if len(str(v)) > 200 else ''}"
-                for k, v in tool_args.items()
-            ]
-        )
-        return f"{tool_name}({args_str})" if args_str else f"{tool_name}()"
+
+        # Build the text with formatting
+        result = Text()
+        result.append("⚙ ", style="indicator")
+        result.append(tool_name, style="bold")
+
+        if tool_args:
+            result.append("\n")
+            for k, v in tool_args.items():
+                # Format value with truncation if needed
+                value_str = str(v)
+                if len(value_str) > 200:
+                    value_str = value_str[:200] + "..."
+
+                result.append(f"  {k} : ")
+                result.append(value_str)
+                result.append("\n")
+
+        return result
 
     @staticmethod
     def render_assistant_message(message: AIMessage) -> None:
@@ -168,10 +216,10 @@ class Renderer:
         if not content:
             # Only tool calls, no content
             if tool_calls:
-                for tool_call in tool_calls:
-                    console.print(
-                        Text(Renderer._format_tool_call(tool_call), style="muted")
-                    )
+                for i, tool_call in enumerate(tool_calls):
+                    console.print(Renderer._format_tool_call(tool_call))
+                    if i < len(tool_calls) - 1:
+                        console.print("")
             return
 
         if is_error:
@@ -209,7 +257,11 @@ class Renderer:
         # Render main content
         content = Renderer._fix_malformed_code_blocks(content)
         if content:
-            parts.append(TransparentMarkdown(content, code_theme="dracula"))
+            parts.append(
+                PrefixedMarkdown(
+                    "◆︎ ", content, prefix_style="indicator", code_theme="dracula"
+                )
+            )
 
         # Print content if any
         if parts:
@@ -219,10 +271,10 @@ class Renderer:
         if tool_calls:
             if parts:
                 console.print(NewLine())
-            for tool_call in tool_calls:
-                console.print(
-                    Text(Renderer._format_tool_call(tool_call), style="muted")
-                )
+            for i, tool_call in enumerate(tool_calls):
+                console.print(Renderer._format_tool_call(tool_call))
+                if i < len(tool_calls) - 1:
+                    console.print("")
         elif parts:
             console.print("")
 
@@ -230,6 +282,11 @@ class Renderer:
     def render_tool_message(message: ToolMessage) -> None:
         """Render a tool execution message with Rich markup support."""
         content = getattr(message, "short_content", None) or message.text
+
+        # Skip rendering if content is empty or None
+        if not content or (isinstance(content, str) and not content.strip()):
+            return
+
         is_error = (
             getattr(message, "is_error", False)
             or getattr(message, "status", None) == "error"
@@ -247,7 +304,7 @@ class Renderer:
         if is_error:
             console.print(Text(formatted_content, style="error"))
         else:
-            console.print(f"[muted]{formatted_content}[/muted]")
+            console.print(formatted_content)
 
         console.print("")
 

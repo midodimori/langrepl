@@ -80,7 +80,7 @@ class BaseTheme(Protocol):
         ...
 
     @property
-    def tool_color(self) -> str:
+    def indicator_color(self) -> str:
         """Tool-related elements color."""
         ...
 

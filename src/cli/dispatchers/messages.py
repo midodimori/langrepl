@@ -1,5 +1,6 @@
 """Message handling for chat sessions."""
 
+import asyncio
 from typing import Any
 
 from langchain_core.messages import AnyMessage, HumanMessage
@@ -75,30 +76,39 @@ class MessageDispatcher:
 
         while True:
             interrupted = False
-            with console.console.status(
-                f"[{theme.spinner_color}]Randomizing...[/{theme.spinner_color}]"
-            ) as status:
-                async for chunk in self.session.graph.astream(
-                    current_input,
-                    config,
-                    context=context,
-                    stream_mode="updates",
-                    subgraphs=True,
-                ):
-                    interrupts = self._extract_interrupts(chunk)
-                    if interrupts:
-                        # Stop spinner before handling interrupt
-                        status.stop()
-                        # Handle interrupt and prepare next iteration
-                        resume_value = await self.interrupt_handler.handle(interrupts)
-                        current_input = Command(resume=resume_value)
-                        interrupted = True
-                        break  # Break inner loop, continue outer while loop
-                    else:
-                        await self._process_chunk(chunk, rendered_messages)
+            cancelled = False
 
-            if not interrupted:
-                # No interrupts encountered, streaming completed
+            try:
+                with console.console.status(
+                    f"[{theme.spinner_color}]Randomizing...[/{theme.spinner_color}]"
+                ) as status:
+                    async for chunk in self.session.graph.astream(
+                        current_input,
+                        config,
+                        context=context,
+                        stream_mode="updates",
+                        subgraphs=True,
+                    ):
+                        interrupts = self._extract_interrupts(chunk)
+                        if interrupts:
+                            # Stop spinner before handling interrupt
+                            status.stop()
+                            # Handle interrupt and prepare next iteration
+                            resume_value = await self.interrupt_handler.handle(
+                                interrupts
+                            )
+                            current_input = Command(resume=resume_value)
+                            interrupted = True
+                            break  # Break inner loop, continue outer while loop
+                        else:
+                            await self._process_chunk(chunk, rendered_messages)
+
+            except (asyncio.CancelledError, KeyboardInterrupt):
+                # User cancelled the generation
+                cancelled = True
+
+            if cancelled or not interrupted:
+                # Cancelled or no interrupts encountered, streaming completed
                 break
 
     @staticmethod

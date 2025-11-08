@@ -4,6 +4,7 @@ from langchain.agents import create_agent
 from langchain.agents.middleware import AgentMiddleware
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.store.base import BaseStore
 
 from src.agents import ContextSchemaType, StateSchemaType
@@ -22,6 +23,7 @@ def create_react_agent(
     prompt: str,
     state_schema: StateSchemaType | None = None,
     context_schema: ContextSchemaType | None = None,
+    checkpointer: BaseCheckpointSaver | None = None,
     store: BaseStore | None = None,
     name: str | None = None,
 ):
@@ -64,6 +66,7 @@ def create_react_agent(
         system_prompt=prompt,
         state_schema=state_schema,
         context_schema=context_schema,
+        checkpointer=checkpointer,
         store=store,
         name=name,
         middleware=middleware,

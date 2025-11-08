@@ -91,15 +91,19 @@ class MessageDispatcher:
                     ):
                         interrupts = self._extract_interrupts(chunk)
                         if interrupts:
-                            # Stop spinner before handling interrupt
                             status.stop()
-                            # Handle interrupt and prepare next iteration
                             resume_value = await self.interrupt_handler.handle(
                                 interrupts
                             )
-                            current_input = Command(resume=resume_value)
+                            # Map resume value to interrupt ID format
+                            if isinstance(resume_value, dict):
+                                current_input = Command(resume=resume_value)
+                            else:
+                                current_input = Command(
+                                    resume={interrupts[0].id: resume_value}
+                                )
                             interrupted = True
-                            break  # Break inner loop, continue outer while loop
+                            break
                         else:
                             await self._process_chunk(chunk, rendered_messages)
 

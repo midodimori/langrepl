@@ -195,3 +195,27 @@ class TestInterruptHandler:
         result = await handler.handle([interrupt])
 
         assert result is None
+
+    @pytest.mark.asyncio
+    @patch("src.cli.handlers.interrupts.PromptSession")
+    async def test_handle_multiple_interrupts(
+        self, mock_prompt_session_cls, mock_prompt_session
+    ):
+        """Test that handle returns dict for multiple interrupts."""
+        handler = InterruptHandler()
+
+        payload1 = InterruptPayload(
+            question="Choose option 1:", options=["allow", "deny"]
+        )
+        payload2 = InterruptPayload(question="Choose option 2:", options=["yes", "no"])
+        interrupt1 = Interrupt(value=payload1, id="int-1")
+        interrupt2 = Interrupt(value=payload2, id="int-2")
+
+        mock_prompt_session.prompt_async.side_effect = ["allow", "yes"]
+        mock_prompt_session_cls.return_value = mock_prompt_session
+
+        result = await handler.handle([interrupt1, interrupt2])
+
+        assert isinstance(result, dict)
+        assert result == {"int-1": "allow", "int-2": "yes"}
+        assert mock_prompt_session.prompt_async.call_count == 2

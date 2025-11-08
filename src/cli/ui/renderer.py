@@ -271,10 +271,8 @@ class Renderer:
         if tool_calls:
             if parts:
                 console.print(NewLine())
-            for i, tool_call in enumerate(tool_calls):
+            for tool_call in tool_calls:
                 console.print(Renderer._format_tool_call(tool_call))
-                if i < len(tool_calls) - 1:
-                    console.print("")
         elif parts:
             console.print("")
 
@@ -295,9 +293,9 @@ class Renderer:
         formatted_lines = []
         for i, line in enumerate(content.split("\n")):
             if i == 0:
-                formatted_lines.append(f"ㄴ{line}")
+                formatted_lines.append(f" ㄴ{line}")
             else:
-                formatted_lines.append(f"  {line}")
+                formatted_lines.append(f"   {line}")
 
         formatted_content = "\n".join(formatted_lines)
 

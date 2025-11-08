@@ -19,7 +19,9 @@ logger = get_logger(__name__)
 class InterruptHandler:
     """Handles LangGraph interrupts and collects user input for resume."""
 
-    async def handle(self, interrupt_data: list[Interrupt]) -> str | None:
+    async def handle(
+        self, interrupt_data: list[Interrupt]
+    ) -> str | dict[str, str] | None:
         """
         Handle a LangGraph interrupts and collect user input.
 
@@ -27,14 +29,27 @@ class InterruptHandler:
             interrupt_data: List of Interrupt objects from LangGraph
 
         Returns:
-            Resume value to pass back to LangGraph
+            Resume value to pass back to LangGraph:
+            - For single interrupt: returns the resume value directly
+            - For multiple interrupts: returns dict mapping interrupt IDs to resume values
         """
         try:
             if not interrupt_data:
                 logger.warning("Empty interrupt data received")
                 return None
 
-            return await self._get_choice(interrupt_data[0])
+            # Handle single interrupt - return value directly
+            if len(interrupt_data) == 1:
+                return await self._get_choice(interrupt_data[0])
+
+            # Handle multiple interrupts - return dict mapping IDs to values
+            resume_dict = {}
+            for interrupt in interrupt_data:
+                choice = await self._get_choice(interrupt)
+                if choice is not None:
+                    resume_dict[interrupt.id] = choice
+
+            return resume_dict if resume_dict else None
 
         except Exception as e:
             console.print_error(f"Error handling interrupt: {e}")

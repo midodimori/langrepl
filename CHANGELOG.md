@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0](https://github.com/midodimori/langrepl/compare/v1.0.2...v1.1.0) (2025-11-08)
+
+
+### Features
+
+* add ctrl c key binding for stream cancellation ([#27](https://github.com/midodimori/langrepl/issues/27)) ([4e527af](https://github.com/midodimori/langrepl/commit/4e527af6311c14ad2dc93b92b41230d06a00178f))
+* improve message rendering with visual indicators and formatting ([#25](https://github.com/midodimori/langrepl/issues/25)) ([b88cfdf](https://github.com/midodimori/langrepl/commit/b88cfdfb0e3304167f6a1dd75058ef6b942bf4dc))
+* pair tool calls with results in rendering ([#29](https://github.com/midodimori/langrepl/issues/29)) ([e2fc941](https://github.com/midodimori/langrepl/commit/e2fc94104a4dd7b7714f3720e6075d13774452a1))
+
+
+### Bug Fixes
+
+* handle multiple pending interrupts ([#28](https://github.com/midodimori/langrepl/issues/28)) ([9cc140f](https://github.com/midodimori/langrepl/commit/9cc140f629203596441d183329912c11b7f8f3e3))
+
 ## [1.0.2](https://github.com/midodimori/langrepl/compare/v1.0.1...v1.0.2) (2025-11-07)
 
 

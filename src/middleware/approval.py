@@ -37,6 +37,16 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
     Checks approval rules and mode, interrupts for user confirmation if needed, persists rules.
     """
 
+    def __init__(self):
+        """Initialize with cache for tool call decisions."""
+        super().__init__()
+        # Cache: tool_call_id -> (user_response, tool_message)
+        self._decision_cache: dict[str, tuple[str, ToolMessage]] = {}
+
+    def clear_cache(self):
+        """Clear the decision cache. Useful for starting fresh in a new turn."""
+        self._decision_cache.clear()
+
     @staticmethod
     def _check_approval_rules(
         config: ToolApprovalConfig, tool_name: str, tool_args: dict
@@ -168,6 +178,15 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
     ) -> ToolMessage | Command:
         """Async tool call interception for approval."""
         try:
+            tool_call_id = str(request.tool_call["id"])
+            tool_name = request.tool_call["name"]
+
+            # Check cache first - if we've already processed this tool_call_id, return cached result
+            if tool_call_id in self._decision_cache:
+                cached_response, cached_message = self._decision_cache[tool_call_id]
+                return cached_message
+
+            # Not in cache - process approval
             user_response = self._handle_approval(request)
 
             if user_response in (ALLOW, ALWAYS_ALLOW):
@@ -175,19 +194,27 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
                 if isinstance(result, Command):
                     return result
 
-                return create_tool_message(
+                tool_msg = create_tool_message(
                     result=result,
-                    tool_name=request.tool_call["name"],
-                    tool_call_id=str(request.tool_call["id"]),
+                    tool_name=tool_name,
+                    tool_call_id=tool_call_id,
                 )
+
+                # Cache the decision
+                self._decision_cache[tool_call_id] = (user_response, tool_msg)
+                return tool_msg
             else:
-                return create_tool_message(
+                tool_msg = create_tool_message(
                     result="Action denied by user.",
-                    tool_name=request.tool_call["name"],
-                    tool_call_id=str(request.tool_call["id"]),
+                    tool_name=tool_name,
+                    tool_call_id=tool_call_id,
                     is_error=True,
                     return_direct=True,
                 )
+
+                # Cache the decision
+                self._decision_cache[tool_call_id] = (user_response, tool_msg)
+                return tool_msg
         except GraphInterrupt:
             raise
         except Exception as e:

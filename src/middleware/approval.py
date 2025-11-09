@@ -6,7 +6,7 @@ from pathlib import Path
 
 from langchain.agents.middleware import AgentMiddleware
 from langchain.tools.tool_node import ToolCallRequest
-from langchain_core.messages import ToolMessage
+from langchain_core.messages import AIMessage, ToolMessage
 from langgraph.errors import GraphInterrupt
 from langgraph.types import Command, interrupt
 from pydantic import BaseModel
@@ -29,6 +29,9 @@ ALWAYS_DENY = "always deny"
 class InterruptPayload(BaseModel):
     question: str
     options: list[str]
+    tool_call: dict | None = None
+    tool_position: int | None = None
+    tool_total: int | None = None
 
 
 class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
@@ -36,6 +39,25 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
 
     Checks approval rules and mode, interrupts for user confirmation if needed, persists rules.
     """
+
+    @staticmethod
+    def _get_tool_position(request: ToolCallRequest) -> tuple[int, int]:
+        """Get position and total count of current tool call."""
+
+        current_tool_id = request.tool_call.get("id")
+        state = request.state
+
+        # Find the latest AIMessage with tool calls
+        if state:
+            messages = state.get("messages", [])
+            for msg in reversed(messages):
+                if isinstance(msg, AIMessage) and msg.tool_calls:
+                    tool_calls = msg.tool_calls
+                    total = len(tool_calls)
+                    for i, tc in enumerate(tool_calls, 1):
+                        if tc.get("id") == current_tool_id:
+                            return i, total
+        return 1, 1
 
     @staticmethod
     def _check_approval_rules(
@@ -112,6 +134,9 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
         tool_name = request.tool_call["name"]
         tool_args = request.tool_call.get("args", {})
 
+        # Get position and total from state messages
+        position, total = self._get_tool_position(request)
+
         tool_metadata = (request.tool.metadata or {}) if request.tool else {}
         tool_config = tool_metadata.get("approval_config", {})
         format_args_fn = tool_config.get("format_args_fn")
@@ -147,6 +172,9 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
         interrupt_payload = InterruptPayload(
             question=question,
             options=[ALLOW, ALWAYS_ALLOW, DENY, ALWAYS_DENY],
+            tool_call=request.tool_call,
+            tool_position=position if total > 1 else None,
+            tool_total=total if total > 1 else None,
         )
         user_response = interrupt(interrupt_payload)
 

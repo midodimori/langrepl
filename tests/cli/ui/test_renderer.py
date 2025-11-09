@@ -275,7 +275,7 @@ class TestRendererToolCallFormatting:
             "name": "read_file",
             "args": {"path": "a" * 300},
         }
-        formatted = Renderer._format_tool_call(tool_call)
+        formatted = Renderer.format_tool_call(tool_call)
         assert "..." in formatted
         assert len(formatted) < 250
 
@@ -285,7 +285,7 @@ class TestRendererToolCallFormatting:
             "name": "get_time",
             "args": {},
         }
-        formatted = Renderer._format_tool_call(tool_call)
+        formatted = Renderer.format_tool_call(tool_call)
         formatted_str = str(formatted)
         assert "⚙ get_time" in formatted_str
 
@@ -295,7 +295,7 @@ class TestRendererToolCallFormatting:
             "name": "search",
             "args": {"query": "test", "limit": 10, "filter": "active"},
         }
-        formatted = Renderer._format_tool_call(tool_call)
+        formatted = Renderer.format_tool_call(tool_call)
         formatted_str = str(formatted)
         assert "⚙ search" in formatted_str
         assert "query :" in formatted_str
@@ -307,7 +307,7 @@ class TestRendererToolCallFormatting:
         tool_call = {
             "args": {"key": "value"},
         }
-        formatted = Renderer._format_tool_call(tool_call)
+        formatted = Renderer.format_tool_call(tool_call)
         formatted_str = str(formatted).lower()
         assert "unknown" in formatted_str or "(" in str(formatted)
 
@@ -316,7 +316,7 @@ class TestRendererToolCallFormatting:
         tool_call = {
             "name": "tool_name",
         }
-        formatted = Renderer._format_tool_call(tool_call)
+        formatted = Renderer.format_tool_call(tool_call)
         formatted_str = str(formatted)
         assert "⚙ tool_name" in formatted_str
 

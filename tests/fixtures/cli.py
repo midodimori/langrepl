@@ -68,6 +68,7 @@ def mock_renderer():
     renderer.show_welcome = MagicMock()
     renderer.render_help = MagicMock()
     renderer.render_graph = MagicMock()
+    renderer.pending_tool_calls = {}
     return renderer
 
 

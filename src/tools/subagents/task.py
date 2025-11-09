@@ -71,22 +71,22 @@ def create_task_tool(
             tool_call_id=runtime.tool_call_id or "",
         )
 
-        is_error = getattr(final_message, "is_error", False)
-        return_direct = getattr(final_message, "return_direct", False)
+        is_error = (
+            getattr(final_message, "is_error", False)
+            or getattr(final_message, "status", None) == "error"
+        )
 
-        if return_direct:
-            if not is_error:
-                short_content = getattr(final_message, "short_content", None)
-                setattr(
-                    final_message,
-                    "short_content",
-                    (
-                        f"Task completed: {short_content}"
-                        if short_content
-                        else "Task completed"
-                    ),
-                )
-            final_message.id = last_message.id
+        status = "completed" if not is_error else "failed"
+        short_content = (
+            getattr(final_message, "short_content", None)
+            if not is_error
+            else final_message.text
+        )
+        setattr(
+            final_message,
+            "short_content",
+            (f"Task {status}: {short_content}" if short_content else f"Task {status}"),
+        )
 
         return Command(
             update={

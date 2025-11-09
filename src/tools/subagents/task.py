@@ -64,19 +64,29 @@ def create_task_tool(
         state["messages"] = [HumanMessage(content=description)]
         result = await subagent.ainvoke(state)
 
-        # Check if subagent ended due to a denied action or other return_direct scenario
         last_message: AnyMessage = result["messages"][-1]
         final_message = create_tool_message(
             result=last_message,
             tool_name=task.name,
             tool_call_id=runtime.tool_call_id or "",
         )
-        if getattr(final_message, "return_direct", False) and getattr(
-            final_message, "is_error", False
-        ):
-            final_message.id = (
-                last_message.id
-            )  # Set the same ID for not rendering twice
+
+        is_error = getattr(final_message, "is_error", False)
+        return_direct = getattr(final_message, "return_direct", False)
+
+        if return_direct:
+            if not is_error:
+                short_content = getattr(final_message, "short_content", None)
+                setattr(
+                    final_message,
+                    "short_content",
+                    (
+                        f"Task completed: {short_content}"
+                        if short_content
+                        else "Task completed"
+                    ),
+                )
+            final_message.id = last_message.id
 
         return Command(
             update={

@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1](https://github.com/midodimori/langrepl/compare/v1.2.0...v1.2.1) (2025-11-09)
+
+
+### Bug Fixes
+
+* add short content for task tool result ([2e094ad](https://github.com/midodimori/langrepl/commit/2e094ad9f6ea22e763d3847cfcc72f1eb4cc554a))
+* always return short_content in task tool ([bc1200d](https://github.com/midodimori/langrepl/commit/bc1200da099a0c415f78b32b48bfa6970e96aad6))
+
 ## [1.2.0](https://github.com/midodimori/langrepl/compare/v1.1.3...v1.2.0) (2025-11-09)
 
 

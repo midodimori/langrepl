@@ -1,6 +1,5 @@
 """Rate limiter utilities for API providers with token-based limits."""
 
-import asyncio
 import threading
 import time
 from collections import deque
@@ -210,6 +209,8 @@ class TokenBucketLimiter(BaseRateLimiter):
         if not blocking:
             return self._consume()
 
+        import asyncio
+
         while not self._consume():
             await asyncio.sleep(self.check_every_n_seconds)
         return True
@@ -255,6 +256,9 @@ class TokenBucketLimiter(BaseRateLimiter):
         # Estimate input tokens
         input_text = "\n".join([str(msg.content) for msg in messages])
         estimated_input_tokens = len(input_text) // 4
+
+        # Wait for tokens to be available
+        import asyncio
 
         if estimated_input_tokens > 0:
             # Use the blocking version to wait for tokens

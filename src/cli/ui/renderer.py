@@ -1,6 +1,5 @@
 """Rich-based UI rendering and message formatting."""
 
-import re
 from typing import Any, cast
 
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, ToolMessage
@@ -106,9 +105,6 @@ class PrefixedMarkdown:
 class Renderer:
     """Handles rendering of UI elements using Rich."""
 
-    def __init__(self):
-        self.pending_tool_calls: dict[str, dict] = {}
-
     @staticmethod
     def show_welcome(context: Context) -> None:
         """Display ASCII logo and session information."""
@@ -183,9 +179,7 @@ class Renderer:
         return texts, thinking_blocks
 
     @staticmethod
-    def format_tool_call(
-        tool_call: dict[str, Any], position: int | None = None, total: int | None = None
-    ) -> Text:
+    def _format_tool_call(tool_call: dict[str, Any]) -> Text:
         """Format a single tool call with improved readability."""
         tool_name = tool_call.get("name", UNKNOWN)
         tool_args = cast(dict[str, Any], tool_call.get("args", {}))
@@ -194,10 +188,6 @@ class Renderer:
         result = Text()
         result.append("⚙ ", style="indicator")
         result.append(tool_name, style="bold")
-
-        # Add position/total if multiple tools
-        if position is not None and total is not None and total > 1:
-            result.append(f" ({position}/{total})", style="dim")
 
         if tool_args:
             result.append("\n")
@@ -213,7 +203,8 @@ class Renderer:
 
         return result
 
-    def render_assistant_message(self, message: AIMessage) -> None:
+    @staticmethod
+    def render_assistant_message(message: AIMessage) -> None:
         """Render an assistant message with optional tool calls."""
         if not message.content and not message.tool_calls:
             return
@@ -222,89 +213,72 @@ class Renderer:
         tool_calls = [dict(tc) for tc in message.tool_calls]
         is_error = getattr(message, "is_error", False)
 
-        # Render content if present
+        if not content:
+            # Only tool calls, no content
+            if tool_calls:
+                for i, tool_call in enumerate(tool_calls):
+                    console.print(Renderer._format_tool_call(tool_call))
+                    if i < len(tool_calls) - 1:
+                        console.print("")
+            return
+
+        if is_error:
+            console.print(Text(cast(str, content), style="error"))
+            return
+
+        # Extract thinking from all sources
+        thinking_parts = []
+
+        # 1. Check metadata first (Bedrock, etc.)
+        metadata_thinking = Renderer._extract_thinking_from_metadata(message)
+        if metadata_thinking:
+            thinking_parts.append(metadata_thinking)
+
+        # 2. Extract from content blocks
+        if isinstance(content, list):
+            text_parts, block_thinking = (
+                Renderer._extract_thinking_and_text_from_blocks(content)
+            )
+            thinking_parts.extend(block_thinking)
+            content = "".join(text_parts)
+
+        # 3. Extract XML-style thinking tags
+        if isinstance(content, str):
+            content, xml_thinking = Renderer._extract_thinking_tags(content)
+            if xml_thinking:
+                thinking_parts.append(xml_thinking)
+
+        # Render thinking first if present
         parts: list[RenderableType] = []
+        if thinking_parts:
+            parts.append(Text("\n\n".join(thinking_parts), style="italic dim"))
+            parts.append(NewLine())
+
+        # Render main content
+        content = Renderer._fix_malformed_code_blocks(content)
         if content:
-            if is_error:
-                console.print(Text(cast(str, content), style="error"))
-                return
-
-            # Extract thinking from all sources
-            thinking_parts = []
-
-            # 1. Check metadata first (Bedrock, etc.)
-            metadata_thinking = Renderer._extract_thinking_from_metadata(message)
-            if metadata_thinking:
-                thinking_parts.append(metadata_thinking)
-
-            # 2. Extract from content blocks
-            if isinstance(content, list):
-                text_parts, block_thinking = (
-                    Renderer._extract_thinking_and_text_from_blocks(content)
-                )
-                thinking_parts.extend(block_thinking)
-                content = "".join(text_parts)
-
-            # 3. Extract XML-style thinking tags
-            if isinstance(content, str):
-                content, xml_thinking = Renderer._extract_thinking_tags(content)
-                if xml_thinking:
-                    thinking_parts.append(xml_thinking)
-
-            # Render thinking first if present
-            if thinking_parts:
-                parts.append(Text("\n\n".join(thinking_parts), style="italic dim"))
-                parts.append(NewLine())
-
-            # Render main content
-            content = Renderer._fix_malformed_code_blocks(content)
-            if content:
-                parts.append(
-                    PrefixedMarkdown(
-                        "◆︎ ", content, prefix_style="indicator", code_theme="dracula"
-                    )
-                )
-
-            # Print content if any
-            if parts:
-                console.print(Group(*parts))
-                console.print("")
-
-        # Buffer tool calls for pairing with results
-        if tool_calls:
-            total = len(tool_calls)
-            for i, tool_call in enumerate(tool_calls, 1):
-                tool_call_id = tool_call.get("id")
-                if tool_call_id is None:
-                    console.print_error(
-                        f"Tool call '{tool_call.get('name')}' has no ID, skipping pairing"
-                    )
-                    continue
-                self.pending_tool_calls[str(tool_call_id)] = {
-                    "call": tool_call,
-                    "position": i,
-                    "total": total,
-                }
-
-    def render_tool_message(self, message: ToolMessage) -> None:
-        """Render a tool execution message with Rich markup support."""
-        tool_call_id = message.tool_call_id
-        lookup_key = str(tool_call_id)
-
-        # Render tool call from buffer for pairing with result
-        if lookup_key in self.pending_tool_calls:
-            tool_data = self.pending_tool_calls.pop(lookup_key)
-            tool_call = tool_data["call"]
-            position = tool_data["position"]
-            total = tool_data["total"]
-            console.print(
-                Renderer.format_tool_call(
-                    tool_call,
-                    position if total > 1 else None,
-                    total if total > 1 else None,
+            parts.append(
+                PrefixedMarkdown(
+                    "◆︎ ", content, prefix_style="indicator", code_theme="dracula"
                 )
             )
 
+        # Print content if any
+        if parts:
+            console.print(Group(*parts))
+
+        # Print tool calls with separator if we had content
+        if tool_calls:
+            if parts:
+                console.print(NewLine())
+            for tool_call in tool_calls:
+                console.print(Renderer._format_tool_call(tool_call))
+        elif parts:
+            console.print("")
+
+    @staticmethod
+    def render_tool_message(message: ToolMessage) -> None:
+        """Render a tool execution message with Rich markup support."""
         content = getattr(message, "short_content", None) or message.text
 
         # Skip rendering if content is empty or None
@@ -376,6 +350,7 @@ class Renderer:
         Returns:
             Tuple of (cleaned_content, thinking_content)
         """
+        import re
 
         content_stripped = content.lstrip()
 
@@ -398,6 +373,7 @@ class Renderer:
     @staticmethod
     def _fix_malformed_code_blocks(content: str) -> str:
         """Fix malformed code blocks where closing ``` are escaped or malformed."""
+        import re
 
         # First, fix escaped backticks that should be proper markdown delimiters
         # This handles cases where LLMs escape closing backticks: ``` -> \`\`\`
@@ -498,13 +474,14 @@ class Renderer:
         except Exception as e:
             console.print_error(f"Could not generate Mermaid diagram: {e}")
 
-    def render_message(self, message: AnyMessage) -> None:
+    @staticmethod
+    def render_message(message: AnyMessage) -> None:
         """Render any message."""
         if isinstance(message, HumanMessage):
             Renderer.render_user_message(message)
 
         elif isinstance(message, AIMessage):
-            self.render_assistant_message(message)
+            Renderer.render_assistant_message(message)
 
         elif isinstance(message, ToolMessage):
-            self.render_tool_message(message)
+            Renderer.render_tool_message(message)

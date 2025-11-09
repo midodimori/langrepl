@@ -1,15 +1,8 @@
 """Tests for Renderer critical logic."""
 
-import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from src.cli.ui.renderer import Renderer
-
-
-@pytest.fixture
-def renderer():
-    """Create a Renderer instance for testing."""
-    return Renderer()
 
 
 class TestRendererMalformedCodeBlocks:
@@ -215,7 +208,7 @@ class TestRendererThinkingExtraction:
 class TestRendererAssistantMessage:
     """Tests for complex assistant message rendering scenarios."""
 
-    def test_render_assistant_message_with_all_thinking_sources(self, renderer):
+    def test_render_assistant_message_with_all_thinking_sources(self):
         """Test rendering message with thinking from metadata, blocks, and XML."""
         message = AIMessage(
             content=[
@@ -226,9 +219,9 @@ class TestRendererAssistantMessage:
         )
 
         # Should not raise and should extract all thinking types
-        renderer.render_assistant_message(message)
+        Renderer.render_assistant_message(message)
 
-    def test_render_assistant_message_only_tool_calls_no_content(self, renderer):
+    def test_render_assistant_message_only_tool_calls_no_content(self):
         """Test rendering message with only tool calls and no content."""
         message = AIMessage(
             content="",
@@ -242,28 +235,28 @@ class TestRendererAssistantMessage:
             ],
         )
         # Should not raise
-        renderer.render_assistant_message(message)
+        Renderer.render_assistant_message(message)
 
-    def test_render_assistant_message_empty_content_and_no_tools(self, renderer):
+    def test_render_assistant_message_empty_content_and_no_tools(self):
         """Test rendering message with no content and no tool calls returns early."""
         message = AIMessage(content="", tool_calls=[])
         # Should not raise and return early
-        renderer.render_assistant_message(message)
+        Renderer.render_assistant_message(message)
 
-    def test_render_assistant_message_is_error_flag(self, renderer):
+    def test_render_assistant_message_is_error_flag(self):
         """Test rendering error messages uses error styling."""
         message = AIMessage(content="Error occurred")
         message.is_error = True  # type: ignore[attr-defined]
         # Should not raise and render as error
-        renderer.render_assistant_message(message)
+        Renderer.render_assistant_message(message)
 
-    def test_render_assistant_message_with_malformed_code_blocks(self, renderer):
+    def test_render_assistant_message_with_malformed_code_blocks(self):
         """Test that malformed code blocks are fixed during rendering."""
         message = AIMessage(
             content="```python\nprint('test')\n\\`\\`\\`\n\nMore content"
         )
         # Should fix code blocks before rendering
-        renderer.render_assistant_message(message)
+        Renderer.render_assistant_message(message)
 
 
 class TestRendererToolCallFormatting:
@@ -275,7 +268,7 @@ class TestRendererToolCallFormatting:
             "name": "read_file",
             "args": {"path": "a" * 300},
         }
-        formatted = Renderer.format_tool_call(tool_call)
+        formatted = Renderer._format_tool_call(tool_call)
         assert "..." in formatted
         assert len(formatted) < 250
 
@@ -285,7 +278,7 @@ class TestRendererToolCallFormatting:
             "name": "get_time",
             "args": {},
         }
-        formatted = Renderer.format_tool_call(tool_call)
+        formatted = Renderer._format_tool_call(tool_call)
         formatted_str = str(formatted)
         assert "⚙ get_time" in formatted_str
 
@@ -295,7 +288,7 @@ class TestRendererToolCallFormatting:
             "name": "search",
             "args": {"query": "test", "limit": 10, "filter": "active"},
         }
-        formatted = Renderer.format_tool_call(tool_call)
+        formatted = Renderer._format_tool_call(tool_call)
         formatted_str = str(formatted)
         assert "⚙ search" in formatted_str
         assert "query :" in formatted_str
@@ -307,7 +300,7 @@ class TestRendererToolCallFormatting:
         tool_call = {
             "args": {"key": "value"},
         }
-        formatted = Renderer.format_tool_call(tool_call)
+        formatted = Renderer._format_tool_call(tool_call)
         formatted_str = str(formatted).lower()
         assert "unknown" in formatted_str or "(" in str(formatted)
 
@@ -316,7 +309,7 @@ class TestRendererToolCallFormatting:
         tool_call = {
             "name": "tool_name",
         }
-        formatted = Renderer.format_tool_call(tool_call)
+        formatted = Renderer._format_tool_call(tool_call)
         formatted_str = str(formatted)
         assert "⚙ tool_name" in formatted_str
 
@@ -324,58 +317,58 @@ class TestRendererToolCallFormatting:
 class TestRendererToolMessage:
     """Tests for tool message rendering."""
 
-    def test_render_tool_message_with_short_content(self, renderer):
+    def test_render_tool_message_with_short_content(self):
         """Test rendering tool message with short content."""
         message = ToolMessage(content="Success", tool_call_id="1")
         # Should add proper indentation
-        renderer.render_tool_message(message)
+        Renderer.render_tool_message(message)
 
-    def test_render_tool_message_uses_short_content_attribute(self, renderer):
+    def test_render_tool_message_uses_short_content_attribute(self):
         """Test that short_content attribute is preferred over text."""
         message = ToolMessage(content="Very long content " * 100, tool_call_id="1")
         message.short_content = "Truncated"  # type: ignore[attr-defined]
         # Should use short_content
-        renderer.render_tool_message(message)
+        Renderer.render_tool_message(message)
 
-    def test_render_tool_message_error_status(self, renderer):
+    def test_render_tool_message_error_status(self):
         """Test rendering tool message with error status."""
         message = ToolMessage(
             content="Error occurred", tool_call_id="1", status="error"
         )
         # Should render with error styling
-        renderer.render_tool_message(message)
+        Renderer.render_tool_message(message)
 
-    def test_render_tool_message_is_error_flag(self, renderer):
+    def test_render_tool_message_is_error_flag(self):
         """Test rendering tool message with is_error flag."""
         message = ToolMessage(content="Error", tool_call_id="1")
         message.is_error = True  # type: ignore[attr-defined]
         # Should render with error styling
-        renderer.render_tool_message(message)
+        Renderer.render_tool_message(message)
 
-    def test_render_tool_message_multiline_indentation(self, renderer):
+    def test_render_tool_message_multiline_indentation(self):
         """Test that multiline tool messages are properly indented."""
         message = ToolMessage(content="Line 1\nLine 2\nLine 3", tool_call_id="1")
         # All lines after first should be indented
-        renderer.render_tool_message(message)
+        Renderer.render_tool_message(message)
 
-    def test_render_tool_message_empty_content_skips_rendering(self, renderer):
+    def test_render_tool_message_empty_content_skips_rendering(self):
         """Test that empty content tool messages are not rendered."""
         message = ToolMessage(content="", tool_call_id="1")
         # Should return early without rendering
-        renderer.render_tool_message(message)
+        Renderer.render_tool_message(message)
 
-    def test_render_tool_message_whitespace_only_skips_rendering(self, renderer):
+    def test_render_tool_message_whitespace_only_skips_rendering(self):
         """Test that whitespace-only content tool messages are not rendered."""
         message = ToolMessage(content="   \n  \t  ", tool_call_id="1")
         # Should return early without rendering
-        renderer.render_tool_message(message)
+        Renderer.render_tool_message(message)
 
-    def test_render_tool_message_empty_short_content_falls_back(self, renderer):
+    def test_render_tool_message_empty_short_content_falls_back(self):
         """Test that empty short_content falls back to text content."""
         message = ToolMessage(content="Actual content", tool_call_id="1")
         message.short_content = ""  # type: ignore[attr-defined]
         # Should fall back to content and render
-        renderer.render_tool_message(message)
+        Renderer.render_tool_message(message)
 
 
 class TestRendererUserMessage:

@@ -184,7 +184,6 @@ class TestApprovalMiddleware:
             "args": {"query": "test"},
         }
         request.tool = mock_tool
-        request.state = {"messages": []}
         request.runtime = Mock()
         request.runtime.context = AgentContext(
             approval_mode=ApprovalMode.AGGRESSIVE,
@@ -228,7 +227,6 @@ class TestApprovalMiddleware:
                 "args": {"query": "test"},
             }
             request.tool = mock_tool
-            request.state = {"messages": []}
             request.runtime = Mock()
             request.runtime.context = AgentContext(
                 approval_mode=ApprovalMode.SEMI_ACTIVE,
@@ -255,7 +253,6 @@ class TestApprovalMiddleware:
         request = Mock(spec=ToolCallRequest)
         request.tool_call = {"id": "call_1", "name": "test_tool", "args": {}}
         request.tool = mock_tool
-        request.state = {"messages": []}
         request.runtime = Mock()
         request.runtime.context = AgentContext(
             approval_mode=ApprovalMode.AGGRESSIVE,

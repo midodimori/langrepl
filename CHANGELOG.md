@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1](https://github.com/midodimori/langrepl/compare/v1.1.0...v1.1.1) (2025-11-09)
+
+
+### Bug Fixes
+
+* tool call/result pairing in live and resume modes ([#30](https://github.com/midodimori/langrepl/issues/30)) ([3e5059a](https://github.com/midodimori/langrepl/commit/3e5059a7b135e76f570800cd5a0e1ee9998f479c))
+
 ## [1.1.0](https://github.com/midodimori/langrepl/compare/v1.0.2...v1.1.0) (2025-11-08)
 
 

@@ -180,7 +180,7 @@ class TestModelHandler:
         """Test that _get_model_selection returns empty string for no models."""
         handler = ModelHandler(mock_session)
 
-        result = await handler._get_model_selection([])
+        result = await handler._get_model_selection([], "test-model", "test-model")
 
         assert result == ""
         mock_app_cls.assert_not_called()
@@ -198,7 +198,9 @@ class TestModelHandler:
         mock_app_cls.return_value = mock_app
 
         with patch("src.cli.handlers.models.sys.stdout"):
-            await handler._get_model_selection([mock_llm_config])
+            await handler._get_model_selection(
+                [mock_llm_config], "test-model", "test-model"
+            )
             mock_app.run_async.assert_called_once()
 
     @pytest.mark.asyncio
@@ -213,27 +215,36 @@ class TestModelHandler:
         mock_app.run_async = AsyncMock(side_effect=KeyboardInterrupt())
         mock_app_cls.return_value = mock_app
 
-        result = await handler._get_model_selection([mock_llm_config])
+        result = await handler._get_model_selection(
+            [mock_llm_config], "test-model", "test-model"
+        )
 
         assert result == ""
 
-    def test_format_agent_list_formats_correctly(self, mock_agent_config):
+    def test_format_agent_list_formats_correctly(self, mock_session, mock_agent_config):
         """Test that _format_agent_list formats agents correctly."""
+        handler = ModelHandler(mock_session)
         agents = [("agent", "test-agent", mock_agent_config)]
 
-        formatted = ModelHandler._format_agent_list(agents, 0)
+        formatted = handler._format_agent_list(agents, 0)
 
         assert formatted is not None
         # Verify the formatted text contains the agent name and model
         formatted_str = "".join(str(item[1]) for item in formatted)
         assert "test-agent" in formatted_str
-        assert mock_agent_config.llm.alias in formatted_str
+        # Should show context model for main agent
+        assert mock_session.context.model in formatted_str
 
     def test_format_model_list_formats_correctly(self, mock_llm_config):
         """Test that _format_model_list formats models correctly."""
-        formatted = ModelHandler._format_model_list([mock_llm_config], 0)
+        formatted = ModelHandler._format_model_list(
+            [mock_llm_config], 0, "test-model", "test-model"
+        )
 
         assert formatted is not None
+        # Verify the formatted text contains the model name and indicators
+        formatted_str = "".join(str(item[1]) for item in formatted)
+        assert mock_llm_config.alias in formatted_str
 
     @pytest.mark.asyncio
     @patch("src.cli.handlers.models.initializer.load_agent_config")

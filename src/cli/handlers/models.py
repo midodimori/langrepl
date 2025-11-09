@@ -54,17 +54,21 @@ class ModelHandler:
             )
             models = config_data.llms
 
-            current_model_name = agent_config.llm.alias
-            available_models = [
-                model for model in models if model.alias != current_model_name
-            ]
+            if agent_type == "agent":
+                current_model_name = self.session.context.model
+            else:
+                current_model_name = agent_config.llm.alias
 
-            if not available_models:
+            default_model_name = agent_config.llm.alias
+
+            if len(models) == 1:
                 console.print_error("No other models available")
                 console.print("")
                 return
 
-            selected_model_name = await self._get_model_selection(available_models)
+            selected_model_name = await self._get_model_selection(
+                models, current_model_name, default_model_name
+            )
 
             if selected_model_name:
                 if agent_type == "agent":
@@ -179,11 +183,15 @@ class ModelHandler:
             console.print("")
             return None
 
-    async def _get_model_selection(self, models: list[LLMConfig]) -> str:
+    async def _get_model_selection(
+        self, models: list[LLMConfig], current_model: str, default_model: str
+    ) -> str:
         """Get model selection from user using interactive list.
 
         Args:
             models: List of model configuration objects
+            current_model: Currently active model name
+            default_model: Default model name from config
 
         Returns:
             Selected model name or empty string if canceled
@@ -195,7 +203,9 @@ class ModelHandler:
 
         # Create text control with formatted text
         text_control = FormattedTextControl(
-            text=lambda: self._format_model_list(models, current_index),
+            text=lambda: self._format_model_list(
+                models, current_index, current_model, default_model
+            ),
             focusable=True,
             show_cursor=False,
         )
@@ -251,9 +261,8 @@ class ModelHandler:
             console.print("")
             return ""
 
-    @staticmethod
     def _format_agent_list(
-        agents: list[tuple[str, str, AgentConfig]], selected_index: int
+        self, agents: list[tuple[str, str, AgentConfig]], selected_index: int
     ):
         """Format the agent list with highlighting.
 
@@ -267,7 +276,12 @@ class ModelHandler:
         prompt_symbol = settings.cli.prompt_style.strip()
         lines = []
         for i, (agent_type, agent_name, agent_config) in enumerate(agents):
-            model_name = agent_config.llm.alias
+            # For main agent, use context model; for subagents, use config model
+            if agent_type == "agent":
+                model_name = self.session.context.model
+            else:
+                model_name = agent_config.llm.alias
+
             type_label = "Agent" if agent_type == "agent" else "Subagent"
 
             display_text = f"[{type_label}] {agent_name} ({model_name})"
@@ -285,12 +299,19 @@ class ModelHandler:
         return FormattedText(lines)
 
     @staticmethod
-    def _format_model_list(models: list[LLMConfig], selected_index: int):
+    def _format_model_list(
+        models: list[LLMConfig],
+        selected_index: int,
+        current_model: str,
+        default_model: str,
+    ):
         """Format the model list with highlighting.
 
         Args:
             models: List of model configuration objects
             selected_index: Index of currently selected model
+            current_model: Currently active model name
+            default_model: Default model name from config
 
         Returns:
             FormattedText with styled lines
@@ -301,14 +322,31 @@ class ModelHandler:
             model_name = model.alias
             provider = model.provider.value
 
-            display_text = f"{model_name} ({provider})"
+            # Build the base text
+            base_text = f"{model_name} ({provider})"
+
+            # Check for indicators
+            is_current = model_name == current_model
+            is_default = model_name == default_model
 
             if i == selected_index:
+                # Selected item - highlight the whole line
                 lines.append(
-                    (f"{theme.selection_color}", f"{prompt_symbol} {display_text}")
+                    (f"{theme.selection_color}", f"{prompt_symbol} {base_text}")
                 )
+                # Add indicators on the same line with colors
+                if is_current:
+                    lines.append((f"{theme.info_color}", " [current]"))
+                if is_default:
+                    lines.append((f"{theme.accent_color}", " [default]"))
             else:
-                lines.append(("", f"  {display_text}"))
+                # Non-selected item
+                lines.append(("", f"  {base_text}"))
+                # Add indicators with colors
+                if is_current:
+                    lines.append((f"{theme.info_color}", " [current]"))
+                if is_default:
+                    lines.append((f"{theme.accent_color}", " [default]"))
 
             if i < len(models) - 1:
                 lines.append(("", "\n"))

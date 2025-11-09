@@ -2,7 +2,7 @@
 
 Interactive terminal CLI for building and running LLM agents. Built with LangChain, LangGraph, Prompt Toolkit, and Rich.
 
-https://github.com/user-attachments/assets/5d95e221-3883-44f8-9694-74c5e215b4e2
+https://github.com/user-attachments/assets/d95444c9-733f-481d-80c7-7d1cc28a732a
 
 ## Table of Contents
 

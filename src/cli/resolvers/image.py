@@ -39,22 +39,27 @@ class ImageResolver(Resolver):
         """
         head = f"head -n {limit}" if limit else "cat"
 
-        # Build extension filter for common image formats
-        extensions = " ".join(f"-e {ext}" for ext in SUPPORTED_IMAGE_EXTENSIONS)
+        # Build extension filters for git (glob patterns) and fd (-e flags)
+        git_globs = " ".join(
+            quote(f"*.{ext.lstrip('.')}") for ext in SUPPORTED_IMAGE_EXTENSIONS
+        )
+        fd_flags = " ".join(
+            f"-e {ext.lstrip('.')}" for ext in SUPPORTED_IMAGE_EXTENSIONS
+        )
 
         safe_pattern = quote(pattern) if pattern else ""
         commands = [
             # Git-based search
             (
-                f"git ls-files {extensions} | grep -i {safe_pattern} | {head}"
+                f"git ls-files {git_globs} | grep -i {safe_pattern} | {head}"
                 if pattern
-                else f"git ls-files {extensions} | {head}"
+                else f"git ls-files {git_globs} | {head}"
             ),
             # fd-based search
             (
-                f"fd --type f {extensions} -i {safe_pattern} | {head}"
+                f"fd --type f {fd_flags} -i {safe_pattern} | {head}"
                 if pattern
-                else f"fd --type f {extensions} | {head}"
+                else f"fd --type f {fd_flags} | {head}"
             ),
         ]
 

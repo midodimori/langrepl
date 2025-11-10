@@ -1,28 +1,7 @@
 """Tests for MessageContentBuilder."""
 
-import base64
-from pathlib import Path
-
-import pytest
-
 from src.cli.builders.message import MessageContentBuilder
 from src.cli.resolvers import RefType
-
-
-@pytest.fixture
-def create_test_image(tmp_path):
-    """Create a minimal test PNG image."""
-
-    def _create(filename: str = "test.png") -> Path:
-        # Minimal 1x1 PNG image
-        png_data = base64.b64decode(
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-        )
-        image_path = tmp_path / filename
-        image_path.write_bytes(png_data)
-        return image_path
-
-    return _create
 
 
 class TestExtractReferences:
@@ -90,7 +69,7 @@ class TestExtractReferences:
     def test_extract_absolute_path(self, temp_dir, create_test_image):
         """Test extracting standalone absolute path to image."""
         builder = MessageContentBuilder(temp_dir)
-        image_path = create_test_image("photo.png")
+        image_path = create_test_image("photo")
         content = f"Look at this image: {image_path}"
 
         refs = builder.extract_references(content)
@@ -101,7 +80,7 @@ class TestExtractReferences:
     def test_skip_image_references(self, temp_dir, create_test_image):
         """Test that @:image: references are counted separately."""
         builder = MessageContentBuilder(temp_dir)
-        image_path = create_test_image("photo.png")
+        image_path = create_test_image("photo")
         content = f"@:image:{image_path} and {image_path}"
 
         refs = builder.extract_references(content)
@@ -112,8 +91,8 @@ class TestExtractReferences:
     def test_multiple_paths(self, temp_dir, create_test_image):
         """Test extracting multiple standalone paths."""
         builder = MessageContentBuilder(temp_dir)
-        img1 = create_test_image("photo1.png")
-        img2 = create_test_image("photo2.jpg")
+        img1 = create_test_image("photo1")
+        img2 = create_test_image("photo2", ".jpg")
         content = f"Compare {img1} with {img2}"
 
         refs = builder.extract_references(content)
@@ -147,7 +126,7 @@ class TestBuild:
     def test_build_with_text_and_image(self, temp_dir, create_test_image):
         """Test build with text and one image."""
         builder = MessageContentBuilder(temp_dir)
-        image_path = create_test_image("photo.png")
+        image_path = create_test_image("photo")
 
         content, ref_mapping = builder.build(
             f"Describe this image @:image:{image_path}"
@@ -165,8 +144,8 @@ class TestBuild:
     def test_build_with_multiple_images(self, temp_dir, create_test_image):
         """Test build with multiple images."""
         builder = MessageContentBuilder(temp_dir)
-        img1 = create_test_image("photo1.png")
-        img2 = create_test_image("photo2.png")
+        img1 = create_test_image("photo1")
+        img2 = create_test_image("photo2")
 
         content, ref_mapping = builder.build(
             f"Compare @:image:{img1} and @:image:{img2}"
@@ -181,7 +160,7 @@ class TestBuild:
     def test_build_only_images(self, temp_dir, create_test_image):
         """Test build with only images."""
         builder = MessageContentBuilder(temp_dir)
-        image_path = create_test_image("photo.png")
+        image_path = create_test_image("photo")
 
         content, ref_mapping = builder.build(f"@:image:{image_path}")
 
@@ -192,7 +171,7 @@ class TestBuild:
     def test_build_integration(self, temp_dir, create_test_image):
         """Test build handles whitespace correctly."""
         builder = MessageContentBuilder(temp_dir)
-        image_path = create_test_image("photo.png")
+        image_path = create_test_image("photo")
 
         content, ref_mapping = builder.build(
             f"  \n  Text with whitespace  \n  @:image:{image_path}"

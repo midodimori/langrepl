@@ -1,46 +1,10 @@
 """Tests for multimodal message handling."""
 
-import base64
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from src.cli.dispatchers.messages import MessageDispatcher
-from src.core.config import ApprovalMode
-
-
-@pytest.fixture
-def create_test_image(tmp_path):
-    """Create a minimal test PNG image."""
-
-    def _create(filename: str = "test.png") -> Path:
-        # Minimal 1x1 PNG image
-        png_data = base64.b64decode(
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-        )
-        image_path = tmp_path / filename
-        image_path.write_bytes(png_data)
-        return image_path
-
-    return _create
-
-
-@pytest.fixture
-def mock_session():
-    """Create a mock session for MessageDispatcher."""
-    session = MagicMock()
-    session.prefilled_reference_mapping = {}
-    session.context.approval_mode = ApprovalMode.SEMI_ACTIVE
-    session.context.working_dir = "/test/dir"
-    session.context.thread_id = "test-thread"
-    session.context.recursion_limit = 100
-    session.context.input_cost_per_mtok = 0.01
-    session.context.output_cost_per_mtok = 0.03
-    session.context.tool_output_max_tokens = 5000
-    session.graph = MagicMock()
-    session.graph.astream = AsyncMock(return_value=iter([]))
-    return session
 
 
 class TestBuildContentBlock:
@@ -51,7 +15,7 @@ class TestBuildContentBlock:
         from src.cli.resolvers.image import ImageResolver
 
         resolver = ImageResolver()
-        image_path = create_test_image("photo.png")
+        image_path = create_test_image("photo")
 
         block = resolver.build_content_block(str(image_path))
 
@@ -84,29 +48,19 @@ class TestDispatchMultimodal:
     """Integration tests for dispatch method with multimodal content."""
 
     @pytest.mark.asyncio
-    async def test_dispatch_with_image_reference(self, tmp_path, create_test_image):
+    @patch.object(MessageDispatcher, "_stream_response", new_callable=AsyncMock)
+    async def test_dispatch_with_image_reference(
+        self, mock_stream_response, create_test_image, mock_session
+    ):
         """Test dispatching message with @:image: reference."""
-        image_path = create_test_image("photo.png")
+        image_path = create_test_image("photo")
 
-        # Create session with proper working directory
-        session = MagicMock()
-        session.prefilled_reference_mapping = {}
-        session.context.approval_mode = ApprovalMode.SEMI_ACTIVE
-        session.context.working_dir = str(tmp_path)
-        session.context.thread_id = "test-thread"
-        session.context.recursion_limit = 100
-        session.context.input_cost_per_mtok = 0.01
-        session.context.output_cost_per_mtok = 0.03
-        session.context.tool_output_max_tokens = 5000
-        session.graph = MagicMock()
-        session.graph.astream = AsyncMock(return_value=iter([]))
+        session = mock_session
 
         dispatcher = MessageDispatcher(session)
         content = f"What's in @:image:{image_path}?"
 
-        mock_stream_response = AsyncMock()
-        with patch.object(dispatcher, "_stream_response", mock_stream_response):
-            await dispatcher.dispatch(content)
+        await dispatcher.dispatch(content)
 
         # Verify _stream_response was called with multimodal message
         assert mock_stream_response.called
@@ -119,29 +73,19 @@ class TestDispatchMultimodal:
         assert any(block["type"] == "image" for block in human_message.content)
 
     @pytest.mark.asyncio
-    async def test_dispatch_with_standalone_path(self, tmp_path, create_test_image):
+    @patch.object(MessageDispatcher, "_stream_response", new_callable=AsyncMock)
+    async def test_dispatch_with_standalone_path(
+        self, mock_stream_response, create_test_image, mock_session
+    ):
         """Test dispatching message with standalone absolute path."""
-        image_path = create_test_image("photo.png")
+        image_path = create_test_image("photo")
 
-        # Create session with proper working directory
-        session = MagicMock()
-        session.prefilled_reference_mapping = {}
-        session.context.approval_mode = ApprovalMode.SEMI_ACTIVE
-        session.context.working_dir = str(tmp_path)
-        session.context.thread_id = "test-thread"
-        session.context.recursion_limit = 100
-        session.context.input_cost_per_mtok = 0.01
-        session.context.output_cost_per_mtok = 0.03
-        session.context.tool_output_max_tokens = 5000
-        session.graph = MagicMock()
-        session.graph.astream = AsyncMock(return_value=iter([]))
+        session = mock_session
 
         dispatcher = MessageDispatcher(session)
         content = f"Analyze this {image_path}"
 
-        mock_stream_response = AsyncMock()
-        with patch.object(dispatcher, "_stream_response", mock_stream_response):
-            await dispatcher.dispatch(content)
+        await dispatcher.dispatch(content)
 
         assert mock_stream_response.called
         call_args = mock_stream_response.call_args
@@ -152,27 +96,15 @@ class TestDispatchMultimodal:
         assert any(block["type"] == "image" for block in human_message.content)
 
     @pytest.mark.asyncio
-    async def test_dispatch_without_images(self, tmp_path):
+    @patch.object(MessageDispatcher, "_stream_response", new_callable=AsyncMock)
+    async def test_dispatch_without_images(self, mock_stream_response, mock_session):
         """Test dispatching regular text message without images."""
-        # Create session with proper working directory
-        session = MagicMock()
-        session.prefilled_reference_mapping = {}
-        session.context.approval_mode = ApprovalMode.SEMI_ACTIVE
-        session.context.working_dir = str(tmp_path)
-        session.context.thread_id = "test-thread"
-        session.context.recursion_limit = 100
-        session.context.input_cost_per_mtok = 0.01
-        session.context.output_cost_per_mtok = 0.03
-        session.context.tool_output_max_tokens = 5000
-        session.graph = MagicMock()
-        session.graph.astream = AsyncMock(return_value=iter([]))
+        session = mock_session
 
         dispatcher = MessageDispatcher(session)
         content = "Just a regular text message"
 
-        mock_stream_response = AsyncMock()
-        with patch.object(dispatcher, "_stream_response", mock_stream_response):
-            await dispatcher.dispatch(content)
+        await dispatcher.dispatch(content)
 
         assert mock_stream_response.called
         call_args = mock_stream_response.call_args
@@ -184,29 +116,19 @@ class TestDispatchMultimodal:
         assert human_message.content == content
 
     @pytest.mark.asyncio
-    async def test_reference_mapping_includes_images(self, tmp_path, create_test_image):
+    @patch.object(MessageDispatcher, "_stream_response", new_callable=AsyncMock)
+    async def test_reference_mapping_includes_images(
+        self, mock_stream_response, create_test_image, mock_session
+    ):
         """Test that reference_mapping includes image paths."""
-        image_path = create_test_image("photo.png")
+        image_path = create_test_image("photo")
 
-        # Create session with proper working directory
-        session = MagicMock()
-        session.prefilled_reference_mapping = {}
-        session.context.approval_mode = ApprovalMode.SEMI_ACTIVE
-        session.context.working_dir = str(tmp_path)
-        session.context.thread_id = "test-thread"
-        session.context.recursion_limit = 100
-        session.context.input_cost_per_mtok = 0.01
-        session.context.output_cost_per_mtok = 0.03
-        session.context.tool_output_max_tokens = 5000
-        session.graph = MagicMock()
-        session.graph.astream = AsyncMock(return_value=iter([]))
+        session = mock_session
 
         dispatcher = MessageDispatcher(session)
         content = f"@:image:{image_path}"
 
-        mock_stream_response = AsyncMock()
-        with patch.object(dispatcher, "_stream_response", mock_stream_response):
-            await dispatcher.dispatch(content)
+        await dispatcher.dispatch(content)
 
         assert mock_stream_response.called
         call_args = mock_stream_response.call_args

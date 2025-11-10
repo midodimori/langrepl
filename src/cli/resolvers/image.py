@@ -146,20 +146,29 @@ class ImageResolver(Resolver):
         return is_image_path(text)
 
     def build_content_block(self, path: str) -> dict[str, Any] | None:
-        """Build image content block for multimodal message."""
-        try:
-            path_obj = Path(path)
-            base64_data = read_image_as_base64(path_obj)
-            mime_type = get_image_mime_type(path_obj)
+        """Build image content block for multimodal message.
 
-            if mime_type:
-                return {
-                    "type": "image",
-                    "source_type": "base64",
-                    "data": base64_data,
-                    "mime_type": mime_type,
-                }
-        except Exception:
-            pass
+        Raises:
+            FileNotFoundError: If image doesn't exist
+            ValueError: If unsupported format or read error
+        """
+        path_obj = Path(path)
 
-        return None
+        if not path_obj.exists():
+            raise FileNotFoundError(f"Image not found: {path}")
+
+        if not is_supported_image(path_obj):
+            raise ValueError(f"Unsupported format: {path_obj.suffix}")
+
+        base64_data = read_image_as_base64(path_obj)
+        mime_type = get_image_mime_type(path_obj)
+
+        if not mime_type:
+            raise ValueError(f"Cannot determine MIME type: {path}")
+
+        return {
+            "type": "image",
+            "source_type": "base64",
+            "data": base64_data,
+            "mime_type": mime_type,
+        }

@@ -51,7 +51,12 @@ class MessageContentBuilder:
     def build(
         self, text: str
     ) -> tuple[str | list[str | dict[str, Any]], dict[str, str]]:
-        """Build message content with multimodal support."""
+        """Build message content with multimodal support.
+
+        Raises:
+            FileNotFoundError: If referenced file/image doesn't exist
+            ValueError: If referenced file/image is invalid
+        """
         references = self.extract_references(text)
 
         if not references:
@@ -60,6 +65,7 @@ class MessageContentBuilder:
         ctx = {"working_dir": str(self.working_dir)}
         reference_mapping = {}
         text_content = text
+        errors: list[str] = []
 
         for ref_type, paths in references.items():
             resolver = self.resolvers[ref_type]
@@ -68,10 +74,17 @@ class MessageContentBuilder:
                 reference_mapping[path] = resolved
 
                 ref_pattern = rf"@:{ref_type.value}:{re.escape(path)}"
-                if resolver.build_content_block(resolved):
+                try:
+                    if resolver.build_content_block(resolved):
+                        text_content = re.sub(ref_pattern, "", text_content)
+                    else:
+                        text_content = re.sub(ref_pattern, resolved, text_content)
+                except (FileNotFoundError, ValueError) as e:
+                    errors.append(str(e))
                     text_content = re.sub(ref_pattern, "", text_content)
-                else:
-                    text_content = re.sub(ref_pattern, resolved, text_content)
+
+        if errors:
+            raise ValueError("\n".join(errors))
 
         content_blocks: list[str | dict[str, Any]] = []
 
@@ -82,8 +95,11 @@ class MessageContentBuilder:
             resolver = self.resolvers[ref_type]
             for path in paths:
                 resolved = reference_mapping[path]
-                if block := resolver.build_content_block(resolved):
-                    content_blocks.append(block)
+                try:
+                    if block := resolver.build_content_block(resolved):
+                        content_blocks.append(block)
+                except (FileNotFoundError, ValueError):
+                    pass
 
         if len(content_blocks) == 1:
             first_block = content_blocks[0]

@@ -26,13 +26,12 @@ class TestBuildContentBlock:
         assert block["mime_type"] == "image/png"
 
     def test_image_resolver_invalid_path(self):
-        """Test ImageResolver returns None for invalid path."""
+        """Test ImageResolver raises FileNotFoundError for invalid path."""
         from src.cli.resolvers.image import ImageResolver
 
         resolver = ImageResolver()
-        block = resolver.build_content_block("/nonexistent/image.png")
-
-        assert block is None
+        with pytest.raises(FileNotFoundError, match="Image not found"):
+            resolver.build_content_block("/nonexistent/image.png")
 
     def test_file_resolver_returns_none(self):
         """Test FileResolver returns None (text-only)."""

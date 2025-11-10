@@ -195,3 +195,25 @@ class TestBuild:
         assert isinstance(content, str)
         assert content == "Just text"
         assert ref_mapping == {}
+
+    def test_build_nonexistent_image_raises_error(self, temp_dir):
+        """Test build raises error for non-existent image."""
+        import pytest
+
+        builder = MessageContentBuilder(temp_dir)
+
+        with pytest.raises(ValueError, match="Image not found"):
+            builder.build("@:image:nonexistent.png")
+
+    def test_build_unsupported_format_raises_error(self, temp_dir):
+        """Test build raises error for unsupported image format."""
+        import pytest
+
+        # Create a file with unsupported extension
+        test_file = temp_dir / "test.txt"
+        test_file.write_text("not an image")
+
+        builder = MessageContentBuilder(temp_dir)
+
+        with pytest.raises(ValueError, match="Unsupported format"):
+            builder.build(f"@:image:{test_file}")

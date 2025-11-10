@@ -1,6 +1,7 @@
 """Tests for image utility functions."""
 
 import base64
+import binascii
 
 import pytest
 
@@ -78,7 +79,7 @@ class TestReadImageAsBase64:
         try:
             decoded = base64.b64decode(result)
             assert len(decoded) > 0
-        except Exception as e:
+        except (binascii.Error, ValueError) as e:
             pytest.fail(f"Invalid base64 encoding: {e}")
 
     def test_file_not_found(self, tmp_path):

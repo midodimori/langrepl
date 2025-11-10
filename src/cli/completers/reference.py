@@ -7,7 +7,7 @@ from pathlib import Path
 from prompt_toolkit.completion import CompleteEvent, Completer, Completion
 from prompt_toolkit.document import Document
 
-from src.cli.resolvers import FileResolver, RefType
+from src.cli.resolvers import FileResolver, ImageResolver, RefType
 
 
 def parse_reference(ref: str) -> tuple[RefType | None, str]:
@@ -47,6 +47,7 @@ class ReferenceCompleter(Completer):
 
         self.resolvers = {
             RefType.FILE: FileResolver(),
+            RefType.IMAGE: ImageResolver(),
         }
 
     def get_completions(
@@ -98,25 +99,3 @@ class ReferenceCompleter(Completer):
 
         for completion in completions:
             yield completion
-
-    def resolve_refs(self, text: str) -> str:
-        """Resolve @ references in text to absolute paths.
-
-        Args:
-            text: Text containing @:type:value references
-
-        Returns:
-            Text with references resolved to absolute paths
-        """
-        if "@:" not in text:
-            return text
-
-        ctx = {"working_dir": str(self.working_dir)}
-
-        def resolve(m):
-            type_filter, ref_value = parse_reference(f":{m.group(1)}:{m.group(2)}")
-            if type_filter and (resolver := self.resolvers.get(type_filter, None)):
-                return resolver.resolve(ref_value, ctx)
-            return m.group(0)
-
-        return re.sub(r"@:(\w+):(\S+)", resolve, text)

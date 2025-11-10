@@ -9,6 +9,7 @@ pytest_plugins = [
     "tests.fixtures.agents",
     "tests.fixtures.checkpointers",
     "tests.fixtures.cli",
+    "tests.fixtures.images",
     "tests.fixtures.mcp",
     "tests.fixtures.mocks",
 ]

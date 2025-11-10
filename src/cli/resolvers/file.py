@@ -25,9 +25,9 @@ class FileResolver(Resolver):
         safe_pattern = quote(pattern) if pattern else ""
         commands = [
             (
-                f"(git ls-files && git ls-files -o --exclude-standard) | sort -u | grep -i {safe_pattern} | {head}"
+                f"(git ls-files && git ls-files -o --exclude-standard) | grep -i {safe_pattern} | {head}"
                 if pattern
-                else f"(git ls-files && git ls-files -o --exclude-standard) | sort -u | {head}"
+                else f"(git ls-files && git ls-files -o --exclude-standard) | {head}"
             ),
             (
                 f"fd --type f -i {safe_pattern} | {head}"

@@ -235,3 +235,41 @@ class TestInteractivePromptInputHandling:
             mock_prompt.return_value = "not a command"
             content, is_command = await prompt.get_input()
             assert is_command is False
+
+    @pytest.mark.asyncio
+    async def test_get_input_treats_absolute_paths_as_content(self, prompt):
+        """Test that absolute file paths are NOT treated as commands."""
+        with patch.object(
+            prompt.prompt_session, "prompt_async", new_callable=AsyncMock
+        ) as mock_prompt:
+            # Absolute path should not be a command
+            mock_prompt.return_value = "/Users/name/image.png"
+            content, is_command = await prompt.get_input()
+            assert is_command is False
+            assert content == "/Users/name/image.png"
+
+            # Multiple slashes = file path
+            mock_prompt.return_value = "/home/user/Downloads/file.jpg"
+            content, is_command = await prompt.get_input()
+            assert is_command is False
+
+            # Path with spaces in message
+            mock_prompt.return_value = "/path/to/image.png describe this"
+            content, is_command = await prompt.get_input()
+            assert is_command is False
+
+    @pytest.mark.asyncio
+    async def test_get_input_unknown_commands_detected(self, prompt):
+        """Test that unknown single-word commands are still treated as commands."""
+        with patch.object(
+            prompt.prompt_session, "prompt_async", new_callable=AsyncMock
+        ) as mock_prompt:
+            # Unknown command (no slashes after first)
+            mock_prompt.return_value = "/unknown"
+            content, is_command = await prompt.get_input()
+            assert is_command is True
+
+            # Known command with args
+            mock_prompt.return_value = "/help something"
+            content, is_command = await prompt.get_input()
+            assert is_command is True

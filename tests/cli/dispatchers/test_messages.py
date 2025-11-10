@@ -28,7 +28,6 @@ class TestMessageDispatcher:
     ):
         """Test dispatch creates HumanMessage."""
         dispatcher = MessageDispatcher(mock_session)
-        mock_session.prompt.completer.resolve_refs = MagicMock(side_effect=lambda x: x)
 
         await dispatcher.dispatch("test message")
 
@@ -41,25 +40,6 @@ class TestMessageDispatcher:
 
     @pytest.mark.asyncio
     @patch.object(MessageDispatcher, "_stream_response", new_callable=AsyncMock)
-    async def test_dispatch_resolves_references(
-        self,
-        mock_stream_response,
-        mock_session,
-    ):
-        """Test dispatch resolves references in content."""
-        dispatcher = MessageDispatcher(mock_session)
-        mock_session.prompt.completer.resolve_refs = MagicMock(
-            return_value="resolved content"
-        )
-
-        await dispatcher.dispatch("@:file:test.txt")
-
-        call_args = mock_stream_response.call_args[0]
-        input_data = call_args[0]
-        assert input_data["messages"][0].content == "resolved content"
-
-    @pytest.mark.asyncio
-    @patch.object(MessageDispatcher, "_stream_response", new_callable=AsyncMock)
     async def test_dispatch_stores_short_content(
         self,
         mock_stream_response,
@@ -67,7 +47,6 @@ class TestMessageDispatcher:
     ):
         """Test dispatch stores original content as short_content."""
         dispatcher = MessageDispatcher(mock_session)
-        mock_session.prompt.completer.resolve_refs = MagicMock(return_value="resolved")
 
         await dispatcher.dispatch("original")
 
@@ -84,7 +63,6 @@ class TestMessageDispatcher:
     ):
         """Test dispatch includes reference mapping in additional_kwargs."""
         dispatcher = MessageDispatcher(mock_session)
-        mock_session.prompt.completer.resolve_refs = MagicMock(side_effect=lambda x: x)
         mock_session.prefilled_reference_mapping = {"ref1": "path1"}
 
         await dispatcher.dispatch("test")
@@ -105,7 +83,6 @@ class TestMessageDispatcher:
     ):
         """Test dispatch clears prefilled reference mapping."""
         dispatcher = MessageDispatcher(mock_session)
-        mock_session.prompt.completer.resolve_refs = MagicMock(side_effect=lambda x: x)
         mock_session.prefilled_reference_mapping = {"ref1": "path1"}
 
         await dispatcher.dispatch("test")
@@ -124,7 +101,6 @@ class TestMessageDispatcher:
         """Test dispatch creates proper graph config and context."""
         mock_session.context = mock_context
         dispatcher = MessageDispatcher(mock_session)
-        mock_session.prompt.completer.resolve_refs = MagicMock(side_effect=lambda x: x)
 
         await dispatcher.dispatch("test")
 
@@ -155,7 +131,6 @@ class TestMessageDispatcher:
     ):
         """Test dispatch handles exceptions gracefully."""
         dispatcher = MessageDispatcher(mock_session)
-        mock_session.prompt.completer.resolve_refs = MagicMock(side_effect=lambda x: x)
 
         # Should not raise, just log error
         await dispatcher.dispatch("test")

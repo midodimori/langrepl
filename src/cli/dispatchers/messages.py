@@ -1,6 +1,7 @@
 """Message handling for chat sessions."""
 
 import asyncio
+from pathlib import Path
 from typing import Any
 
 from langchain_core.messages import AnyMessage, HumanMessage
@@ -9,6 +10,7 @@ from langgraph.types import Command, Interrupt
 
 from src.agents.context import AgentContext
 from src.cli.bootstrap.initializer import initializer
+from src.cli.builders import MessageContentBuilder
 from src.cli.handlers import CompressionHandler, InterruptHandler
 from src.cli.theme import console, theme
 from src.core.logging import get_logger
@@ -24,6 +26,7 @@ class MessageDispatcher:
         """Initialize with reference to CLI session."""
         self.session = session
         self.interrupt_handler = InterruptHandler()
+        self.message_builder = MessageContentBuilder(Path(session.context.working_dir))
 
     async def dispatch(self, content: str) -> None:
         """Dispatch user message and get AI response."""
@@ -31,15 +34,15 @@ class MessageDispatcher:
             reference_mapping = self.session.prefilled_reference_mapping.copy()
             self.session.prefilled_reference_mapping.clear()
 
-            resolved_content = self.session.prompt.completer.resolve_refs(content)
+            message_content, image_refs = self.message_builder.build(content)
+
+            reference_mapping.update(image_refs)
 
             human_message = HumanMessage(
-                content=resolved_content,
+                content=message_content,
                 short_content=content,
                 additional_kwargs={"reference_mapping": reference_mapping},
             )
-
-            # Prepare graph config
             ctx = self.session.context
             agent_context = AgentContext(
                 approval_mode=ctx.approval_mode,
@@ -62,7 +65,7 @@ class MessageDispatcher:
 
         except Exception as e:
             console.print_error(f"Error processing message: {e}")
-            logger.debug("Message processing error")
+            logger.debug("Message processing error", exc_info=True)
 
     async def _stream_response(
         self,

@@ -11,6 +11,7 @@ from src.utils.bash import execute_bash_command
 from src.utils.image import (
     SUPPORTED_IMAGE_EXTENSIONS,
     get_image_mime_type,
+    is_image_file,
     is_image_path,
     is_supported_image,
     read_image_as_base64,
@@ -51,9 +52,9 @@ class ImageResolver(Resolver):
         commands = [
             # Git-based search
             (
-                f"git ls-files {git_globs} | grep -i {safe_pattern} | {head}"
+                f"(git ls-files {git_globs} && git ls-files -o --exclude-standard {git_globs}) | grep -i {safe_pattern} | {head}"
                 if pattern
-                else f"git ls-files {git_globs} | {head}"
+                else f"(git ls-files {git_globs} && git ls-files -o --exclude-standard {git_globs}) | {head}"
             ),
             # fd-based search
             (
@@ -69,13 +70,13 @@ class ImageResolver(Resolver):
                 cmd, cwd=str(working_dir), timeout=1
             )
             if return_code == 0 and stdout:
-                # Filter results to only include supported image files
+                # Filter results to only include image files
                 results = [f for f in stdout.strip().split("\n") if f]
-                # Verify each result is actually a supported image
+                # Verify each result is actually an image
                 filtered_results = []
                 for file_path in results:
                     full_path = working_dir / file_path
-                    if full_path.exists() and is_supported_image(full_path):
+                    if full_path.exists() and is_image_file(full_path):
                         filtered_results.append(file_path)
                 if filtered_results:
                     return filtered_results
@@ -95,8 +96,7 @@ class ImageResolver(Resolver):
         working_dir = ctx.get("working_dir", "")
         try:
             resolved = resolve_path(str(working_dir), ref)
-            # Validate that the resolved path is a supported image
-            if resolved.exists() and is_supported_image(resolved):
+            if resolved.exists():
                 return str(resolved)
             return ref
         except Exception:

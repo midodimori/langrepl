@@ -9,6 +9,12 @@ SUPPORTED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 SUPPORTED_IMAGE_MIMES = {"image/png", "image/jpeg", "image/gif", "image/webp"}
 
 
+def is_image_file(path: Path) -> bool:
+    """Check if file is an image (any format)."""
+    mime_type, _ = mimetypes.guess_type(str(path))
+    return mime_type is not None and mime_type.startswith("image/")
+
+
 def is_supported_image(path: Path) -> bool:
     """Check if file is a supported image format.
 
@@ -79,7 +85,7 @@ def is_image_path(text: str) -> bool:
         text: String to check
 
     Returns:
-        True if the string is an absolute path to an existing supported image file
+        True if the string is an absolute path to an existing image file
     """
     try:
         path = Path(text.strip())
@@ -87,7 +93,7 @@ def is_image_path(text: str) -> bool:
             path.is_absolute()
             and path.exists()
             and path.is_file()
-            and is_supported_image(path)
+            and is_image_file(path)
         )
     except (OSError, ValueError):
         return False

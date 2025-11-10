@@ -83,8 +83,8 @@ class TestImageResolverResolve:
         assert result == "nonexistent.png"
 
     def test_resolve_unsupported_format(self, tmp_path):
-        """Test resolving unsupported image format returns original ref."""
-        # Create an SVG file (unsupported)
+        """Test resolving unsupported image format resolves path."""
+        # Create an SVG file (unsupported for LLMs but valid image)
         svg_file = tmp_path / "image.svg"
         svg_file.write_text("<svg></svg>")
 
@@ -92,8 +92,8 @@ class TestImageResolverResolve:
         ctx = {"working_dir": str(tmp_path)}
 
         result = resolver.resolve("image.svg", ctx)
-        # Should return original ref since SVG is not in SUPPORTED_IMAGE_EXTENSIONS
-        assert result == "image.svg"
+        # Should resolve to absolute path (validation happens at submit)
+        assert result == str(svg_file)
 
 
 class TestImageResolverComplete:

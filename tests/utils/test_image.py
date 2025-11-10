@@ -7,10 +7,28 @@ import pytest
 
 from src.utils.image import (
     get_image_mime_type,
+    is_image_file,
     is_image_path,
     is_supported_image,
     read_image_as_base64,
 )
+
+
+class TestIsImageFile:
+    """Tests for is_image_file function."""
+
+    def test_common_formats(self, create_test_image):
+        """Test that common image formats are recognized."""
+        for ext in [".png", ".jpg", ".jpeg", ".gif", ".webp"]:
+            path = create_test_image("test", ext)
+            assert is_image_file(path)
+
+    def test_non_image_rejected(self, tmp_path):
+        """Test that non-image files are rejected."""
+        for ext in [".txt", ".pdf", ".py"]:
+            path = tmp_path / f"test{ext}"
+            path.write_text("test")
+            assert not is_image_file(path)
 
 
 class TestIsSupportedImage:
@@ -123,11 +141,11 @@ class TestIsImagePath:
         """Test that nonexistent paths are rejected."""
         assert not is_image_path("/nonexistent/path/to/image.png")
 
-    def test_unsupported_format_rejected(self, tmp_path):
-        """Test that unsupported image formats are rejected."""
+    def test_svg_format_accepted(self, tmp_path):
+        """Test that SVG images are accepted (validation at submit)."""
         path = tmp_path / "test.svg"
         path.write_text("<svg></svg>")
-        assert not is_image_path(str(path))
+        assert is_image_path(str(path))
 
     def test_directory_rejected(self, tmp_path):
         """Test that directories are rejected."""

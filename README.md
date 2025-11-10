@@ -36,7 +36,7 @@ https://github.com/user-attachments/assets/d95444c9-733f-481d-80c7-7d1cc28a732a
   sub-agent delegation for complex multi-step tasks
 - **LangGraph Server Mode** - Run agents as API servers with LangGraph Studio integration for visual debugging
 - **Multi-Provider LLM Support** - OpenAI, Anthropic, Google, AWS Bedrock, Ollama, DeepSeek, ZhipuAI, and local models (LMStudio, Ollama)
-- **Multimodal Image Support** - Send images via @:image: references, absolute paths, or clipboard paste to vision models
+- **Multimodal Image Support** - Send images to vision models via clipboard paste, drag-and-drop, or absolute paths
 - **Extensible Tool System** - File operations, web search, terminal access, grep search, and MCP server integration
 - **Persistent Conversations** - SQLite-backed thread storage with resume, replay, and compression
 - **User Memory** - Project-specific custom instructions and preferences that persist across conversations

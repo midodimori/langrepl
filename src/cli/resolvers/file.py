@@ -16,18 +16,18 @@ class FileResolver(Resolver):
     type = RefType.FILE
 
     @staticmethod
-    async def _get_tracked_files(
+    async def _get_files(
         working_dir: Path, limit: int | None = None, pattern: str = ""
     ) -> list[str]:
-        """Get list of tracked files using git or fd."""
+        """Get list of files (tracked and untracked) using git or fd."""
         head = f"head -n {limit}" if limit else "cat"
 
         safe_pattern = quote(pattern) if pattern else ""
         commands = [
             (
-                f"git ls-files | grep -i {safe_pattern} | {head}"
+                f"(git ls-files && git ls-files -o --exclude-standard) | sort -u | grep -i {safe_pattern} | {head}"
                 if pattern
-                else f"git ls-files | {head}"
+                else f"(git ls-files && git ls-files -o --exclude-standard) | sort -u | {head}"
             ),
             (
                 f"fd --type f -i {safe_pattern} | {head}"
@@ -56,9 +56,9 @@ class FileResolver(Resolver):
         safe_pattern = quote(pattern) if pattern else ""
         commands = [
             (
-                f"git ls-files -z | xargs -0 -n1 dirname | sort -u | grep -i {safe_pattern} | {head}"
+                f"(git ls-files -z && git ls-files -o --exclude-standard -z) | xargs -0 -n1 dirname | sort -u | grep -i {safe_pattern} | {head}"
                 if pattern
-                else f"git ls-files -z | xargs -0 -n1 dirname | sort -u | {head}"
+                else f"(git ls-files -z && git ls-files -o --exclude-standard -z) | xargs -0 -n1 dirname | sort -u | {head}"
             ),
             (
                 f"fd --type d -i -0 {safe_pattern} | tr '\\0' '\\n' | {head}"
@@ -92,9 +92,7 @@ class FileResolver(Resolver):
         working_dir = Path(ctx.get("working_dir", ""))
 
         try:
-            files = await self._get_tracked_files(
-                working_dir, limit=limit, pattern=fragment
-            )
+            files = await self._get_files(working_dir, limit=limit, pattern=fragment)
             directories = await self._get_directories(
                 working_dir, limit=limit, pattern=fragment
             )

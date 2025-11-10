@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0](https://github.com/midodimori/langrepl/compare/v1.2.1...v1.3.0) (2025-11-10)
+
+
+### Features
+
+* add multimodal image support with builder pattern ([#37](https://github.com/midodimori/langrepl/issues/37)) ([dc3a94f](https://github.com/midodimori/langrepl/commit/dc3a94fbe4d0ac6ce101b813775e2ecebac79071))
+
+
+### Documentation
+
+* update demo ([799001d](https://github.com/midodimori/langrepl/commit/799001dfe87a64e617ce09bec17cf3d4fc21e512))
+
 ## [1.2.1](https://github.com/midodimori/langrepl/compare/v1.2.0...v1.2.1) (2025-11-09)
 
 

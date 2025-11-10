@@ -36,7 +36,7 @@ class CompleterRouter(Completer):
         text = document.text_before_cursor
 
         if text.lstrip().startswith("/"):
-            for completion in self.slash_completer.get_completions(
+            async for completion in self.slash_completer.get_completions_async(
                 document, complete_event
             ):
                 yield completion
@@ -45,7 +45,3 @@ class CompleterRouter(Completer):
                 document, complete_event
             ):
                 yield completion
-
-    def resolve_refs(self, text: str) -> str:
-        """Resolve @ references in text to absolute paths."""
-        return self.reference_completer.resolve_refs(text)

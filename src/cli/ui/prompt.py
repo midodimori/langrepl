@@ -2,7 +2,6 @@
 
 import asyncio
 import os
-import re
 import time
 from pathlib import Path
 
@@ -77,12 +76,6 @@ class InteractivePrompt:
             bottom_toolbar=self._get_bottom_toolbar,
         )
 
-    def _save_reference_mapping(self, ref: str) -> None:
-        """Save reference mapping if session is available."""
-        if self.session:
-            resolved = self.completer.resolve_refs(ref)
-            self.session.prefilled_reference_mapping[ref] = resolved
-
     def _create_key_bindings(self) -> KeyBindings:
         """Create custom key bindings."""
         kb = KeyBindings()
@@ -138,13 +131,9 @@ class InteractivePrompt:
                 # For slash commands, submit immediately
                 if buffer.text.lstrip().startswith("/"):
                     buffer.validate_and_handle()
-                # For @ references, add space and save mapping
+                # For @ references, add space
                 else:
                     buffer.insert_text(" ")
-                    match = re.search(r"(@:\w+:\S+)\s*$", buffer.text)
-                    if match:
-                        ref = match.group(1)
-                        self._save_reference_mapping(ref)
 
         @kb.add(Keys.Tab)
         def _(event):
@@ -156,13 +145,9 @@ class InteractivePrompt:
                 current_completion = buffer.complete_state.current_completion
                 buffer.apply_completion(current_completion)
 
-                # For @ references, add space and save mapping
+                # For @ references, add space
                 if not buffer.text.lstrip().startswith("/"):
                     buffer.insert_text(" ")
-                    match = re.search(r"(@:\w+:\S+)\s*$", buffer.text)
-                    if match:
-                        ref = match.group(1)
-                        self._save_reference_mapping(ref)
             else:
                 # Start completion with first item selected
                 buffer.start_completion(select_first=True)
@@ -171,13 +156,9 @@ class InteractivePrompt:
                     current_completion = buffer.complete_state.current_completion
                     buffer.apply_completion(current_completion)
 
-                    # For @ references, add space and save mapping
+                    # For @ references, add space
                     if not buffer.text.lstrip().startswith("/"):
                         buffer.insert_text(" ")
-                        match = re.search(r"(@:\w+:\S+)\s*$", buffer.text)
-                        if match:
-                            ref = match.group(1)
-                            self._save_reference_mapping(ref)
 
         return kb
 
@@ -331,7 +312,20 @@ class InteractivePrompt:
             print()
 
             content = result.strip()
-            return content, content.startswith("/")
+
+            is_command = False
+            if content.startswith("/"):
+                # If it's a known command, treat as command
+                first_word = content.split()[0] if content.split() else content
+                if first_word in self.commands:
+                    is_command = True
+                # If it has only one "/" at the start and no path separators after,
+                # treat as command (e.g., "/help", "/exit")
+                elif "/" not in content[1:]:
+                    is_command = True
+                # Otherwise it's likely a file path, treat as regular content
+
+            return content, is_command
 
         except (KeyboardInterrupt, EOFError):
             raise

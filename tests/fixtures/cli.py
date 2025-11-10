@@ -83,7 +83,6 @@ def mock_completer():
     from src.cli.completers.router import CompleterRouter
 
     completer = MagicMock(spec=CompleterRouter)
-    completer.resolve_refs = MagicMock(side_effect=lambda x: x)
     completer.get_completions_async = MagicMock(
         side_effect=lambda *_: _empty_async_iter()
     )

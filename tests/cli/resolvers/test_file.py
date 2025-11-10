@@ -9,32 +9,30 @@ import pytest
 from src.cli.resolvers.file import FileResolver
 
 
-class TestFileResolverGetTrackedFiles:
-    """Tests for FileResolver._get_tracked_files method."""
+class TestFileResolverGetFiles:
+    """Tests for FileResolver._get_files method."""
 
     @pytest.mark.asyncio
     @patch("src.cli.resolvers.file.execute_bash_command")
-    async def test_get_tracked_files_with_git(self, mock_exec, temp_dir):
-        """Test getting tracked files using git."""
+    async def test_get_files_with_git(self, mock_exec, temp_dir):
+        """Test getting files using git."""
         mock_exec.return_value = (0, "file1.py\nfile2.py\nfile3.py\n", "")
 
-        files = await FileResolver._get_tracked_files(temp_dir)
+        files = await FileResolver._get_files(temp_dir)
 
         assert files == ["file1.py", "file2.py", "file3.py"]
         assert "git ls-files" in mock_exec.call_args[0][0][2]
 
     @pytest.mark.asyncio
     @patch("src.cli.resolvers.file.execute_bash_command")
-    async def test_get_tracked_files_git_fails_fallback_to_fd(
-        self, mock_exec, temp_dir
-    ):
+    async def test_get_files_git_fails_fallback_to_fd(self, mock_exec, temp_dir):
         """Test fallback to fd when git fails."""
         mock_exec.side_effect = [
             (1, "", "not a git repository"),
             (0, "file1.py\nfile2.py\n", ""),
         ]
 
-        files = await FileResolver._get_tracked_files(temp_dir)
+        files = await FileResolver._get_files(temp_dir)
 
         assert files == ["file1.py", "file2.py"]
         assert mock_exec.call_count == 2
@@ -42,34 +40,34 @@ class TestFileResolverGetTrackedFiles:
 
     @pytest.mark.asyncio
     @patch("src.cli.resolvers.file.execute_bash_command")
-    async def test_get_tracked_files_both_commands_fail(self, mock_exec, temp_dir):
+    async def test_get_files_both_commands_fail(self, mock_exec, temp_dir):
         """Test when both git and fd fail."""
         mock_exec.side_effect = [
             (1, "", "not a git repository"),
             (1, "", "fd not found"),
         ]
 
-        files = await FileResolver._get_tracked_files(temp_dir)
+        files = await FileResolver._get_files(temp_dir)
 
         assert files == []
 
     @pytest.mark.asyncio
     @patch("src.cli.resolvers.file.execute_bash_command")
-    async def test_get_tracked_files_filters_empty_lines(self, mock_exec, temp_dir):
+    async def test_get_files_filters_empty_lines(self, mock_exec, temp_dir):
         """Test that empty lines are filtered out."""
         mock_exec.return_value = (0, "file1.py\n\nfile2.py\n\n", "")
 
-        files = await FileResolver._get_tracked_files(temp_dir)
+        files = await FileResolver._get_files(temp_dir)
 
         assert files == ["file1.py", "file2.py"]
 
     @pytest.mark.asyncio
     @patch("src.cli.resolvers.file.execute_bash_command")
-    async def test_get_tracked_files_pattern_escaping(self, mock_exec, temp_dir):
+    async def test_get_files_pattern_escaping(self, mock_exec, temp_dir):
         """Test that pattern is properly quoted for shell safety."""
         mock_exec.return_value = (0, "test.py\n", "")
 
-        await FileResolver._get_tracked_files(temp_dir, pattern="$(malicious)")
+        await FileResolver._get_files(temp_dir, pattern="$(malicious)")
 
         call_args = mock_exec.call_args[0][0][2]
         assert quote("$(malicious)") in call_args

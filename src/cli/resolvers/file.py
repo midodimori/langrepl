@@ -25,9 +25,9 @@ class FileResolver(Resolver):
         safe_pattern = quote(pattern) if pattern else ""
         commands = [
             (
-                f"git ls-files | grep -i {safe_pattern} | {head}"
+                f"(git ls-files && git ls-files -o --exclude-standard) | grep -i {safe_pattern} | {head}"
                 if pattern
-                else f"git ls-files | {head}"
+                else f"(git ls-files && git ls-files -o --exclude-standard) | {head}"
             ),
             (
                 f"fd --type f -i {safe_pattern} | {head}"
@@ -56,9 +56,9 @@ class FileResolver(Resolver):
         safe_pattern = quote(pattern) if pattern else ""
         commands = [
             (
-                f"git ls-files -z | xargs -0 -n1 dirname | sort -u | grep -i {safe_pattern} | {head}"
+                f"(git ls-files -z && git ls-files -o --exclude-standard -z) | xargs -0 -n1 dirname | sort -u | grep -i {safe_pattern} | {head}"
                 if pattern
-                else f"git ls-files -z | xargs -0 -n1 dirname | sort -u | {head}"
+                else f"(git ls-files -z && git ls-files -o --exclude-standard -z) | xargs -0 -n1 dirname | sort -u | {head}"
             ),
             (
                 f"fd --type d -i -0 {safe_pattern} | tr '\\0' '\\n' | {head}"

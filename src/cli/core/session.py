@@ -83,6 +83,27 @@ class Session:
                 console.print_error(f"Error processing input: {e}")
                 logger.debug("Input processing error")
 
+    async def send(self, message: str) -> int:
+        """Send a single message in one-shot mode (non-interactive)."""
+        try:
+            self.graph_context = initializer.get_graph(
+                agent=self.context.agent,
+                model=self.context.model,
+                working_dir=self.context.working_dir,
+            )
+
+            async with self.graph_context as graph:
+                self.graph = graph
+                await self.message_dispatcher.dispatch(message)
+                return 0
+
+        except KeyboardInterrupt:
+            return 0
+        except Exception as e:
+            console.print_error(f"Error sending message: {e}")
+            logger.exception("CLI message error")
+            return 1
+
     def update_context(self, **kwargs) -> None:
         """Update context fields dynamically.
 

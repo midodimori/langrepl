@@ -414,11 +414,12 @@ class TestHandleServerCommand:
         mock_app_args,
         patch_server_dependencies,
     ):
-        """Test that handle_server_command kills process on timeout."""
+        """Test that handle_server_command terminates process on timeout."""
         result = await handle_server_command(mock_app_args)
 
         mock_wait.assert_awaited_once()
-        patch_server_dependencies["process"].kill.assert_called_once()
+        patch_server_dependencies["process"].terminate.assert_called_once()
+        patch_server_dependencies["process"].wait.assert_called()
         assert result == 1
 
     @pytest.mark.asyncio

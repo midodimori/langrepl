@@ -32,6 +32,7 @@ def mock_session(mock_context, mock_renderer, mock_graph):
     """Create a mock CLI session for testing."""
     session = MagicMock()
     session.start = AsyncMock()
+    session.send = AsyncMock(return_value=0)
     session.needs_reload = False
     session.running = True
     session.context = mock_context
@@ -96,6 +97,7 @@ def mock_app_args(temp_dir):
         agent="test-agent",
         model="test-model",
         resume=False,
+        message=None,
         working_dir=str(temp_dir),
         approval_mode=ApprovalMode.SEMI_ACTIVE,
         timer=False,

@@ -140,6 +140,15 @@ langrepl -w /path     # Set working directory
 lg                    # Quick alias
 ```
 
+### One-Shot Mode
+
+```bash
+langrepl "your message here"                    # Send message and exit
+langrepl "what is 2+2?" -am aggressive          # With approval mode
+langrepl -a general "search for latest news"    # Use specific agent
+langrepl -r "continue from where we left off"   # Resume conversation
+```
+
 ### LangGraph Server Mode
 
 ```bash

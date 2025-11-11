@@ -28,12 +28,14 @@ class ResumeHandler:
         """Initialize with reference to CLI session."""
         self.session = session
 
-    async def handle(self, thread_id: str | None = None) -> None:
+    async def handle(
+        self, thread_id: str | None = None, render_history: bool = True
+    ) -> None:
         """Show interactive thread selector and resume selected thread."""
         try:
             # If thread_id is provided, directly load that thread
             if thread_id:
-                await self._load_thread(thread_id)
+                await self._load_thread(thread_id, render_history=render_history)
                 return
 
             threads = await initializer.get_threads(
@@ -58,7 +60,9 @@ class ResumeHandler:
 
             if selected_thread_id:
                 # Resume the selected thread and load its history
-                await self._load_thread(selected_thread_id)
+                await self._load_thread(
+                    selected_thread_id, render_history=render_history
+                )
 
         except Exception as e:
             console.print_error(f"Error resuming threads: {e}")
@@ -196,7 +200,7 @@ class ResumeHandler:
 
         return FormattedText(lines)
 
-    async def _load_thread(self, thread_id: str) -> None:
+    async def _load_thread(self, thread_id: str, render_history: bool = True) -> None:
         """Load and display conversation history for a thread."""
         try:
             # Get checkpointer directly from initializer
@@ -254,15 +258,13 @@ class ResumeHandler:
                 # Sort by timestamp and render messages in chronological order
                 all_messages.sort(key=lambda x: x[0])
 
-                # Keep track of already rendered messages to avoid duplicates
-                rendered_message_ids = set()
-
-                for timestamp, message in all_messages:
-                    # Create unique message ID
-                    message_id = getattr(message, "id", None) or id(message)
-                    if message_id not in rendered_message_ids:
-                        rendered_message_ids.add(message_id)
-                        self.session.renderer.render_message(message)
+                if render_history:
+                    rendered_message_ids = set()
+                    for timestamp, message in all_messages:
+                        message_id = getattr(message, "id", None) or id(message)
+                        if message_id not in rendered_message_ids:
+                            rendered_message_ids.add(message_id)
+                            self.session.renderer.render_message(message)
 
                 # Restore context from latest checkpoint
                 self.session.update_context(

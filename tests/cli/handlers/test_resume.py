@@ -66,7 +66,7 @@ class TestResumeHandler:
         ):
             await handler.handle()
 
-            mock_load.assert_called_once_with("thread-1")
+            mock_load.assert_called_once_with("thread-1", render_history=True)
 
     @pytest.mark.asyncio
     async def test_handle_with_direct_thread_id(self, mock_session):
@@ -76,7 +76,7 @@ class TestResumeHandler:
         with patch.object(handler, "_load_thread", new_callable=AsyncMock) as mock_load:
             await handler.handle(thread_id="specific-thread")
 
-            mock_load.assert_called_once_with("specific-thread")
+            mock_load.assert_called_once_with("specific-thread", render_history=True)
 
     @pytest.mark.asyncio
     @patch("src.cli.handlers.resume.Application")

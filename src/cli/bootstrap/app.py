@@ -24,6 +24,15 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
+    # Add positional message argument for one-shot mode
+    parser.add_argument(
+        "message",
+        type=str,
+        nargs="?",
+        default=None,
+        help="Message to send in one-shot mode (omit for interactive mode)",
+    )
+
     # Add global working directory option
     parser.add_argument(
         "-w",

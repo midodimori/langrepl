@@ -20,10 +20,19 @@ async def handle_chat_command(args) -> int:
             approval_mode=args.approval_mode,
         )
 
+        session = Session(context)
+
+        # One-shot mode
+        if args.message:
+            if args.resume:
+                await session.command_dispatcher.resume_handler.handle(
+                    context.thread_id, render_history=False
+                )
+            return await session.send(args.message)
+
+        # Interactive mode
         first_start = True
         while True:
-            session = Session(context)
-
             if first_start and args.resume:
                 await session.command_dispatcher.resume_handler.handle(
                     context.thread_id
@@ -33,6 +42,7 @@ async def handle_chat_command(args) -> int:
             first_start = False
 
             if session.needs_reload:
+                session = Session(context)
                 continue
             else:
                 break

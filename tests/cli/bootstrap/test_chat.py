@@ -33,7 +33,7 @@ class TestHandleChatCommand:
     async def test_handle_chat_command_with_resume_flag(
         self, mock_app_args, patch_chat_dependencies, mock_context
     ):
-        """Test that handle_chat_command handles resume flag."""
+        """Test that handle_chat_command handles resume flag in interactive mode."""
         mock_app_args.resume = True
 
         result = await handle_chat_command(mock_app_args)
@@ -135,6 +135,38 @@ class TestHandleChatCommand:
 
         call_args = patch_chat_dependencies["context_create"].call_args
         assert isinstance(call_args[1]["working_dir"], Path)
+
+    @pytest.mark.asyncio
+    async def test_handle_chat_command_one_shot_mode(
+        self, mock_app_args, patch_chat_dependencies
+    ):
+        """Test that handle_chat_command sends a single message in one-shot mode."""
+        mock_app_args.message = "test message"
+
+        result = await handle_chat_command(mock_app_args)
+
+        patch_chat_dependencies["session"].send.assert_called_once_with("test message")
+        patch_chat_dependencies["session"].start.assert_not_called()
+        assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_handle_chat_command_one_shot_mode_with_resume(
+        self, mock_app_args, patch_chat_dependencies, mock_context
+    ):
+        """Test that handle_chat_command handles resume in one-shot mode without rendering history."""
+        mock_app_args.message = "test message"
+        mock_app_args.resume = True
+
+        result = await handle_chat_command(mock_app_args)
+
+        patch_chat_dependencies[
+            "session"
+        ].command_dispatcher.resume_handler.handle.assert_called_once_with(
+            mock_context.thread_id, render_history=False
+        )
+        patch_chat_dependencies["session"].send.assert_called_once_with("test message")
+        patch_chat_dependencies["session"].start.assert_not_called()
+        assert result == 0
 
 
 @pytest.fixture

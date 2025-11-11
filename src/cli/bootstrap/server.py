@@ -167,6 +167,80 @@ async def _upsert_assistant(
     return None, False
 
 
+async def _get_or_create_thread(
+    client: httpx.AsyncClient, server_url: str, resume: bool
+) -> str:
+    """Get existing thread or create new one.
+
+    Args:
+        client: HTTP client
+        server_url: The server URL
+        resume: If True, get last thread; if False, create new thread
+
+    Returns:
+        Thread ID
+    """
+    # If resume flag set, try to get last thread
+    if resume:
+        try:
+            response = await client.post(
+                f"{server_url}/threads/search",
+                json={"limit": 1, "offset": 0},
+            )
+            if response.status_code == 200:
+                threads = response.json()
+                if threads:
+                    return threads[0]["thread_id"]
+        except Exception:
+            pass
+
+    # Create new thread
+    response = await client.post(f"{server_url}/threads", json={})
+    response.raise_for_status()
+    return response.json()["thread_id"]
+
+
+async def _send_message(
+    client: httpx.AsyncClient,
+    server_url: str,
+    assistant_id: str,
+    message: str,
+    resume: bool,
+) -> tuple[int, str]:
+    """Send message to LangGraph server.
+
+    Args:
+        client: HTTP client
+        server_url: The server URL
+        assistant_id: Assistant ID
+        message: Message to send
+        resume: If True, resume last thread; if False, create new thread
+
+    Returns:
+        Tuple of (exit_code, thread_id)
+    """
+    try:
+        # Get or create thread
+        tid = await _get_or_create_thread(client, server_url, resume)
+
+        # Send the message via runs/wait
+        payload = {
+            "assistant_id": assistant_id,
+            "input": {"messages": [{"role": "user", "content": message}]},
+        }
+
+        response = await client.post(
+            f"{server_url}/threads/{tid}/runs/wait", json=payload
+        )
+        response.raise_for_status()
+
+        return 0, tid
+
+    except Exception as e:
+        console.print_error(f"Failed to send message: {e}")
+        return 1, ""
+
+
 async def handle_server_command(args) -> int:
     """Handle server mode command.
 
@@ -176,6 +250,7 @@ async def handle_server_command(args) -> int:
     Returns:
         Exit code (0 for success, 1 for error)
     """
+    process = None
     try:
         working_dir = Path(args.working_dir)
 
@@ -231,7 +306,8 @@ async def handle_server_command(args) -> int:
             # Wait for server to be ready
             if not await _wait_for_server_ready(client, server_url):
                 console.print_error("Server failed to start within timeout")
-                process.kill()
+                process.terminate()
+                process.wait()
                 return 1
 
             console.print(f"Server is ready at {server_url}")
@@ -266,9 +342,36 @@ async def handle_server_command(args) -> int:
                     f"(ID: {assistant['assistant_id']}, Version: {assistant['version']})"
                 )
 
+            # If message provided, send it
+            if args.message and assistant:
+                exit_code, sent_thread_id = await _send_message(
+                    client,
+                    server_url,
+                    assistant["assistant_id"],
+                    args.message,
+                    args.resume,
+                )
+                if exit_code == 0:
+                    console.print(f"Message sent to thread: {sent_thread_id}")
+                    console.print(
+                        f"View conversation at: {server_url}/threads/{sent_thread_id}"
+                    )
+                else:
+                    process.terminate()
+                    process.wait()
+                    return exit_code
+
         # Wait for process to complete
         return process.wait()
 
+    except KeyboardInterrupt:
+        if process:
+            process.terminate()
+            process.wait()
+        return 0
     except Exception as e:
         console.print_error(f"Error starting server: {e}")
+        if process:
+            process.terminate()
+            process.wait()
         return 1

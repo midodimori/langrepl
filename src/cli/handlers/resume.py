@@ -223,10 +223,6 @@ class ResumeHandler:
                 # Get checkpoint history for current branch
                 history = await get_checkpoint_history(checkpointer, latest_checkpoint)
 
-                # Sort history by timestamp (oldest first) and extract messages
-                # Also extract token/cost from the latest checkpoint
-                all_messages = []
-
                 # Get channel values from the LATEST checkpoint (last in history)
                 latest_channel_values: dict = {}
                 if (
@@ -236,35 +232,18 @@ class ResumeHandler:
                 ):
                     latest_channel_values = history[-1].checkpoint["channel_values"]
 
-                for checkpoint_tuple in history:
-                    checkpoint = checkpoint_tuple.checkpoint
-                    metadata = checkpoint_tuple.metadata
-
-                    if checkpoint and "channel_values" in checkpoint:
-                        channel_values = checkpoint["channel_values"]
-                        messages = channel_values.get("messages", [])
-                        if messages:
-                            # Add timestamp info for sorting
-                            timestamp = (
-                                metadata.get("ts")
-                                if metadata
-                                else checkpoint.get("ts", "")
-                            )
-                            # Ensure timestamp is a string for consistent sorting
-                            timestamp_str = str(timestamp) if timestamp else ""
-                            for msg in messages:
-                                all_messages.append((timestamp_str, msg))
-
-                # Sort by timestamp and render messages in chronological order
-                all_messages.sort(key=lambda x: x[0])
-
+                # Extract and render messages in chronological order
                 if render_history:
                     rendered_message_ids = set()
-                    for timestamp, message in all_messages:
-                        message_id = getattr(message, "id", None) or id(message)
-                        if message_id not in rendered_message_ids:
-                            rendered_message_ids.add(message_id)
-                            self.session.renderer.render_message(message)
+                    for checkpoint_tuple in history:
+                        checkpoint = checkpoint_tuple.checkpoint
+                        if checkpoint and "channel_values" in checkpoint:
+                            messages = checkpoint["channel_values"].get("messages", [])
+                            for message in messages:
+                                message_id = getattr(message, "id", None) or id(message)
+                                if message_id not in rendered_message_ids:
+                                    rendered_message_ids.add(message_id)
+                                    self.session.renderer.render_message(message)
 
                 # Restore context from latest checkpoint
                 self.session.update_context(

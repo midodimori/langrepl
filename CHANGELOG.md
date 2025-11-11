@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0](https://github.com/midodimori/langrepl/compare/v1.3.0...v1.4.0) (2025-11-11)
+
+
+### Features
+
+* add one-shot mode ([#40](https://github.com/midodimori/langrepl/issues/40)) ([43cb1de](https://github.com/midodimori/langrepl/commit/43cb1de82de32a2c7c6ac6642f6c3a9d2ef4b44c))
+
+
+### Documentation
+
+* update ([4f83edb](https://github.com/midodimori/langrepl/commit/4f83edb8422f0a05d3ef279b8f63ada83d8097bb))
+
 ## [1.3.0](https://github.com/midodimori/langrepl/compare/v1.2.1...v1.3.0) (2025-11-10)
 
 

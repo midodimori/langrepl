@@ -1,0 +1,19 @@
+- model: glm-4.6
+  alias: glm-4.6
+  provider: zhipuai
+  max_tokens: 8192
+  temperature: 0.1
+  context_window: 200000
+  input_cost_per_mtok: 0.60
+  output_cost_per_mtok: 2.20
+
+- model: glm-4.6
+  alias: glm-4.6-thinking
+  provider: zhipuai
+  max_tokens: 10000
+  temperature: 1
+  context_window: 200000
+  input_cost_per_mtok: 0.60
+  output_cost_per_mtok: 2.20
+  extended_reasoning:
+    type: enabled

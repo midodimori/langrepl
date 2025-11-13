@@ -12,6 +12,62 @@ from pydantic import BaseModel, Field, model_validator
 from src.utils.render import render_templates
 
 
+def _validate_no_duplicates(items: list[dict], key: str, config_type: str) -> None:
+    """Validate that all items have the required key and no duplicates exist.
+
+    Args:
+        items: Config items to validate
+        key: Key to check (e.g., 'name', 'alias', 'type')
+        config_type: Type of config for error message (e.g., 'Agent', 'LLM')
+
+    Raises:
+        ValueError: If any item is missing the key or duplicates are found
+    """
+    seen = set()
+    for idx, item in enumerate(items):
+        if key not in item:
+            raise ValueError(
+                f"Config item at index {idx} missing required key '{key}': {item}"
+            )
+        value = item[key]
+        if value in seen:
+            raise ValueError(
+                f"Duplicate {config_type.lower()} '{key}': '{value}'. "
+                f"Each {config_type.lower()} must have a unique {key}."
+            )
+        seen.add(value)
+
+
+async def _load_yaml_items(
+    dir_path: Path, key: str | None = None, config_type: str | None = None
+) -> list[dict]:
+    """Load YAML files from directory with optional filename validation."""
+    if not dir_path.exists():
+        return []
+
+    items = []
+    for yml_file in sorted(dir_path.glob("*.yml")):
+        content = await asyncio.to_thread(yml_file.read_text)
+        data = yaml.safe_load(content)
+
+        file_items = (
+            data if isinstance(data, list) else [data] if isinstance(data, dict) else []
+        )
+
+        # Validate filename matches key value
+        if key and config_type:
+            for item in file_items:
+                if (item_key := item.get(key)) and item_key != yml_file.stem:
+                    raise ValueError(
+                        f"{config_type} file '{yml_file.name}' has {key}='{item_key}' "
+                        f"but filename is '{yml_file.stem}'. Rename file to '{item_key}.yml'."
+                    )
+
+        items.extend(file_items)
+
+    return items
+
+
 class LLMProvider(str, Enum):
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
@@ -175,10 +231,23 @@ class BatchLLMConfig(BaseModel):
         return next((llm for llm in self.llms if llm.alias == llm_name), None)
 
     @classmethod
-    async def from_yaml(cls, path: Path) -> "BatchLLMConfig":
-        yaml_content = await asyncio.to_thread(path.read_text)
-        data = yaml.unsafe_load(yaml_content)
-        return cls(**data)
+    async def from_yaml(
+        cls,
+        file_path: Path | None = None,
+        dir_path: Path | None = None,
+    ) -> "BatchLLMConfig":
+        llms = []
+
+        if file_path and file_path.exists():
+            yaml_content = await asyncio.to_thread(file_path.read_text)
+            data = yaml.safe_load(yaml_content)
+            llms.extend(data.get("llms", []))
+
+        if dir_path:
+            llms.extend(await _load_yaml_items(dir_path))
+
+        _validate_no_duplicates(llms, key="alias", config_type="LLM")
+        return cls.model_validate({"llms": llms})
 
 
 class BatchCheckpointerConfig(BaseModel):
@@ -198,10 +267,25 @@ class BatchCheckpointerConfig(BaseModel):
         )
 
     @classmethod
-    async def from_yaml(cls, path: Path) -> "BatchCheckpointerConfig":
-        yaml_content = await asyncio.to_thread(path.read_text)
-        data = yaml.unsafe_load(yaml_content)
-        return cls(**data)
+    async def from_yaml(
+        cls,
+        file_path: Path | None = None,
+        dir_path: Path | None = None,
+    ) -> "BatchCheckpointerConfig":
+        checkpointers = []
+
+        if file_path and file_path.exists():
+            yaml_content = await asyncio.to_thread(file_path.read_text)
+            data = yaml.safe_load(yaml_content)
+            checkpointers.extend(data.get("checkpointers", []))
+
+        if dir_path:
+            checkpointers.extend(
+                await _load_yaml_items(dir_path, key="type", config_type="Checkpointer")
+            )
+
+        _validate_no_duplicates(checkpointers, key="type", config_type="Checkpointer")
+        return cls.model_validate({"checkpointers": checkpointers})
 
 
 class CompressionConfig(BaseModel):
@@ -298,55 +382,90 @@ class BatchAgentConfig(BaseModel):
         return self
 
     @staticmethod
-    async def update_agent_llm(path: Path, agent_name: str, new_llm_name: str):
-        """Update a specific agent's LLM in the YAML file without modifying other fields."""
-        yaml_content = await asyncio.to_thread(path.read_text)
-        data = yaml.unsafe_load(yaml_content)
+    async def update_agent_llm(
+        file_path: Path,
+        agent_name: str,
+        new_llm_name: str,
+        dir_path: Path | None = None,
+    ):
+        if dir_path and dir_path.exists():
+            agent_file = dir_path / f"{agent_name}.yml"
+            if agent_file.exists():
+                yaml_content = await asyncio.to_thread(agent_file.read_text)
+                data = yaml.safe_load(yaml_content)
+                data["llm"] = new_llm_name
+                yaml_str = yaml.dump(data, default_flow_style=False, sort_keys=False)
+                await asyncio.to_thread(agent_file.write_text, yaml_str)
+                return
 
-        agents: list[dict] = data.get("agents", [])
-        for agent in agents:
-            if agent.get("name") == agent_name:
-                agent["llm"] = new_llm_name
-                break
-
-        with open(path, "w") as f:
-            yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+        if file_path.exists():
+            yaml_content = await asyncio.to_thread(file_path.read_text)
+            data = yaml.safe_load(yaml_content)
+            agents: list[dict] = data.get("agents", [])
+            for agent in agents:
+                if agent.get("name") == agent_name:
+                    agent["llm"] = new_llm_name
+                    break
+            yaml_str = yaml.dump(data, default_flow_style=False, sort_keys=False)
+            await asyncio.to_thread(file_path.write_text, yaml_str)
 
     @staticmethod
-    async def update_default_agent(path: Path, agent_name: str):
-        """Update which agent is marked as default in the YAML file."""
-        yaml_content = await asyncio.to_thread(path.read_text)
-        data = yaml.unsafe_load(yaml_content)
+    async def update_default_agent(
+        file_path: Path, agent_name: str, dir_path: Path | None = None
+    ):
+        if dir_path and dir_path.exists():
+            for agent_file in dir_path.glob("*.yml"):
+                yaml_content = await asyncio.to_thread(agent_file.read_text)
+                data = yaml.safe_load(yaml_content)
+                is_target = data.get("name") == agent_name
+                data["default"] = is_target
+                yaml_str = yaml.dump(data, default_flow_style=False, sort_keys=False)
+                await asyncio.to_thread(agent_file.write_text, yaml_str)
 
-        agents: list[dict] = data.get("agents", [])
-        for agent in agents:
-            agent["default"] = agent.get("name") == agent_name
-
-        with open(path, "w") as f:
-            yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+        if file_path.exists():
+            yaml_content = await asyncio.to_thread(file_path.read_text)
+            data = yaml.safe_load(yaml_content)
+            agents: list[dict] = data.get("agents", [])
+            for agent in agents:
+                agent["default"] = agent.get("name") == agent_name
+            yaml_str = yaml.dump(data, default_flow_style=False, sort_keys=False)
+            await asyncio.to_thread(file_path.write_text, yaml_str)
 
     @classmethod
     async def from_yaml(
         cls,
-        path: Path,
+        file_path: Path | None = None,
+        dir_path: Path | None = None,
         batch_llm_config: BatchLLMConfig | None = None,
         batch_checkpointer_config: BatchCheckpointerConfig | None = None,
         batch_subagent_config: "BatchAgentConfig | None" = None,
     ) -> "BatchAgentConfig":
-        yaml_content = await asyncio.to_thread(path.read_text)
-        data = yaml.unsafe_load(yaml_content)
+        agents = []
+        prompt_base_path = None
 
-        agents: list[dict] = data.get("agents", [])
+        if file_path and file_path.exists():
+            yaml_content = await asyncio.to_thread(file_path.read_text)
+            data = yaml.safe_load(yaml_content)
+            agents.extend(data.get("agents", []))
+            prompt_base_path = file_path.parent
+
+        if dir_path and dir_path.exists():
+            agents.extend(
+                await _load_yaml_items(dir_path, key="name", config_type="Agent")
+            )
+            prompt_base_path = dir_path.parent
+
         if not agents:
             raise ValueError("No agents found in YAML file")
+
+        _validate_no_duplicates(agents, key="name", config_type="Agent")
 
         for agent in agents:
             if prompt_content := agent.get("prompt", ""):
                 agent["prompt"] = await cls._load_prompt_content(
-                    path.parent, prompt_content
+                    prompt_base_path or Path(), prompt_content
                 )
 
-            # Resolve LLM by name if string reference
             if batch_llm_config and isinstance(agent.get("llm"), str):
                 llm_name = agent["llm"]
                 resolved_llm = batch_llm_config.get_llm_config(llm_name)
@@ -356,7 +475,6 @@ class BatchAgentConfig(BaseModel):
                     )
                 agent["llm"] = resolved_llm
 
-            # Resolve checkpointer by name if string reference
             if batch_checkpointer_config and isinstance(agent.get("checkpointer"), str):
                 checkpointer_name = agent["checkpointer"]
                 resolved_checkpointer = (
@@ -368,7 +486,6 @@ class BatchAgentConfig(BaseModel):
                     )
                 agent["checkpointer"] = resolved_checkpointer
 
-            # Resolve subagents by name if list of string references
             if batch_subagent_config and isinstance(agent.get("subagents"), list):
                 subagent_names = agent["subagents"]
                 resolved_subagents = []
@@ -383,7 +500,6 @@ class BatchAgentConfig(BaseModel):
                     resolved_subagents.append(resolved_subagent)
                 agent["subagents"] = resolved_subagents
 
-            # Resolve compression LLM if specified, or default to agent's main LLM
             if agent.get("compression"):
                 compression = agent["compression"]
                 if isinstance(compression.get("compression_llm"), str):
@@ -398,10 +514,9 @@ class BatchAgentConfig(BaseModel):
                             )
                         compression["compression_llm"] = resolved_compression_llm
                 elif compression.get("compression_llm") is None:
-                    # Default to agent's main LLM
                     compression["compression_llm"] = agent["llm"]
 
-        return cls(**data)
+        return cls.model_validate({"agents": agents})
 
     @staticmethod
     async def _load_prompt_content(base_path: Path, prompt: str | list[str]) -> str:

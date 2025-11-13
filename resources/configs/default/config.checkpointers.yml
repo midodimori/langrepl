@@ -1,6 +1,0 @@
-checkpointers:
-  - type: sqlite
-    max_connections: 10
-
-  - type: memory
-    max_connections: 1

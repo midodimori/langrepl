@@ -1,0 +1,2 @@
+type: sqlite
+max_connections: 10

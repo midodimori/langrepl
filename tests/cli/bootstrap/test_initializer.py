@@ -16,11 +16,12 @@ from src.core.config import (
     LLMConfig,
 )
 from src.core.constants import (
-    CONFIG_AGENTS_FILE_NAME,
-    CONFIG_CHECKPOINTERS_FILE_NAME,
+    CONFIG_AGENTS_DIR,
+    CONFIG_CHECKPOINTERS_DIR,
     CONFIG_DIR_NAME,
-    CONFIG_LLMS_FILE_NAME,
+    CONFIG_LLMS_DIR,
     CONFIG_MEMORY_FILE_NAME,
+    CONFIG_SUBAGENTS_DIR,
 )
 
 
@@ -42,9 +43,10 @@ class TestInitializer:
     async def test_ensure_config_dir_copies_template_files(self, config_dir):
         """Test that _ensure_config_dir copies template files."""
         config_path = config_dir / CONFIG_DIR_NAME
-        assert (config_path / CONFIG_AGENTS_FILE_NAME.name).exists()
-        assert (config_path / CONFIG_LLMS_FILE_NAME.name).exists()
-        assert (config_path / CONFIG_CHECKPOINTERS_FILE_NAME.name).exists()
+        assert (config_path / CONFIG_AGENTS_DIR.name).exists()
+        assert (config_path / CONFIG_LLMS_DIR.name).exists()
+        assert (config_path / CONFIG_CHECKPOINTERS_DIR.name).exists()
+        assert (config_path / CONFIG_SUBAGENTS_DIR.name).exists()
 
     @pytest.mark.asyncio
     async def test_ensure_config_dir_adds_gitignore(self, temp_dir, initializer):
@@ -208,9 +210,9 @@ class TestInitializer:
         await Initializer.update_agent_llm("test-agent", "new-model", config_dir)
 
         mock_update_agent_llm.assert_awaited_once()
-        args = mock_update_agent_llm.call_args[0]
-        assert "test-agent" in args
-        assert "new-model" in args
+        kwargs = mock_update_agent_llm.call_args.kwargs
+        assert kwargs["agent_name"] == "test-agent"
+        assert kwargs["new_llm_name"] == "new-model"
 
     @pytest.mark.asyncio
     @patch.object(BatchAgentConfig, "update_agent_llm", new_callable=AsyncMock)
@@ -223,9 +225,9 @@ class TestInitializer:
         await Initializer.update_subagent_llm("test-subagent", "new-model", config_dir)
 
         mock_update_agent_llm.assert_awaited_once()
-        args = mock_update_agent_llm.call_args[0]
-        assert "test-subagent" in args
-        assert "new-model" in args
+        kwargs = mock_update_agent_llm.call_args.kwargs
+        assert kwargs["agent_name"] == "test-subagent"
+        assert kwargs["new_llm_name"] == "new-model"
 
     @pytest.mark.asyncio
     @patch.object(BatchAgentConfig, "update_default_agent", new_callable=AsyncMock)
@@ -238,8 +240,8 @@ class TestInitializer:
         await Initializer.update_default_agent("test-agent", config_dir)
 
         mock_update_default_agent.assert_awaited_once()
-        args = mock_update_default_agent.call_args[0]
-        assert "test-agent" in args
+        kwargs = mock_update_default_agent.call_args.kwargs
+        assert kwargs["agent_name"] == "test-agent"
 
     @pytest.mark.asyncio
     @patch.object(Initializer, "load_agent_config")

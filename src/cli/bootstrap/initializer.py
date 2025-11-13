@@ -28,14 +28,18 @@ from src.core.config import (
     MCPConfig,
 )
 from src.core.constants import (
+    CONFIG_AGENTS_DIR,
     CONFIG_AGENTS_FILE_NAME,
     CONFIG_APPROVAL_FILE_NAME,
+    CONFIG_CHECKPOINTERS_DIR,
     CONFIG_CHECKPOINTERS_FILE_NAME,
     CONFIG_CHECKPOINTS_URL_FILE_NAME,
     CONFIG_DIR_NAME,
+    CONFIG_LLMS_DIR,
     CONFIG_LLMS_FILE_NAME,
     CONFIG_MCP_FILE_NAME,
     CONFIG_MEMORY_FILE_NAME,
+    CONFIG_SUBAGENTS_DIR,
     CONFIG_SUBAGENTS_FILE_NAME,
 )
 from src.core.settings import settings
@@ -104,8 +108,10 @@ class Initializer:
     async def load_llms_config(self, working_dir: Path) -> BatchLLMConfig:
         """Load LLMs configuration."""
         await self._ensure_config_dir(working_dir)
-        target_llms_config_path = Path(working_dir) / CONFIG_LLMS_FILE_NAME
-        return await BatchLLMConfig.from_yaml(target_llms_config_path)
+        return await BatchLLMConfig.from_yaml(
+            file_path=Path(working_dir) / CONFIG_LLMS_FILE_NAME,
+            dir_path=Path(working_dir) / CONFIG_LLMS_DIR,
+        )
 
     async def load_llm_config(self, model: str, working_dir: Path) -> LLMConfig:
         """Load LLM configuration by name."""
@@ -123,45 +129,54 @@ class Initializer:
     ) -> BatchCheckpointerConfig:
         """Load checkpointers configuration."""
         await self._ensure_config_dir(working_dir)
-        target_checkpointers_config_path = (
-            Path(working_dir) / CONFIG_CHECKPOINTERS_FILE_NAME
+        return await BatchCheckpointerConfig.from_yaml(
+            file_path=Path(working_dir) / CONFIG_CHECKPOINTERS_FILE_NAME,
+            dir_path=Path(working_dir) / CONFIG_CHECKPOINTERS_DIR,
         )
-        return await BatchCheckpointerConfig.from_yaml(target_checkpointers_config_path)
 
     async def load_subagents_config(self, working_dir: Path) -> BatchAgentConfig:
         """Load subagents configuration."""
         await self._ensure_config_dir(working_dir)
-        target_subagents_config_path = Path(working_dir) / CONFIG_SUBAGENTS_FILE_NAME
 
         llm_config = None
-        if (Path(working_dir) / CONFIG_LLMS_FILE_NAME).exists():
+        if (Path(working_dir) / CONFIG_LLMS_FILE_NAME).exists() or (
+            Path(working_dir) / CONFIG_LLMS_DIR
+        ).exists():
             llm_config = await self.load_llms_config(working_dir)
 
         return await BatchAgentConfig.from_yaml(
-            target_subagents_config_path, llm_config, None, None
+            file_path=Path(working_dir) / CONFIG_SUBAGENTS_FILE_NAME,
+            dir_path=Path(working_dir) / CONFIG_SUBAGENTS_DIR,
+            batch_llm_config=llm_config,
         )
 
     async def load_agents_config(self, working_dir: Path) -> BatchAgentConfig:
         """Load agents configuration with resolved subagent references."""
         await self._ensure_config_dir(working_dir)
-        target_agents_config_path = Path(working_dir) / CONFIG_AGENTS_FILE_NAME
 
-        # Load LLM and checkpointer configs if they exist
         llm_config = None
         checkpointer_config = None
-        if (Path(working_dir) / CONFIG_LLMS_FILE_NAME).exists():
+        if (Path(working_dir) / CONFIG_LLMS_FILE_NAME).exists() or (
+            Path(working_dir) / CONFIG_LLMS_DIR
+        ).exists():
             llm_config = await self.load_llms_config(working_dir)
-        if (Path(working_dir) / CONFIG_CHECKPOINTERS_FILE_NAME).exists():
+        if (Path(working_dir) / CONFIG_CHECKPOINTERS_FILE_NAME).exists() or (
+            Path(working_dir) / CONFIG_CHECKPOINTERS_DIR
+        ).exists():
             checkpointer_config = await self.load_checkpointers_config(working_dir)
 
-        # Load subagents config if it exists
         subagents_config = None
-        target_subagents_config_path = Path(working_dir) / CONFIG_SUBAGENTS_FILE_NAME
-        if target_subagents_config_path.exists():
+        if (Path(working_dir) / CONFIG_SUBAGENTS_FILE_NAME).exists() or (
+            Path(working_dir) / CONFIG_SUBAGENTS_DIR
+        ).exists():
             subagents_config = await self.load_subagents_config(working_dir)
 
         return await BatchAgentConfig.from_yaml(
-            target_agents_config_path, llm_config, checkpointer_config, subagents_config
+            file_path=Path(working_dir) / CONFIG_AGENTS_FILE_NAME,
+            dir_path=Path(working_dir) / CONFIG_AGENTS_DIR,
+            batch_llm_config=llm_config,
+            batch_checkpointer_config=checkpointer_config,
+            batch_subagent_config=subagents_config,
         )
 
     async def load_agent_config(
@@ -190,9 +205,11 @@ class Initializer:
     @staticmethod
     async def update_agent_llm(agent_name: str, new_llm_name: str, working_dir: Path):
         """Update a specific agent's LLM in the config file."""
-        target_agents_config_path = Path(working_dir) / CONFIG_AGENTS_FILE_NAME
         await BatchAgentConfig.update_agent_llm(
-            target_agents_config_path, agent_name, new_llm_name
+            file_path=Path(working_dir) / CONFIG_AGENTS_FILE_NAME,
+            agent_name=agent_name,
+            new_llm_name=new_llm_name,
+            dir_path=Path(working_dir) / CONFIG_AGENTS_DIR,
         )
 
     @staticmethod
@@ -200,17 +217,20 @@ class Initializer:
         subagent_name: str, new_llm_name: str, working_dir: Path
     ):
         """Update a specific subagent's LLM in the config file."""
-        target_subagents_config_path = Path(working_dir) / CONFIG_SUBAGENTS_FILE_NAME
         await BatchAgentConfig.update_agent_llm(
-            target_subagents_config_path, subagent_name, new_llm_name
+            file_path=Path(working_dir) / CONFIG_SUBAGENTS_FILE_NAME,
+            agent_name=subagent_name,
+            new_llm_name=new_llm_name,
+            dir_path=Path(working_dir) / CONFIG_SUBAGENTS_DIR,
         )
 
     @staticmethod
     async def update_default_agent(agent_name: str, working_dir: Path):
         """Update which agent is marked as default in the config file."""
-        target_agents_config_path = Path(working_dir) / CONFIG_AGENTS_FILE_NAME
         await BatchAgentConfig.update_default_agent(
-            target_agents_config_path, agent_name
+            file_path=Path(working_dir) / CONFIG_AGENTS_FILE_NAME,
+            agent_name=agent_name,
+            dir_path=Path(working_dir) / CONFIG_AGENTS_DIR,
         )
 
     @staticmethod

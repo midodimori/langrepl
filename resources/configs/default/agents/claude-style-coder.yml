@@ -1,0 +1,22 @@
+name: claude-style-coder
+description: "An agent that mimics Claude Code's behavior for software development tasks"
+prompt:
+  - prompts/prefixes/notes.md
+  - prompts/agents/claude-style-coder.md
+  - prompts/suffixes/environments.md
+llm: haiku-4.5
+checkpointer: sqlite
+default: false
+recursion_limit: 40
+tool_output_max_tokens: 10000
+tools:
+  - impl:*:*
+  - internal:*:*
+  - mcp:*:*
+subagents:
+  - general-purpose
+  - explorer
+compression:
+  auto_compress_enabled: true
+  auto_compress_threshold: 0.8
+  compression_llm: haiku-4.5

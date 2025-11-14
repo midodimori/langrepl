@@ -1,0 +1,10 @@
+name: general-purpose
+description: "General-purpose agent for complex, multi-step tasks that require research, analysis, and synthesis. Use this when you need to handle tasks that involve multiple searches, gathering information from various sources, or autonomous multi-step workflows."
+prompt:
+  - prompts/subagents/general-purpose.md
+tool_output_max_tokens: 10000
+llm: haiku-4.5
+tools:
+  - impl:*:*
+  - internal:*:*
+  - mcp:*:*

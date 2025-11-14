@@ -1,0 +1,6 @@
+- model: deepseek/deepseek-r1-0528-qwen3-8b
+  alias: deepseek-r1-local
+  provider: lmstudio
+  max_tokens: 8192
+  temperature: 0.1
+  context_window: 64000

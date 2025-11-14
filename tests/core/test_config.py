@@ -1,6 +1,12 @@
 import pytest
+import yaml
 
-from src.core.config import BatchAgentConfig, ToolApprovalRule
+from src.core.config import (
+    BatchAgentConfig,
+    BatchCheckpointerConfig,
+    BatchLLMConfig,
+    ToolApprovalRule,
+)
 
 
 class TestToolApprovalRuleMatchesCall:
@@ -116,3 +122,213 @@ class TestBatchAgentConfigValidation:
         default_agent = config.get_default_agent()
         assert default_agent is not None
         assert default_agent.name == "agent1"
+
+
+class TestDuplicateValidation:
+    """Test duplicate detection in configs."""
+
+    @pytest.mark.asyncio
+    async def test_duplicate_agents(self, temp_dir, mock_llm_config):
+        """Test that duplicate agent names raise an error."""
+        file_path = temp_dir / "config.agents.yml"
+        file_path.write_text(
+            yaml.dump(
+                {
+                    "agents": [
+                        {"name": "my-agent", "default": True, "llm": "test-model"},
+                        {"name": "my-agent", "llm": "test-model"},  # Duplicate
+                    ]
+                }
+            )
+        )
+
+        batch_llm = BatchLLMConfig(llms=[mock_llm_config])
+
+        with pytest.raises(ValueError, match=r"Duplicate agent 'name': 'my-agent'"):
+            await BatchAgentConfig.from_yaml(
+                file_path=file_path, batch_llm_config=batch_llm
+            )
+
+    @pytest.mark.asyncio
+    async def test_duplicate_llms(self, temp_dir):
+        """Test that duplicate LLM aliases raise an error."""
+        file_path = temp_dir / "config.llms.yml"
+        file_path.write_text(
+            yaml.dump(
+                {
+                    "llms": [
+                        {
+                            "alias": "model",
+                            "provider": "anthropic",
+                            "model": "claude-3-5-sonnet-20241022",
+                            "max_tokens": 4096,
+                            "temperature": 0.7,
+                        },
+                        {
+                            "alias": "model",  # Duplicate
+                            "provider": "openai",
+                            "model": "gpt-4",
+                            "max_tokens": 8192,
+                            "temperature": 0.5,
+                        },
+                    ]
+                }
+            )
+        )
+
+        with pytest.raises(ValueError, match=r"Duplicate llm 'alias': 'model'"):
+            await BatchLLMConfig.from_yaml(file_path=file_path)
+
+    @pytest.mark.asyncio
+    async def test_duplicate_checkpointers(self, temp_dir):
+        """Test that duplicate checkpointer types raise an error."""
+        file_path = temp_dir / "config.checkpointers.yml"
+        file_path.write_text(
+            yaml.dump(
+                {
+                    "checkpointers": [
+                        {"type": "sqlite", "max_connections": 10},
+                        {"type": "sqlite", "max_connections": 20},  # Duplicate
+                    ]
+                }
+            )
+        )
+
+        with pytest.raises(
+            ValueError, match=r"Duplicate checkpointer 'type': 'sqlite'"
+        ):
+            await BatchCheckpointerConfig.from_yaml(file_path=file_path)
+
+    @pytest.mark.asyncio
+    async def test_missing_key_raises_error(self, temp_dir):
+        """Test that missing required key raises an error."""
+        file_path = temp_dir / "config.llms.yml"
+        file_path.write_text(
+            yaml.dump(
+                {
+                    "llms": [
+                        {
+                            "provider": "anthropic",  # Missing 'alias' key
+                            "model": "claude-3-5-sonnet-20241022",
+                            "max_tokens": 4096,
+                            "temperature": 0.7,
+                        }
+                    ]
+                }
+            )
+        )
+
+        with pytest.raises(ValueError, match=r"missing required key 'alias'"):
+            await BatchLLMConfig.from_yaml(file_path=file_path)
+
+    @pytest.mark.asyncio
+    async def test_unique_items_load_successfully(
+        self, temp_dir, mock_llm_config, mock_checkpointer_config
+    ):
+        """Test that configs with unique items from file and directory load successfully."""
+        file_path = temp_dir / "config.agents.yml"
+        file_path.write_text(
+            yaml.dump(
+                {
+                    "agents": [
+                        {
+                            "name": "agent1",
+                            "default": True,
+                            "llm": "test-model",
+                            "checkpointer": "memory",
+                        }
+                    ]
+                }
+            )
+        )
+
+        dir_path = temp_dir / "agents"
+        dir_path.mkdir()
+        (dir_path / "agent2.yml").write_text(
+            yaml.dump({"name": "agent2", "llm": "test-model"})
+        )
+
+        batch_llm = BatchLLMConfig(llms=[mock_llm_config])
+        batch_checkpointer = BatchCheckpointerConfig(
+            checkpointers=[mock_checkpointer_config]
+        )
+
+        config = await BatchAgentConfig.from_yaml(
+            file_path=file_path,
+            dir_path=dir_path,
+            batch_llm_config=batch_llm,
+            batch_checkpointer_config=batch_checkpointer,
+        )
+
+        assert len(config.agents) == 2
+        assert set(config.agent_names) == {"agent1", "agent2"}
+
+
+class TestFilenameValidation:
+    """Test filename validation for directory-based configs."""
+
+    @pytest.mark.asyncio
+    async def test_agent_filename_mismatch_raises_error(
+        self, temp_dir, mock_llm_config
+    ):
+        """Test that agent filename must match agent name."""
+        dir_path = temp_dir / "agents"
+        dir_path.mkdir()
+        (dir_path / "wrong-name.yml").write_text(
+            yaml.dump({"name": "correct-name", "llm": "test-model", "default": True})
+        )
+
+        batch_llm = BatchLLMConfig(llms=[mock_llm_config])
+
+        with pytest.raises(
+            ValueError,
+            match=r"Agent file 'wrong-name.yml' has name='correct-name' but filename is 'wrong-name'",
+        ):
+            await BatchAgentConfig.from_yaml(
+                dir_path=dir_path, batch_llm_config=batch_llm
+            )
+
+    @pytest.mark.asyncio
+    async def test_checkpointer_filename_mismatch_raises_error(self, temp_dir):
+        """Test that checkpointer filename must match checkpointer type."""
+        dir_path = temp_dir / "checkpointers"
+        dir_path.mkdir()
+        (dir_path / "wrong-type.yml").write_text(
+            yaml.dump({"type": "sqlite", "max_connections": 10})
+        )
+
+        with pytest.raises(
+            ValueError,
+            match=r"Checkpointer file 'wrong-type.yml' has type='sqlite' but filename is 'wrong-type'",
+        ):
+            await BatchCheckpointerConfig.from_yaml(dir_path=dir_path)
+
+    @pytest.mark.asyncio
+    async def test_matching_filenames_load_successfully(
+        self, temp_dir, mock_llm_config
+    ):
+        """Test that correctly named files load successfully."""
+        # Agents
+        agents_dir = temp_dir / "agents"
+        agents_dir.mkdir()
+        (agents_dir / "my-agent.yml").write_text(
+            yaml.dump({"name": "my-agent", "llm": "test-model", "default": True})
+        )
+
+        # Checkpointers
+        checkpointers_dir = temp_dir / "checkpointers"
+        checkpointers_dir.mkdir()
+        (checkpointers_dir / "memory.yml").write_text(
+            yaml.dump({"type": "memory", "max_connections": 10})
+        )
+
+        # All should load successfully
+        agents_config = await BatchAgentConfig.from_yaml(
+            dir_path=agents_dir, batch_llm_config=BatchLLMConfig(llms=[mock_llm_config])
+        )
+        checkpointers_config = await BatchCheckpointerConfig.from_yaml(
+            dir_path=checkpointers_dir
+        )
+
+        assert len(agents_config.agents) == 1
+        assert len(checkpointers_config.checkpointers) == 1

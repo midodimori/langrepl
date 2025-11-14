@@ -9,24 +9,24 @@ https://github.com/user-attachments/assets/d95444c9-733f-481d-80c7-7d1cc28a732a
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
-    - [From GitHub](#from-github)
-    - [From Source](#from-source)
-    - [Configure API Keys](#configure-api-keys)
-    - [Tracing](#tracing)
+  - [From GitHub](#from-github)
+  - [From Source](#from-source)
+  - [Configure API Keys](#configure-api-keys)
+  - [Tracing](#tracing)
 - [Quick Start](#quick-start)
-    - [Interactive Chat Mode](#interactive-chat-mode)
-    - [LangGraph Server Mode](#langgraph-server-mode)
+  - [Interactive Chat Mode](#interactive-chat-mode)
+  - [LangGraph Server Mode](#langgraph-server-mode)
 - [Interactive Commands](#interactive-commands)
-    - [Conversation Management](#conversation-management)
-    - [Configuration](#configuration)
-    - [Utilities](#utilities)
+  - [Conversation Management](#conversation-management)
+  - [Configuration](#configuration)
+  - [Utilities](#utilities)
 - [Usage](#usage)
-    - [Agents](#agents-configagentsyml)
-    - [LLMs](#llms-configllmsyml)
-    - [Custom Tools](#custom-tools)
-    - [MCP Servers](#mcp-servers-configmcpjson)
-    - [Sub-Agents](#sub-agents-configsubagentsyml)
-    - [Tool Approval](#tool-approval-configapprovaljson)
+  - [Agents](#agents)
+  - [LLMs](#llms)
+  - [Custom Tools](#custom-tools)
+  - [MCP Servers](#mcp-servers-configmcpjson)
+  - [Sub-Agents](#sub-agents)
+  - [Tool Approval](#tool-approval-configapprovaljson)
 - [Development](#development)
 - [License](#license)
 
@@ -265,12 +265,36 @@ Renders in terminal (ASCII) or opens in browser with `--browser` flag.
 
 Configs are auto-generated in `.langrepl/` on first run.
 
-### Agents (`config.agents.yml`)
+### Agents
+
+`.langrepl/agents/*.yml`:
+```yaml
+# agents/my-agent.yml (filename must match agent name)
+name: my-agent
+prompt: prompts/my_agent.md  # Single file or array of files
+llm: haiku-4.5               # References llms/*.yml
+checkpointer: sqlite         # References checkpointers/*.yml
+recursion_limit: 40
+tool_output_max_tokens: 10000
+default: true
+tools:
+  - impl:file_system:read_file
+  - mcp:context7:resolve-library-id
+subagents:
+  - general-purpose         # References subagents/*.yml
+compression:
+  auto_compress_enabled: true
+  auto_compress_threshold: 0.8
+  compression_llm: haiku-4.5
+```
+
+<details>
+<summary>Single-file format: .langrepl/config.agents.yml</summary>
 
 ```yaml
 agents:
   - name: my-agent
-    prompt: prompts/my_agent.md  # Single file or array of files, this will look for `.langrepl/prompts/my_agent.md`
+    prompt: prompts/my_agent.md
     llm: haiku-4.5
     checkpointer: sqlite
     recursion_limit: 40
@@ -287,12 +311,30 @@ agents:
       compression_llm: haiku-4.5
 ```
 
+</details>
+
 **Tool naming**: `<category>:<module>:<function>` with wildcard support (`*`, `?`, `[seq]`)
 - `impl:*:*` - All built-in tools
 - `impl:file_system:read_*` - All read_* tools in file_system
 - `mcp:server:*` - All tools from MCP server
 
-### LLMs (`config.llms.yml`)
+### LLMs
+
+`.langrepl/llms/*.yml`:
+```yaml
+# llms/anthropic.yml (organize by provider, filename is flexible)
+- model: claude-haiku-4-5
+  alias: haiku-4.5
+  provider: anthropic
+  max_tokens: 10000
+  temperature: 0.1
+  context_window: 200000
+  input_cost_per_mtok: 1.00
+  output_cost_per_mtok: 5.00
+```
+
+<details>
+<summary>Single-file format: .langrepl/config.llms.yml</summary>
 
 ```yaml
 llms:
@@ -305,6 +347,8 @@ llms:
     input_cost_per_mtok: 1.00
     output_cost_per_mtok: 5.00
 ```
+
+</details>
 
 ### Custom Tools
 
@@ -349,18 +393,33 @@ llms:
 - Reference: `mcp:my-server:tool1`
 - Examples: [useful-mcp-servers.json](examples/useful-mcp-servers.json)
 
-### Sub-Agents (`config.subagents.yml`)
+### Sub-Agents
 
 Sub-agents use the same config structure as main agents.
 
+`.langrepl/subagents/*.yml`:
 ```yaml
-subagents:
+# subagents/code-reviewer.yml (filename must match subagent name)
+name: code-reviewer
+prompt: prompts/code-reviewer.md
+llm: haiku-4.5
+tools: [impl:file_system:read_file]
+```
+
+<details>
+<summary>Single-file format: .langrepl/config.subagents.yml</summary>
+
+```yaml
+agents:
   - name: code-reviewer
     prompt: prompts/code-reviewer.md
+    llm: haiku-4.5
     tools: [impl:file_system:read_file]
 ```
 
-**Add custom**: Create prompt, add to config above, reference in parent agent's `subagents` list.
+</details>
+
+**Add custom**: Create prompt, add config file, reference in parent agent's `subagents` list.
 
 ### Tool Approval (`config.approval.json`)
 

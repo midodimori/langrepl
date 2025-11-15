@@ -23,9 +23,10 @@ https://github.com/user-attachments/assets/d95444c9-733f-481d-80c7-7d1cc28a732a
 - [Usage](#usage)
   - [Agents](#agents)
   - [LLMs](#llms)
+  - [Checkpointers](#checkpointers)
+  - [Sub-Agents](#sub-agents)
   - [Custom Tools](#custom-tools)
   - [MCP Servers](#mcp-servers-configmcpjson)
-  - [Sub-Agents](#sub-agents)
   - [Tool Approval](#tool-approval-configapprovaljson)
 - [Development](#development)
 - [License](#license)
@@ -350,6 +351,66 @@ llms:
 
 </details>
 
+### Checkpointers
+
+`.langrepl/checkpointers/*.yml`:
+```yaml
+# checkpointers/sqlite.yml (filename must match checkpointer type)
+type: sqlite
+max_connections: 10
+```
+
+```yaml
+# checkpointers/memory.yml (filename must match checkpointer type)
+type: memory
+max_connections: 1
+```
+
+<details>
+<summary>Single-file format: .langrepl/config.checkpointers.yml</summary>
+
+```yaml
+checkpointers:
+  - type: sqlite
+    max_connections: 10
+  - type: memory
+    max_connections: 1
+```
+
+</details>
+
+**Checkpointer types**:
+- `sqlite` - Persistent SQLite-backed storage (default, stored in `.langrepl/.db/checkpoints.db`)
+- `memory` - In-memory storage (ephemeral, lost on exit)
+
+### Sub-Agents
+
+Sub-agents use the same config structure as main agents.
+
+`.langrepl/subagents/*.yml`:
+```yaml
+# subagents/code-reviewer.yml (filename must match subagent name)
+name: code-reviewer
+prompt: prompts/code-reviewer.md
+llm: haiku-4.5
+tools: [impl:file_system:read_file]
+```
+
+<details>
+<summary>Single-file format: .langrepl/config.subagents.yml</summary>
+
+```yaml
+agents:
+  - name: code-reviewer
+    prompt: prompts/code-reviewer.md
+    llm: haiku-4.5
+    tools: [impl:file_system:read_file]
+```
+
+</details>
+
+**Add custom**: Create prompt, add config file, reference in parent agent's `subagents` list.
+
 ### Custom Tools
 
 1. Implement in `src/tools/impl/my_tool.py`:
@@ -392,34 +453,6 @@ llms:
 - Suppress stderr: `"command": "sh", "args": ["-c", "npx pkg 2>/dev/null"]`
 - Reference: `mcp:my-server:tool1`
 - Examples: [useful-mcp-servers.json](examples/useful-mcp-servers.json)
-
-### Sub-Agents
-
-Sub-agents use the same config structure as main agents.
-
-`.langrepl/subagents/*.yml`:
-```yaml
-# subagents/code-reviewer.yml (filename must match subagent name)
-name: code-reviewer
-prompt: prompts/code-reviewer.md
-llm: haiku-4.5
-tools: [impl:file_system:read_file]
-```
-
-<details>
-<summary>Single-file format: .langrepl/config.subagents.yml</summary>
-
-```yaml
-agents:
-  - name: code-reviewer
-    prompt: prompts/code-reviewer.md
-    llm: haiku-4.5
-    tools: [impl:file_system:read_file]
-```
-
-</details>
-
-**Add custom**: Create prompt, add config file, reference in parent agent's `subagents` list.
 
 ### Tool Approval (`config.approval.json`)
 

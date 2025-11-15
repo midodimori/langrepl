@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1](https://github.com/midodimori/langrepl/compare/v1.4.0...v1.4.1) (2025-11-15)
+
+
+### Bug Fixes
+
+* wrap Path.glob() in asyncio.to_thread() to prevent BlockingError in server mode ([9a4f7ee](https://github.com/midodimori/langrepl/commit/9a4f7ee766d1a122dfa5096c112e4d37c2788394))
+
+
+### Documentation
+
+* update ([af8607d](https://github.com/midodimori/langrepl/commit/af8607d00ed4b181e397d905c719490120d8d878))
+
 ## [1.4.0](https://github.com/midodimori/langrepl/compare/v1.3.0...v1.4.0) (2025-11-11)
 
 

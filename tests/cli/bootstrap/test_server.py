@@ -368,7 +368,7 @@ class TestHandleServerCommand:
 
         patch_server_dependencies["popen"].assert_called_once()
         call_args = patch_server_dependencies["popen"].call_args[0][0]
-        assert "langgraph" in call_args
+        assert any("langgraph" in str(arg) for arg in call_args)
         assert "dev" in call_args
 
     @pytest.mark.asyncio

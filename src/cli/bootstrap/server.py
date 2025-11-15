@@ -4,6 +4,7 @@ import asyncio
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import httpx
@@ -290,12 +291,21 @@ async def handle_server_command(args) -> int:
             except Exception:
                 pass
 
-        # Start server in background
         console.print("Starting LangGraph development server...")
         config_path = working_dir / CONFIG_LANGGRAPH_FILE_NAME
 
+        python_bin = Path(sys.executable)
+        langgraph_bin = python_bin.parent / "langgraph"
+
+        if not langgraph_bin.exists():
+            console.print_error(
+                f"langgraph CLI not found at {langgraph_bin}. "
+                "Install with: uv tool install 'langgraph-cli[inmem]'"
+            )
+            return 1
+
         process = subprocess.Popen(
-            ["uv", "run", "langgraph", "dev", "--config", str(config_path)],
+            [str(langgraph_bin), "dev", "--config", str(config_path)],
             cwd=LANGREPL_ROOT,
             env=env,
         )

@@ -2,6 +2,12 @@
 
 Interactive terminal CLI for building and running LLM agents. Built with LangChain, LangGraph, Prompt Toolkit, and Rich.
 
+[![CI](https://github.com/midodimori/langrepl/actions/workflows/ci.yml/badge.svg)](https://github.com/midodimori/langrepl/actions/workflows/ci.yml)
+[![PyPI - Version](https://img.shields.io/pypi/v/langrepl?logo=pypi&logoColor=white)](https://pypi.org/project/langrepl/)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/langrepl?logo=pypi&logoColor=white)](https://pypi.org/project/langrepl/)
+[![Python Version](https://img.shields.io/pypi/pyversions/langrepl?logo=python&logoColor=white)](https://pypi.org/project/langrepl/)
+[![License](https://img.shields.io/github/license/midodimori/langrepl)](https://github.com/midodimori/langrepl/blob/main/LICENSE)
+
 https://github.com/user-attachments/assets/d95444c9-733f-481d-80c7-7d1cc28a732a
 
 ## Table of Contents
@@ -9,6 +15,7 @@ https://github.com/user-attachments/assets/d95444c9-733f-481d-80c7-7d1cc28a732a
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
+  - [From PyPI](#from-pypi)
   - [From GitHub](#from-github)
   - [From Source](#from-source)
   - [Configure API Keys](#configure-api-keys)
@@ -66,6 +73,27 @@ https://github.com/user-attachments/assets/d95444c9-733f-481d-80c7-7d1cc28a732a
 
 The `.langrepl` config directory is created in your **working directory** (or use `-w` to specify a location).
 Aliases: `langrepl` or `lg`
+
+### From PyPI
+
+**Quick try (no installation):**
+```bash
+uvx langrepl
+uvx langrepl -w /path  # specify working dir
+```
+
+**Install globally:**
+```bash
+uv tool install langrepl
+# or with pipx:
+pipx install langrepl
+```
+
+Then run from any directory:
+```bash
+langrepl              # or: lg
+langrepl -w /path     # specify working directory
+```
 
 ### From GitHub
 

@@ -46,7 +46,8 @@ async def _load_yaml_items(
         return []
 
     items = []
-    for yml_file in sorted(dir_path.glob("*.yml")):
+    yml_files = await asyncio.to_thread(lambda: sorted(dir_path.glob("*.yml")))
+    for yml_file in yml_files:
         content = await asyncio.to_thread(yml_file.read_text)
         data = yaml.safe_load(content)
 
@@ -414,7 +415,8 @@ class BatchAgentConfig(BaseModel):
         file_path: Path, agent_name: str, dir_path: Path | None = None
     ):
         if dir_path and dir_path.exists():
-            for agent_file in dir_path.glob("*.yml"):
+            agent_files = await asyncio.to_thread(list, dir_path.glob("*.yml"))
+            for agent_file in agent_files:
                 yaml_content = await asyncio.to_thread(agent_file.read_text)
                 data = yaml.safe_load(yaml_content)
                 is_target = data.get("name") == agent_name

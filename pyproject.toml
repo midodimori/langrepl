@@ -1,9 +1,41 @@
 [project]
 name = "langrepl"
 version = "1.4.0"
-description = "A powerful interactive terminal CLI for AI-powered assistance, built with Interactive command-line chat application powered by Langchain, Langgraph, Prompt Toolkit and Rich."
-readme = "README.md"
+description = "Interactive terminal CLI for building and running LLM agents. Built with LangChain, LangGraph, Prompt Toolkit, and Rich."
+readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.13"
+license = { text = "MIT" }
+authors = [
+    { name = "midodimori", email = "midodimori@gmail.com" }
+]
+keywords = [
+    "ai",
+    "cli",
+    "langchain",
+    "langgraph",
+    "llm",
+    "agent",
+    "assistant",
+    "terminal",
+    "repl",
+    "chatbot",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Terminals",
+    "Typing :: Typed",
+]
 dependencies = [
     "langchain>=1.0.4",
     "langchain-anthropic>=1.0.1",
@@ -35,6 +67,12 @@ dependencies = [
     "pygments-cache>=0.1.3",
     "trafilatura>=2.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/midodimori/langrepl"
+Repository = "https://github.com/midodimori/langrepl"
+Issues = "https://github.com/midodimori/langrepl/issues"
+Changelog = "https://github.com/midodimori/langrepl/blob/main/CHANGELOG.md"
 
 [tool.mypy]
 python_version = "3.13"

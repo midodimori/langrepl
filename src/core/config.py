@@ -117,7 +117,7 @@ class LLMConfig(BaseModel):
     alias: str = Field(default="", description="Display alias for the model")
     max_tokens: int = Field(description="The maximum number of tokens to generate")
     temperature: float = Field(description="The temperature to use")
-    streaming: bool = Field(default=False, description="Whether to stream the response")
+    streaming: bool = Field(default=True, description="Whether to stream the response")
     rate_config: RateConfig | None = Field(
         default=None, description="The rate config to use"
     )

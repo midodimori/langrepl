@@ -3,7 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.types import Interrupt
 
 from src.cli.dispatchers.messages import MessageDispatcher
@@ -138,7 +138,7 @@ class TestMessageDispatcher:
     def test_extract_interrupts_from_tuple(self):
         """Test _extract_interrupts with tuple format."""
         interrupt = Interrupt(value="test")
-        chunk = ((), {"__interrupt__": [interrupt]})
+        chunk = ((), "updates", {"__interrupt__": [interrupt]})
 
         result = MessageDispatcher._extract_interrupts(chunk)
 
@@ -155,7 +155,7 @@ class TestMessageDispatcher:
 
     def test_extract_interrupts_no_interrupt(self):
         """Test _extract_interrupts with no interrupt."""
-        chunk: tuple = ((), {"messages": []})
+        chunk: tuple = ((), "updates", {"messages": []})
 
         result = MessageDispatcher._extract_interrupts(chunk)
 
@@ -170,66 +170,93 @@ class TestMessageDispatcher:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_process_chunk_renders_message(self, mock_session):
-        """Test _process_chunk renders new messages."""
+    async def test_process_update_chunk_renders_ai_message(self, mock_session):
+        """Test _process_update_chunk renders AI messages."""
         dispatcher = MessageDispatcher(mock_session)
         mock_session.renderer.render_message = MagicMock()
 
         message = AIMessage(content="test", id="msg1")
-        chunk = ((), {"agent": {"messages": [message]}})
+        chunk = {"agent": {"messages": [message]}}
         rendered_messages: set[str] = set()
 
-        await dispatcher._process_chunk(chunk, rendered_messages)
+        await dispatcher._process_update_chunk(chunk, rendered_messages)
 
         mock_session.renderer.render_message.assert_called_once_with(message)
         assert "msg1_ai" in rendered_messages
 
     @pytest.mark.asyncio
+    async def test_process_update_chunk_renders_tool_message(self, mock_session):
+        """Test _process_update_chunk renders tool messages."""
+        dispatcher = MessageDispatcher(mock_session)
+        mock_session.renderer.render_message = MagicMock()
+
+        message = ToolMessage(content="test", tool_call_id="tool1", id="msg1")
+        chunk = {"agent": {"messages": [message]}}
+        rendered_messages: set[str] = set()
+
+        await dispatcher._process_update_chunk(chunk, rendered_messages)
+
+        mock_session.renderer.render_message.assert_called_once_with(message)
+        assert "msg1_tool" in rendered_messages
+
+    @pytest.mark.asyncio
+    async def test_process_update_chunk_skips_other_message_types(self, mock_session):
+        """Test _process_update_chunk skips non-AI/Tool messages (e.g., HumanMessage)."""
+        dispatcher = MessageDispatcher(mock_session)
+        mock_session.renderer.render_message = MagicMock()
+
+        message = HumanMessage(content="test", id="msg1")
+        chunk = {"agent": {"messages": [message]}}
+        rendered_messages: set[str] = set()
+
+        await dispatcher._process_update_chunk(chunk, rendered_messages)
+
+        mock_session.renderer.render_message.assert_not_called()
+        assert "msg1_human" in rendered_messages
+
+    @pytest.mark.asyncio
     @patch.object(MessageDispatcher, "_check_auto_compression", new_callable=AsyncMock)
-    async def test_process_chunk_skips_rendered_messages(
+    async def test_process_update_chunk_skips_rendered_messages(
         self,
         _mock_auto_compress,
         mock_session,
     ):
-        """Test _process_chunk skips already rendered messages."""
+        """Test _process_update_chunk skips already rendered messages."""
         dispatcher = MessageDispatcher(mock_session)
         mock_session.renderer.render_message = MagicMock()
 
         message = AIMessage(content="test", id="msg1")
-        chunk = ((), {"agent": {"messages": [message]}})
+        chunk = {"agent": {"messages": [message]}}
         rendered_messages: set[str] = {"msg1_ai"}  # Already rendered
 
-        await dispatcher._process_chunk(chunk, rendered_messages)
+        await dispatcher._process_update_chunk(chunk, rendered_messages)
 
         mock_session.renderer.render_message.assert_not_called()
 
     @pytest.mark.asyncio
     @patch.object(MessageDispatcher, "_check_auto_compression", new_callable=AsyncMock)
-    async def test_process_chunk_updates_context_for_ai_message(
+    async def test_process_update_chunk_updates_context_for_ai_message(
         self,
         _mock_auto_compress,
         mock_session,
     ):
-        """Test _process_chunk updates context for AI messages."""
+        """Test _process_update_chunk updates context for AI messages."""
         dispatcher = MessageDispatcher(mock_session)
         mock_session.renderer.render_message = MagicMock()
         mock_session.update_context = MagicMock()
 
         message = AIMessage(content="test", id="msg1")
-        chunk = (
-            (),
-            {
-                "agent": {
-                    "messages": [message],
-                    "current_input_tokens": 100,
-                    "current_output_tokens": 50,
-                    "total_cost": 0.01,
-                }
-            },
-        )
+        chunk = {
+            "agent": {
+                "messages": [message],
+                "current_input_tokens": 100,
+                "current_output_tokens": 50,
+                "total_cost": 0.01,
+            }
+        }
         rendered_messages: set[str] = set()
 
-        await dispatcher._process_chunk(chunk, rendered_messages)
+        await dispatcher._process_update_chunk(chunk, rendered_messages)
 
         mock_session.update_context.assert_called_once_with(
             current_input_tokens=100, current_output_tokens=50, total_cost=0.01
@@ -237,43 +264,40 @@ class TestMessageDispatcher:
 
     @pytest.mark.asyncio
     @patch.object(MessageDispatcher, "_check_auto_compression", new_callable=AsyncMock)
-    async def test_process_chunk_checks_auto_compression(
+    async def test_process_update_chunk_checks_auto_compression(
         self,
         mock_auto_compress,
         mock_session,
     ):
-        """Test _process_chunk checks auto compression when token fields present."""
+        """Test _process_update_chunk checks auto compression when token fields present."""
         dispatcher = MessageDispatcher(mock_session)
         mock_session.renderer.render_message = MagicMock()
         mock_session.update_context = MagicMock()
 
         message = AIMessage(content="test", id="msg1")
         # Include token fields to trigger auto-compression check
-        chunk = (
-            (),
-            {
-                "agent": {
-                    "messages": [message],
-                    "current_input_tokens": 100,
-                }
-            },
-        )
+        chunk = {
+            "agent": {
+                "messages": [message],
+                "current_input_tokens": 100,
+            }
+        }
         rendered_messages: set[str] = set()
 
-        await dispatcher._process_chunk(chunk, rendered_messages)
+        await dispatcher._process_update_chunk(chunk, rendered_messages)
 
         mock_auto_compress.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_process_chunk_no_messages(self, mock_session):
-        """Test _process_chunk with no messages."""
+    async def test_process_update_chunk_no_messages(self, mock_session):
+        """Test _process_update_chunk with no messages."""
         dispatcher = MessageDispatcher(mock_session)
         mock_session.renderer.render_message = MagicMock()
 
-        chunk: tuple = ((), {"agent": {}})
+        chunk: dict = {"agent": {}}
         rendered_messages: set[str] = set()
 
-        await dispatcher._process_chunk(chunk, rendered_messages)
+        await dispatcher._process_update_chunk(chunk, rendered_messages)
 
         mock_session.renderer.render_message.assert_not_called()
 

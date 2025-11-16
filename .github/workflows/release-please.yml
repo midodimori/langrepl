@@ -12,8 +12,12 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    outputs:
+      prs_created: ${{ steps.release.outputs.prs_created }}
+      pr: ${{ steps.release.outputs.pr }}
     steps:
       - uses: googleapis/release-please-action@v4
+        id: release
         with:
           # Python package release type
           release-type: python
@@ -23,3 +27,42 @@ jobs:
 
           # Token for creating releases and PRs
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  update-lockfile:
+    needs: release-please
+    if: needs.release-please.outputs.prs_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Extract PR branch name
+        id: pr-info
+        run: |
+          echo '${{ needs.release-please.outputs.pr }}' | jq -r '.headBranchName' > branch.txt
+          echo "branch=$(cat branch.txt)" >> $GITHUB_OUTPUT
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.pr-info.outputs.branch }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Update lock file
+        run: uv lock
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          git diff --exit-code uv.lock || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push if changed
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add uv.lock
+          git commit -m "chore: update uv.lock after version bump"
+          git push

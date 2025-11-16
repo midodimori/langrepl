@@ -7,6 +7,7 @@ from langchain_core.runnables.graph import Graph
 from rich.console import Console, ConsoleOptions, Group, NewLine, RenderableType
 from rich.markdown import CodeBlock, Markdown
 from rich.panel import Panel
+from rich.segment import Segment
 from rich.style import Style
 from rich.syntax import Syntax, SyntaxTheme
 from rich.table import Table
@@ -81,25 +82,30 @@ class PrefixedMarkdown:
 
     def __rich_console__(self, console: Console, options: ConsoleOptions):
         """Render markdown with prefix on first line by prepending to content."""
-        # Split content into lines
-        lines = self.content.split("\n")
+        # Render all content as markdown
+        markdown = TransparentMarkdown(self.content, code_theme=self.code_theme)
+        segments = list(console.render(markdown, options))
 
-        if lines:
-            # Prepend the styled prefix to the first line
-            first_line = lines[0]
-            # Create styled text for the first line with symbol
-            styled_first = Text()
-            styled_first.append(self.prefix, style=self.prefix_style)
-            styled_first.append(first_line)
-            yield styled_first
+        if not segments:
+            return
 
-            # Render remaining lines as markdown if any
-            if len(lines) > 1:
-                remaining_content = "\n".join(lines[1:])
-                markdown = TransparentMarkdown(
-                    remaining_content, code_theme=self.code_theme
-                )
-                yield from console.render(markdown, options)
+        # Get prefix style from console theme
+        prefix_style = console.get_style(self.prefix_style)
+        prefix_segment = Segment(self.prefix, prefix_style)
+
+        # Find the first non-empty, non-newline segment to insert prefix before
+        for i, segment in enumerate(segments):
+            # Skip empty segments and initial newlines
+            if segment.text and segment.text not in ("", "\n"):
+                # Yield prefix segment
+                yield prefix_segment
+                # Yield all segments from this point
+                yield from segments[i:]
+                return
+
+        # If we only found empty/newline segments, just yield prefix and all segments
+        yield prefix_segment
+        yield from segments
 
 
 class Renderer:

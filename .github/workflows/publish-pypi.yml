@@ -36,8 +36,10 @@ jobs:
         with:
           repository-url: https://test.pypi.org/legacy/
           print-hash: true
+          attestations: false
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           print-hash: true
+          attestations: true

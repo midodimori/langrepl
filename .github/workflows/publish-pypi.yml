@@ -31,7 +31,20 @@ jobs:
       - name: Build distributions
         run: uv build
 
+      - name: Check if version exists on TestPyPI
+        id: check-testpypi
+        run: |
+          VERSION=$(grep '^version = ' pyproject.toml | cut -d'"' -f2)
+          if pip index versions langrepl --index-url https://test.pypi.org/simple/ 2>/dev/null | grep -q "$VERSION"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Version $VERSION already exists on TestPyPI, skipping"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Version $VERSION not found on TestPyPI, will publish"
+          fi
+
       - name: Publish to TestPyPI
+        if: steps.check-testpypi.outputs.exists == 'false'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/

@@ -100,6 +100,7 @@ async def main() -> int:
             return await handle_chat_command(args)
     except Exception as e:
         console.print_error(f"Unexpected error: {e}")
+        console.print("")
         logger.exception("CLI error")
         return 1
 

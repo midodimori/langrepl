@@ -39,6 +39,7 @@ class ToolsHandler:
 
         except Exception as e:
             console.print_error(f"Error displaying tools: {e}")
+            console.print("")
             logger.debug("Tool display error", exc_info=True)
 
     async def _get_tool_selection(self, tools: list[Any]) -> None:

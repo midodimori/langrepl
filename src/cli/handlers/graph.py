@@ -42,6 +42,7 @@ class GraphHandler:
                     console.print_error(
                         "Failed to render PNG. Falling back to terminal output."
                     )
+                    console.print("")
                     self.session.renderer.render_graph(drawable_graph)
             else:
                 # Default: render in terminal
@@ -49,6 +50,7 @@ class GraphHandler:
 
         except Exception as e:
             console.print_error(f"Error rendering graph: {e}")
+            console.print("")
             logger.debug("Graph rendering error", exc_info=True)
 
     async def _try_render_png(self, drawable_graph) -> bool:

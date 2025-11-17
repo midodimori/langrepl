@@ -111,6 +111,7 @@ class ModelHandler:
 
         except Exception as e:
             console.print_error(f"Error switching models: {e}")
+            console.print("")
             logger.debug("Model switch error", exc_info=True)
 
     async def _get_agent_selection(

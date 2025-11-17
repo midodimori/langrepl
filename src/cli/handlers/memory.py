@@ -45,4 +45,5 @@ class MemoryHandler:
 
         except Exception as e:
             console.print_error(f"Error opening memory file: {e}")
+            console.print("")
             logger.debug("Memory handler error", exc_info=True)

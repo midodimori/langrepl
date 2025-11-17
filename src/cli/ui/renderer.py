@@ -479,6 +479,7 @@ class Renderer:
 
         except Exception as e:
             console.print_error(f"Could not generate Mermaid diagram: {e}")
+            console.print("")
 
     @staticmethod
     def render_message(message: AnyMessage) -> None:

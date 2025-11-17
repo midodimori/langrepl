@@ -81,6 +81,7 @@ class Session:
                 break
             except Exception as e:
                 console.print_error(f"Error processing input: {e}")
+                console.print("")
                 logger.debug("Input processing error")
 
     async def send(self, message: str) -> int:
@@ -101,6 +102,7 @@ class Session:
             return 0
         except Exception as e:
             console.print_error(f"Error sending message: {e}")
+            console.print("")
             logger.exception("CLI message error")
             return 1
 

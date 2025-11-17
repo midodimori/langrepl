@@ -164,6 +164,7 @@ async def _upsert_assistant(
     except httpx.HTTPError as e:
         action = "update" if assistant_id else "create"
         console.print_error(f"Failed to {action} assistant: {e}")
+        console.print("")
 
     return None, False
 
@@ -239,6 +240,7 @@ async def _send_message(
 
     except Exception as e:
         console.print_error(f"Failed to send message: {e}")
+        console.print("")
         return 1, ""
 
 
@@ -302,6 +304,7 @@ async def handle_server_command(args) -> int:
                 f"langgraph CLI not found at {langgraph_bin}. "
                 "Install with: uv tool install 'langgraph-cli[inmem]'"
             )
+            console.print("")
             return 1
 
         process = subprocess.Popen(
@@ -316,6 +319,7 @@ async def handle_server_command(args) -> int:
             # Wait for server to be ready
             if not await _wait_for_server_ready(client, server_url):
                 console.print_error("Server failed to start within timeout")
+                console.print("")
                 process.terminate()
                 process.wait()
                 return 1
@@ -381,6 +385,7 @@ async def handle_server_command(args) -> int:
         return 0
     except Exception as e:
         console.print_error(f"Error starting server: {e}")
+        console.print("")
         if process:
             process.terminate()
             process.wait()

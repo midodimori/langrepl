@@ -66,6 +66,7 @@ class ResumeHandler:
 
         except Exception as e:
             console.print_error(f"Error resuming threads: {e}")
+            console.print("")
             logger.debug("Thread resume error", exc_info=True)
 
     async def _get_thread_selection(self, threads: list[dict]) -> str:
@@ -218,6 +219,7 @@ class ResumeHandler:
                 latest_checkpoint = await checkpointer.aget_tuple(config)
                 if not latest_checkpoint:
                     console.print_error("No conversation history found for this thread")
+                    console.print("")
                     return
 
                 # Get checkpoint history for current branch
@@ -259,4 +261,5 @@ class ResumeHandler:
 
         except Exception as e:
             console.print_error(f"Error loading thread history: {e}")
+            console.print("")
             logger.debug("Thread history loading error", exc_info=True)

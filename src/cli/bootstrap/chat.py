@@ -52,4 +52,5 @@ async def handle_chat_command(args) -> int:
         return 0
     except Exception as e:
         console.print_error(f"Error starting chat session: {e}")
+        console.print("")
         return 1

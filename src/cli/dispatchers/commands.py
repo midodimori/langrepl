@@ -57,12 +57,14 @@ class CommandDispatcher:
         """Dispatch a slash command."""
         if not command_line.startswith("/"):
             console.print_error("Commands must start with '/'")
+            console.print("")
             return
 
         try:
             parts = shlex.split(command_line)
             if not parts:
                 console.print_error("Empty command")
+                console.print("")
                 return
 
             command = parts[0].lower()
@@ -72,10 +74,12 @@ class CommandDispatcher:
                 await self.commands[command](args)
             else:
                 console.print_error(f"Unknown command: {command}")
+                console.print("")
                 await self.cmd_help([])
 
         except Exception as e:
             console.print_error(f"Command error: {e}")
+            console.print("")
 
     async def cmd_help(self, args: list[str]) -> None:
         """Show help information."""

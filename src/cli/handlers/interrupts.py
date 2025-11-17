@@ -53,6 +53,7 @@ class InterruptHandler:
 
         except Exception as e:
             console.print_error(f"Error handling interrupt: {e}")
+            console.print("")
             return None
 
     @staticmethod

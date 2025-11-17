@@ -75,6 +75,7 @@ class MessageDispatcher:
 
         except Exception as e:
             console.print_error(f"Error processing message: {e}")
+            console.print("")
             logger.debug("Message processing error", exc_info=True)
 
     async def _stream_response(

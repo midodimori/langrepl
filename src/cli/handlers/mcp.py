@@ -52,6 +52,7 @@ class MCPHandler:
 
         except Exception as e:
             console.print_error(f"Error managing MCP servers: {e}")
+            console.print("")
             logger.debug("MCP management error", exc_info=True)
 
     async def _get_mcp_selection(self, mcp_servers) -> bool:

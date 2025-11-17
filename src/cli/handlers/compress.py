@@ -30,6 +30,7 @@ class CompressionHandler:
 
             if not agent_config:
                 console.print_error(f"Agent '{ctx.agent}' not found")
+                console.print("")
                 return
 
             compression_config = agent_config.compression or CompressionConfig()
@@ -42,6 +43,7 @@ class CompressionHandler:
                 latest_checkpoint = await checkpointer.aget_tuple(config)
                 if not latest_checkpoint or not latest_checkpoint.checkpoint:
                     console.print_error("No conversation history found to compress")
+                    console.print("")
                     return
 
                 channel_values = latest_checkpoint.checkpoint.get("channel_values", {})
@@ -49,6 +51,7 @@ class CompressionHandler:
 
                 if not messages:
                     console.print_error("No messages found in conversation history")
+                    console.print("")
                     return
 
                 compression_llm_config = (
@@ -98,4 +101,5 @@ class CompressionHandler:
 
         except Exception as e:
             console.print_error(f"Error compressing conversation: {e}")
+            console.print("")
             logger.debug("Compression error", exc_info=True)

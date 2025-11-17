@@ -60,6 +60,7 @@ class ReplayHandler:
                     console.print_error(
                         f"Warning: Could not rewind conversation history: {e}"
                     )
+                    console.print("")
 
                 selected_message = human_messages[selected_index]
                 self.session.prefilled_text = selected_message["text"]
@@ -72,6 +73,7 @@ class ReplayHandler:
 
         except Exception as e:
             console.print_error(f"Error replaying conversation: {e}")
+            console.print("")
             logger.debug("Replay error", exc_info=True)
             return None
 
@@ -304,5 +306,6 @@ class ReplayHandler:
 
         except Exception as e:
             console.print_error(f"Error replaying history: {e}")
+            console.print("")
             logger.debug("History replay error", exc_info=True)
             return None

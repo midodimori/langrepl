@@ -1,12 +1,22 @@
 """Message handling for chat sessions."""
 
 import asyncio
+import hashlib
 from pathlib import Path
 from typing import Any
 
-from langchain_core.messages import AnyMessage, HumanMessage
+from langchain_core.messages import (
+    AIMessage,
+    AIMessageChunk,
+    AnyMessage,
+    HumanMessage,
+    ToolMessage,
+)
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command, Interrupt
+from rich.console import Group
+from rich.markup import render
+from rich.text import Text
 
 from src.agents.context import AgentContext
 from src.cli.bootstrap.initializer import initializer
@@ -76,6 +86,12 @@ class MessageDispatcher:
         """Stream with automatic interrupt handling loop."""
         current_input: dict[str, Any] | Command = input_data
         rendered_messages: set[str] = set()
+        streaming_state: dict[str, Any] = {
+            "active": False,
+            "message_id": None,
+            "preview_lines": [""],
+            "chunks": [],
+        }
 
         while True:
             interrupted = False
@@ -89,16 +105,16 @@ class MessageDispatcher:
                         current_input,
                         config,
                         context=context,
-                        stream_mode="updates",
+                        stream_mode=["messages", "updates"],
                         subgraphs=True,
                     ):
                         interrupts = self._extract_interrupts(chunk)
                         if interrupts:
+                            self._clear_preview(streaming_state)
                             status.stop()
                             resume_value = await self.interrupt_handler.handle(
                                 interrupts
                             )
-                            # Map resume value to interrupt ID format
                             if isinstance(resume_value, dict):
                                 current_input = Command(resume=resume_value)
                             else:
@@ -107,60 +123,180 @@ class MessageDispatcher:
                                 )
                             interrupted = True
                             break
-                        else:
-                            await self._process_chunk(chunk, rendered_messages)
+
+                        _namespace, mode, data = chunk
+                        if mode == "messages":
+                            await self._process_message_chunk(
+                                data, streaming_state, status, rendered_messages
+                            )
+                        elif mode == "updates":
+                            self._finalize_streaming(
+                                streaming_state, None, rendered_messages
+                            )
+                            await self._process_update_chunk(data, rendered_messages)
 
             except (asyncio.CancelledError, KeyboardInterrupt):
-                # User cancelled the generation
+                self._finalize_streaming(streaming_state, None, rendered_messages)
                 cancelled = True
 
             if cancelled or not interrupted:
-                # Cancelled or no interrupts encountered, streaming completed
+                self._finalize_streaming(streaming_state, None, rendered_messages)
                 break
 
     @staticmethod
     def _extract_interrupts(chunk) -> list[Interrupt] | None:
         """Extract interrupt data from chunk."""
-        if isinstance(chunk, tuple) and len(chunk) == 2:
-            _, data = chunk
-            return data["__interrupt__"] if "__interrupt__" in data else None
+        if isinstance(chunk, tuple) and len(chunk) == 3:
+            _namespace, _mode, data = chunk
+            if isinstance(data, dict):
+                return data.get("__interrupt__")
         elif isinstance(chunk, dict):
-            return chunk["__interrupt__"] if "__interrupt__" in chunk else None
+            return chunk.get("__interrupt__")
         return None
 
-    async def _process_chunk(self, chunk, rendered_messages) -> None:
-        """Process a streaming chunk and display separate blocks."""
-        if isinstance(chunk, tuple) and len(chunk) == 2:
-            # Handle subgraphs=True format: (namespace, data)
-            namespace, data = chunk
+    @staticmethod
+    def _get_stable_message_id(message: AnyMessage) -> str:
+        """Get a stable ID for deduplication, even when message.id is None.
 
-            # Process different types of updates
-            for node_name, node_data in data.items():
-                if not isinstance(node_data, dict):
+        Returns a base ID without type suffix. Caller should append type if needed.
+        """
+        if message.id:
+            return message.id
+
+        content_str = str(message.content) if message.content else ""
+        stable_key = hashlib.sha256(
+            f"{content_str}:{message.type}".encode()
+        ).hexdigest()[:8]
+        return stable_key
+
+    async def _process_message_chunk(
+        self,
+        data: tuple[AnyMessage, dict],
+        streaming_state: dict,
+        status,
+        rendered_messages: set[str],
+    ) -> None:
+        """Process message chunk for token-by-token streaming preview."""
+        message_chunk, _metadata = data
+
+        if isinstance(message_chunk, AIMessageChunk):
+            message_id = self._get_stable_message_id(message_chunk)
+
+            if (
+                not streaming_state["active"]
+                or streaming_state["message_id"] != message_id
+            ):
+                self._finalize_streaming(streaming_state, None, rendered_messages)
+                streaming_state["active"] = True
+                streaming_state["message_id"] = message_id
+                streaming_state["preview_lines"] = [""]
+                streaming_state["chunks"] = []
+
+            streaming_state["chunks"].append(message_chunk)
+
+            content = self._extract_chunk_content(message_chunk)
+            if content:
+                lines = content.split("\n")
+                if len(lines) == 1:
+                    streaming_state["preview_lines"][-1] += lines[0]
+                else:
+                    streaming_state["preview_lines"][-1] += lines[0]
+                    for new_line in lines[1:]:
+                        streaming_state["preview_lines"].append(new_line)
+                    if len(streaming_state["preview_lines"]) > 4:
+                        streaming_state["preview_lines"] = streaming_state[
+                            "preview_lines"
+                        ][-4:]
+
+                window_preview = "\n".join(streaming_state["preview_lines"][-3:])
+
+                spinner_text = render(
+                    f"[{theme.spinner_color}]Randomizing...[/{theme.spinner_color}]"
+                )
+                status.update(Group(spinner_text, Text(window_preview, style="dim")))
+
+    async def _process_update_chunk(
+        self, data: dict, rendered_messages: set[str]
+    ) -> None:
+        """Process update chunk for tools/state (batch mode)."""
+        for _node_name, node_data in data.items():
+            if not isinstance(node_data, dict):
+                continue
+
+            await self._update_token_tracking(node_data)
+
+            if node_data and "messages" in node_data and node_data["messages"]:
+                messages = node_data["messages"]
+                last_message: AnyMessage = messages[-1]
+                base_id = self._get_stable_message_id(last_message)
+                message_id = f"{base_id}_{last_message.type}"
+
+                if message_id in rendered_messages:
                     continue
 
-                # Update token/cost tracking from any node that has this data
-                # (middleware nodes emit these fields first, then get merged into agent state)
-                await self._update_token_tracking(node_data)
+                rendered_messages.add(message_id)
 
-                # Render messages if present
-                if node_data and "messages" in node_data and node_data["messages"]:
-                    messages = node_data["messages"]
-                    last_message: AnyMessage = messages[-1]
-
-                    message_id = (
-                        f"{last_message.id or id(last_message)}_{last_message.type}"
-                    )
-
-                    # Skip if we've already rendered this message
-                    if message_id in rendered_messages:
-                        continue
-
-                    # Mark this message as rendered
-                    rendered_messages.add(message_id)
-
-                    # Render the message
+                if isinstance(last_message, (AIMessage, ToolMessage)):
                     self.session.renderer.render_message(last_message)
+
+    @staticmethod
+    def _extract_chunk_content(chunk: AIMessageChunk) -> str:
+        """Extract text content from AI message chunk."""
+        if isinstance(chunk.content, str):
+            return chunk.content
+        elif isinstance(chunk.content, list):
+            texts = []
+            for block in chunk.content:
+                if isinstance(block, str):
+                    texts.append(block)
+                elif isinstance(block, dict) and block.get("type") == "text":
+                    texts.append(block.get("text", ""))
+            return "".join(texts)
+        return ""
+
+    @staticmethod
+    def _clear_preview(streaming_state: dict) -> None:
+        """Clear preview without rendering final message."""
+        if streaming_state["active"]:
+            streaming_state["active"] = False
+            streaming_state["message_id"] = None
+            streaming_state["preview_lines"] = [""]
+            streaming_state["chunks"] = []
+
+    def _finalize_streaming(
+        self, streaming_state: dict, status, rendered_messages: set[str]
+    ) -> None:
+        """Finalize active streaming message and render final version."""
+        if streaming_state["active"]:
+            if status:
+                status.stop()
+
+            if streaming_state["chunks"]:
+                final_message = self._merge_chunks(streaming_state["chunks"])
+                self.session.renderer.render_assistant_message(final_message)
+                message_id = f"{streaming_state['message_id']}_{final_message.type}"
+                rendered_messages.add(message_id)
+
+            self._clear_preview(streaming_state)
+
+    @staticmethod
+    def _merge_chunks(chunks: list[AIMessageChunk]) -> AIMessage:
+        """Merge message chunks into final AIMessage, preserving all attributes."""
+        if not chunks:
+            return AIMessage(content="")
+
+        merged = chunks[0]
+        for chunk in chunks[1:]:
+            merged = merged + chunk
+
+        return AIMessage(
+            content=merged.content,
+            additional_kwargs=merged.additional_kwargs,
+            response_metadata=merged.response_metadata,
+            tool_calls=merged.tool_calls,
+            id=merged.id,
+            name=merged.name,
+        )
 
     async def _update_token_tracking(self, node_data: dict[str, Any]) -> None:
         """Update session context with token tracking data if present in node."""

@@ -6,3 +6,15 @@
   context_window: 1000000
   input_cost_per_mtok: 0.10
   output_cost_per_mtok: 0.40
+
+- model: gemini-2.5-pro
+  alias: gemini-2.5-pro-thinking
+  provider: google
+  max_tokens: 10000
+  temperature: 0.1
+  context_window: 1000000
+  input_cost_per_mtok: 0.10
+  output_cost_per_mtok: 0.40
+  extended_reasoning:
+    include_thoughts: true
+    thinking_budget: 8192

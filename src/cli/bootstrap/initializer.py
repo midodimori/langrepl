@@ -10,12 +10,12 @@ from typing import cast
 
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
-from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph.state import CompiledStateGraph
 
 from src.agents.context import AgentContext
 from src.agents.factory import AgentFactory, GraphFactory
 from src.agents.state import AgentState
+from src.checkpointer.base import BaseCheckpointer
 from src.checkpointer.factory import CheckpointerFactory
 from src.cli.bootstrap.timer import timer
 from src.core.config import (
@@ -255,7 +255,7 @@ class Initializer:
     @asynccontextmanager
     async def get_checkpointer(
         self, agent: str, working_dir: Path
-    ) -> AsyncIterator[BaseCheckpointSaver]:
+    ) -> AsyncIterator[BaseCheckpointer]:
         """Get checkpointer for agent."""
         agent_config = await self.load_agent_config(agent, working_dir)
         async with self.checkpointer_factory.create(
@@ -330,16 +330,8 @@ class Initializer:
         """
         async with self.get_checkpointer(agent, working_dir) as checkpointer:
             try:
-                # First pass: collect unique thread_ids
-                thread_ids = set()
-                async for checkpoint in checkpointer.alist(config=None):
-                    thread_id = checkpoint.config.get("configurable", {}).get(
-                        "thread_id"
-                    )
-                    if thread_id:
-                        thread_ids.add(thread_id)
+                thread_ids = await checkpointer.get_threads()
 
-                # Second pass: get the latest checkpoint for each thread using aget_tuple
                 threads = {}
                 for thread_id in thread_ids:
                     try:
@@ -347,20 +339,30 @@ class Initializer:
                             config=RunnableConfig(configurable={"thread_id": thread_id})
                         )
 
-                        if checkpoint_tuple and checkpoint_tuple.checkpoint:
-                            messages = checkpoint_tuple.checkpoint.get(
-                                "channel_values", {}
-                            ).get("messages", [])
-                            if messages:
-                                threads[thread_id] = {
-                                    "thread_id": thread_id,
-                                    "last_message": messages[-1].text[:100],
-                                    "timestamp": checkpoint_tuple.checkpoint.get(
-                                        "ts", ""
-                                    ),
-                                }
+                        if not checkpoint_tuple or not checkpoint_tuple.checkpoint:
+                            continue
+
+                        messages = checkpoint_tuple.checkpoint.get(
+                            "channel_values", {}
+                        ).get("messages", [])
+
+                        if not messages:
+                            continue
+
+                        last_msg = messages[-1]
+                        msg_text = getattr(last_msg, "short_content", None) or getattr(
+                            last_msg, "text", "No content"
+                        )
+                        if isinstance(msg_text, list):
+                            msg_text = " ".join(str(item) for item in msg_text)
+
+                        threads[thread_id] = {
+                            "thread_id": thread_id,
+                            "last_message": str(msg_text)[:100],
+                            "timestamp": checkpoint_tuple.checkpoint.get("ts", ""),
+                        }
+
                     except Exception:
-                        # Skip threads that can't be retrieved
                         continue
 
                 # Sort threads by timestamp (latest first)
@@ -368,7 +370,6 @@ class Initializer:
                 thread_list.sort(key=lambda t: t.get("timestamp", 0), reverse=True)
                 return thread_list
             except Exception:
-                # Return an empty list if there's an error
                 return []
 
 

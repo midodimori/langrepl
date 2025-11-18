@@ -1,2 +1,2 @@
 type: sqlite
-max_connections: 10
+# other options can be added here as needed

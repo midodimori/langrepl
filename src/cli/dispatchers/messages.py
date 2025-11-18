@@ -37,6 +37,7 @@ class MessageDispatcher:
         self.session = session
         self.interrupt_handler = InterruptHandler()
         self.message_builder = MessageContentBuilder(Path(session.context.working_dir))
+        self._pending_compression = False
 
     async def dispatch(self, content: str) -> None:
         """Dispatch user message and get AI response."""
@@ -85,6 +86,7 @@ class MessageDispatcher:
         context: AgentContext,
     ) -> None:
         """Stream with automatic interrupt handling loop."""
+        self._pending_compression = False
         current_input: dict[str, Any] | Command = input_data
         rendered_messages: set[str] = set()
         streaming_state: dict[str, Any] = {
@@ -143,6 +145,13 @@ class MessageDispatcher:
             if cancelled or not interrupted:
                 self._finalize_streaming(streaming_state, None, rendered_messages)
                 break
+
+        if self._pending_compression and not cancelled:
+            self._pending_compression = False
+            try:
+                await self._execute_compression()
+            except (asyncio.CancelledError, KeyboardInterrupt):
+                pass
 
     @staticmethod
     def _extract_interrupts(chunk) -> list[Interrupt] | None:
@@ -322,37 +331,37 @@ class MessageDispatcher:
             await self._check_auto_compression()
 
     async def _check_auto_compression(self) -> None:
-        """Check if auto-compression should be triggered and execute if needed."""
+        """Check if auto-compression should be triggered."""
         try:
             ctx = self.session.context
             config_data = await initializer.load_agents_config(ctx.working_dir)
             agent_config = config_data.get_agent_config(ctx.agent)
 
-            if not agent_config or not agent_config.compression:
-                return
-
-            compression_config = agent_config.compression
-
-            if not compression_config.auto_compress_enabled:
-                return
-
-            context_window = agent_config.llm.context_window
-            current_tokens = ctx.current_input_tokens or 0
-
-            if should_auto_compress(
-                current_tokens,
-                context_window,
-                compression_config.auto_compress_threshold,
-            ):
-                usage_pct = int(
-                    (current_tokens / context_window * 100) if context_window else 0
+            if (
+                agent_config
+                and agent_config.compression
+                and agent_config.compression.auto_compress_enabled
+                and should_auto_compress(
+                    ctx.current_input_tokens or 0,
+                    ctx.context_window,
+                    agent_config.compression.auto_compress_threshold,
                 )
-
-                with console.console.status(
-                    f"[{theme.spinner_color}]Context at {usage_pct}%, auto-compressing to new thread...[/{theme.spinner_color}]"
-                ):
-                    compression_handler = CompressionHandler(self.session)
-                    await compression_handler.handle()
+            ):
+                self._pending_compression = True
 
         except Exception as e:
-            logger.debug(f"Auto-compression check failed: {e}", exc_info=True)
+            logger.warning(f"Auto-compression check failed: {e}", exc_info=True)
+
+    async def _execute_compression(self) -> None:
+        """Execute compression after streaming completes."""
+        ctx = self.session.context
+        usage_pct = int(
+            (ctx.current_input_tokens or 0) / ctx.context_window * 100
+            if ctx.context_window
+            else 0
+        )
+
+        with console.console.status(
+            f"[{theme.spinner_color}]Context at {usage_pct}%, auto-compressing to new thread...[/{theme.spinner_color}]"
+        ):
+            await CompressionHandler(self.session).handle()

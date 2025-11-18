@@ -1,2 +1,2 @@
 type: memory
-max_connections: 1
+# other options can be added here as needed

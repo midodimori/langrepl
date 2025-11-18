@@ -146,12 +146,10 @@ class TestResumeHandler:
         mock_checkpointer.aget_tuple.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.resume.get_checkpoint_history")
     @patch("src.cli.handlers.resume.initializer.get_checkpointer")
     async def test_load_thread_with_valid_checkpoint(
         self,
         mock_get_checkpointer,
-        mock_get_history,
         mock_session,
         mock_checkpointer,
         mock_checkpointer_tuple,
@@ -179,7 +177,6 @@ class TestResumeHandler:
 
         mock_checkpointer.aget_tuple.return_value = checkpoint_tuple
         mock_get_checkpointer.return_value.__aenter__.return_value = mock_checkpointer
-        mock_get_history.return_value = [checkpoint_tuple]
 
         await handler._load_thread("thread-1")
 

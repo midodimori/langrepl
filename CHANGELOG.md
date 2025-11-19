@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1](https://github.com/midodimori/langrepl/compare/v1.6.0...v1.6.1) (2025-11-19)
+
+
+### Bug Fixes
+
+* release please token ([3891a14](https://github.com/midodimori/langrepl/commit/3891a1426b85326c90d8113165e5efe4684621f6))
+
 ## [1.6.0](https://github.com/midodimori/langrepl/compare/v1.5.0...v1.6.0) (2025-11-19)
 
 

@@ -26,7 +26,7 @@ jobs:
           package-name: langrepl
 
           # Token for creating releases and PRs
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
 
   update-lockfile:
     needs: release-please

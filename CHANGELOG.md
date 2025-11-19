@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0](https://github.com/midodimori/langrepl/compare/v1.5.0...v1.6.0) (2025-11-19)
+
+
+### Features
+
+* add message indexing for resume/replay performance ([#49](https://github.com/midodimori/langrepl/issues/49)) ([1a06163](https://github.com/midodimori/langrepl/commit/1a061633bcd142038a2483ad567f8b11148b584e))
+
+
+### Bug Fixes
+
+* disable attestations for TestPyPI to avoid conflicts ([abcfcd2](https://github.com/midodimori/langrepl/commit/abcfcd2b6297a35bfc4c3e8f74c4892254afba58))
+* skip TestPyPI if version already exists ([a448c49](https://github.com/midodimori/langrepl/commit/a448c4961b79b1d3b2cfbdb0ea6e97b0cedcddca))
+
 ## [1.5.0](https://github.com/midodimori/langrepl/compare/v1.4.1...v1.5.0) (2025-11-17)
 
 

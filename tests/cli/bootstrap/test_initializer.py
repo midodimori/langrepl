@@ -361,14 +361,9 @@ class TestInitializer:
         thread_id_1 = str(uuid.uuid4())
         thread_id_2 = str(uuid.uuid4())
 
-        async def mock_alist(*args, **kwargs):
-            for item in [
-                MagicMock(config={"configurable": {"thread_id": thread_id_1}}),
-                MagicMock(config={"configurable": {"thread_id": thread_id_2}}),
-            ]:
-                yield item
-
-        mock_checkpointer.alist = mock_alist
+        mock_checkpointer.get_threads = AsyncMock(
+            return_value={thread_id_1, thread_id_2}
+        )
 
         mock_checkpointer.aget_tuple = AsyncMock(
             side_effect=[

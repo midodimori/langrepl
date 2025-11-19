@@ -26,7 +26,10 @@ def calculate_message_tokens(
         token counting. Final fallback uses character-based estimation (4 chars per token).
     """
     try:
-        return llm.get_num_tokens_from_messages(list(messages))
+        cleaned_messages = [
+            msg.model_copy(update={"content": msg.text}) for msg in messages
+        ]
+        return llm.get_num_tokens_from_messages(list(cleaned_messages))
     except (NotImplementedError, ImportError):
         # Fallback to tiktoken with cl100k_base encoding (used by GPT-4, GPT-3.5-turbo)
         try:

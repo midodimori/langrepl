@@ -145,7 +145,6 @@ class LLMConfig(BaseModel):
 
 class CheckpointerConfig(BaseModel):
     type: CheckpointerProvider = Field(description="The checkpointer type")
-    max_connections: int = Field(default=10, description="Maximum database connections")
 
 
 class MCPServerConfig(BaseModel):

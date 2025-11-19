@@ -11,7 +11,6 @@ from prompt_toolkit.layout import Layout
 from prompt_toolkit.layout.containers import Window
 from prompt_toolkit.layout.controls import FormattedTextControl
 
-from src.checkpointer.utils import get_checkpoint_history
 from src.cli.bootstrap.initializer import initializer
 from src.cli.theme import console, theme
 from src.core.logging import get_logger
@@ -222,30 +221,22 @@ class ResumeHandler:
                     console.print("")
                     return
 
-                # Get checkpoint history for current branch
-                history = await get_checkpoint_history(checkpointer, latest_checkpoint)
-
-                # Get channel values from the LATEST checkpoint (last in history)
+                # Get channel values from the latest checkpoint
                 latest_channel_values: dict = {}
                 if (
-                    history
-                    and history[-1].checkpoint
-                    and "channel_values" in history[-1].checkpoint
+                    latest_checkpoint.checkpoint
+                    and "channel_values" in latest_checkpoint.checkpoint
                 ):
-                    latest_channel_values = history[-1].checkpoint["channel_values"]
+                    latest_channel_values = latest_checkpoint.checkpoint[
+                        "channel_values"
+                    ]
 
-                # Extract and render messages in chronological order
+                # Extract and render messages from the latest checkpoint
+                # (Latest checkpoint contains full message history)
                 if render_history:
-                    rendered_message_ids = set()
-                    for checkpoint_tuple in history:
-                        checkpoint = checkpoint_tuple.checkpoint
-                        if checkpoint and "channel_values" in checkpoint:
-                            messages = checkpoint["channel_values"].get("messages", [])
-                            for message in messages:
-                                message_id = getattr(message, "id", None) or id(message)
-                                if message_id not in rendered_message_ids:
-                                    rendered_message_ids.add(message_id)
-                                    self.session.renderer.render_message(message)
+                    messages = latest_channel_values.get("messages", [])
+                    for message in messages:
+                        self.session.renderer.render_message(message)
 
                 # Restore context from latest checkpoint
                 self.session.update_context(

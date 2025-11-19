@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v1.6.3 (2025-11-20)
+
+### Bug Fixes
+
+- Handle None values and skip empty diffs in approval rendering
+  ([`be58af9`](https://github.com/midodimori/langrepl/commit/be58af9edb936b4fc6a12e09f6bbf3ac5b1f8b21))
+
+### Continuous Integration
+
+- Simplify release workflow with PSR CLI
+  ([`c83b40e`](https://github.com/midodimori/langrepl/commit/c83b40e97adc7b929be60daea0056b00df92af4d))
+
+- Use PAT to trigger publish workflow and sync uv.lock
+  ([`c3ba0ca`](https://github.com/midodimori/langrepl/commit/c3ba0ca2e3e7afb61bfa9d7a603a8ac50bc95ca5))
+
+
 ## v1.6.2 (2025-11-19)
 
 ### Continuous Integration

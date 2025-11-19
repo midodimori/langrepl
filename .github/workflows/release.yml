@@ -63,14 +63,18 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-groups
 
-      - name: Build distributions
-        run: uv build
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Python Semantic Release
+      - name: Run semantic release
         id: release
-        uses: python-semantic-release/python-semantic-release@v9.17.0
-        with:
-          github_token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
-          git_committer_name: "github-actions[bot]"
-          git_committer_email: "github-actions[bot]@users.noreply.github.com"
-          force: ${{ steps.bump_type.outputs.bump }}
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: |
+          uv run semantic-release version --${{ steps.bump_type.outputs.bump }}
+          uv lock --upgrade-package langrepl
+          git add uv.lock
+          git commit --amend --no-edit
+          uv run semantic-release publish

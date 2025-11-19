@@ -37,10 +37,25 @@ class InteractivePrompt:
         self.prompt_session: PromptSession[str]
         self.completer: CompleterRouter
         self.mode_change_callback = None
+        self.bash_mode_toggle_callback = None
         self._last_ctrl_c_time: float | None = None
         self._ctrl_c_timeout = 0.5  # 500ms window for double-press detection
         self._show_quit_message = False
+        self.hotkeys: dict[str, str] = {}
         self._setup_session()
+
+    @staticmethod
+    def _format_key_name(key) -> str:
+        """Format key enum to human-readable string."""
+        key_str = str(key)
+        replacements = {
+            "Keys.Control": "Ctrl+",
+            "Keys.Back": "Shift+",
+            "Keys.": "",
+        }
+        for old, new in replacements.items():
+            key_str = key_str.replace(old, new)
+        return key_str
 
     def _setup_session(self) -> None:
         """Set up the prompt session with all configurations."""
@@ -79,6 +94,7 @@ class InteractivePrompt:
     def _create_key_bindings(self) -> KeyBindings:
         """Create custom key bindings."""
         kb = KeyBindings()
+        self.hotkeys.clear()
 
         @kb.add(Keys.ControlC)
         def _(event):
@@ -120,6 +136,19 @@ class InteractivePrompt:
             if self.mode_change_callback:
                 self.mode_change_callback()
 
+        @kb.add(Keys.ControlB)
+        def _(event):
+            """Ctrl-B: Toggle bash mode."""
+            if self.bash_mode_toggle_callback:
+                self.bash_mode_toggle_callback()
+
+        @kb.add(Keys.ControlK)
+        def _(event):
+            """Ctrl-K: Show keyboard shortcuts."""
+            buffer = event.current_buffer
+            buffer.text = "/hotkeys"
+            buffer.validate_and_handle()
+
         @kb.add(Keys.Enter, filter=completion_is_selected)
         def _(event):
             """Enter when completion is selected: apply completion."""
@@ -160,11 +189,26 @@ class InteractivePrompt:
                     if not buffer.text.lstrip().startswith("/"):
                         buffer.insert_text(" ")
 
+        # Register hotkey descriptions
+        self.hotkeys = {
+            self._format_key_name(Keys.ControlC): "Clear input (press twice to quit)",
+            self._format_key_name(Keys.ControlJ): "Insert newline for multiline input",
+            self._format_key_name(Keys.BackTab): "Cycle approval mode",
+            self._format_key_name(Keys.ControlB): "Toggle bash mode",
+            self._format_key_name(Keys.ControlK): "Show keyboard shortcuts",
+            "Tab": "Apply first completion",
+            "Enter": "Apply selected completion or submit",
+        }
+
         return kb
 
     def set_mode_change_callback(self, callback):
         """Set callback for mode change events."""
         self.mode_change_callback = callback
+
+    def set_bash_mode_toggle_callback(self, callback):
+        """Set callback for bash mode toggle events."""
+        self.bash_mode_toggle_callback = callback
 
     def _get_placeholder(self) -> HTML:
         """Generate placeholder text with agent name and usage info."""
@@ -205,24 +249,31 @@ class InteractivePrompt:
     def _get_bottom_toolbar(self) -> HTML:
         """Generate bottom toolbar text with working directory and approval mode."""
         if self._show_quit_message:
-            return HTML(f"<muted> Ctrl+C again to quit</muted>")
+            return HTML("<muted> Ctrl+C again to quit</muted>")
 
         mode_name = self.context.approval_mode.value
-        working_dir = self.context.working_dir
+        terminal_width = os.get_terminal_size().columns if os.isatty(1) else 80
+        left_content = f" {self.context.working_dir}"
 
-        try:
-            terminal_width = os.get_terminal_size().columns
-        except OSError:
-            terminal_width = 80
+        # Build right content with bash mode if active
+        right_parts = (
+            ["bash-mode", mode_name] if self.context.bash_mode else [mode_name]
+        )
+        right_content = " | ".join(right_parts)
 
-        # Calculate spacing to right-align the mode
-        left_content = f" {working_dir}"
-        right_content = f"{mode_name} | Shift+Tab "
-        spaces_needed = max(0, terminal_width - len(left_content) - len(right_content))
-        padding = " " * spaces_needed
+        # Calculate padding
+        padding = " " * max(
+            0, terminal_width - len(left_content) - len(right_content) - 1
+        )
+
+        # Build styled output
+        if self.context.bash_mode:
+            styled_right = f"<toolbar.bash>bash-mode</toolbar.bash><muted> | </muted><toolbar.mode>{mode_name}</toolbar.mode>"
+        else:
+            styled_right = f"<toolbar.mode>{mode_name}</toolbar.mode>"
 
         return HTML(
-            f"<muted>{left_content}{padding}</muted><toolbar.mode>{mode_name}</toolbar.mode><muted> | Shift+Tab </muted>"
+            f"<muted>{left_content}{padding}</muted>{styled_right}<muted> </muted>"
         )
 
     def _schedule_hide_message(self, app):
@@ -237,7 +288,9 @@ class InteractivePrompt:
         asyncio.create_task(hide_after_timeout())
 
     def _get_prompt_color(self) -> str:
-        """Get prompt color based on approval mode."""
+        """Get prompt color based on approval mode and bash mode."""
+        if self.context.bash_mode:
+            return theme.danger_color
         mode_colors = {
             ApprovalMode.SEMI_ACTIVE: theme.approval_semi_active,
             ApprovalMode.ACTIVE: theme.approval_active,
@@ -293,6 +346,8 @@ class InteractivePrompt:
                 "bottom-toolbar.text": f"noreverse {theme.muted_text}",
                 # Toolbar mode styling - dynamic based on approval mode
                 "toolbar.mode": f"noreverse {prompt_color}",
+                # Toolbar bash mode styling - danger (pink)
+                "toolbar.bash": f"noreverse {theme.danger_color}",
             }
         )
 

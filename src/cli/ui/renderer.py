@@ -344,6 +344,26 @@ class Renderer:
         console.print("")
 
     @staticmethod
+    def render_hotkeys(hotkeys: dict[str, str]) -> None:
+        """Render keyboard shortcuts."""
+        hotkeys_table = Table.grid(padding=(0, 2))
+        hotkeys_table.add_column(style="command", justify="left", width=20)
+        hotkeys_table.add_column(style="secondary")
+
+        for shortcut, description in hotkeys.items():
+            hotkeys_table.add_row(shortcut, description)
+
+        hotkeys_panel = Panel(
+            Group(hotkeys_table),
+            title="[accent]Keyboard Shortcuts[/accent]",
+            border_style="border",
+            padding=(1, 2),
+        )
+
+        console.print(hotkeys_panel)
+        console.print("")
+
+    @staticmethod
     def _extract_thinking_tags(content: str) -> tuple[str, str | None]:
         """Extract thinking content from XML-style tags like <think>...</think>.
 

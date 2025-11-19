@@ -63,6 +63,9 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-groups
 
+      - name: Build distributions
+        run: uv build
+
       - name: Python Semantic Release
         id: release
         uses: python-semantic-release/python-semantic-release@v9.17.0
@@ -71,3 +74,4 @@ jobs:
           git_committer_name: "github-actions[bot]"
           git_committer_email: "github-actions[bot]@users.noreply.github.com"
           force: ${{ steps.bump_type.outputs.bump }}
+          build_command: "echo 'Distributions already built'"

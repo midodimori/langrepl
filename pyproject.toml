@@ -117,7 +117,6 @@ lg = "src.cli.bootstrap.app:cli"
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
-build_command = "uv build"
 commit_parser = "angular"
 major_on_zero = false
 

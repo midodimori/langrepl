@@ -150,24 +150,24 @@ def create_tool_message(
 
 
 def generate_diff(
-    old_content: str,
-    new_content: str,
+    old_content: str | None,
+    new_content: str | None,
     context_lines: int = 3,
     full_content: str | None = None,
 ) -> list[str]:
     """Generate unified diff lines between old and new content.
 
     Args:
-        old_content: Original content
-        new_content: New content
+        old_content: Original content (None treated as empty string)
+        new_content: New content (None treated as empty string)
         context_lines: Number of context lines to show
         full_content: Full file content to calculate accurate line numbers
 
     Returns:
         List of diff lines (including headers)
     """
-    old_lines = old_content.splitlines()
-    new_lines = new_content.splitlines()
+    old_lines = (old_content or "").splitlines()
+    new_lines = (new_content or "").splitlines()
 
     diff_lines = list(
         difflib.unified_diff(

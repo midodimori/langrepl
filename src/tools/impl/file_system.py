@@ -60,7 +60,8 @@ def _render_diff_args(args: dict, config: dict) -> str:
             diff_lines = generate_diff(
                 old_content, new_content, context_lines=3, full_content=full_content
             )
-            all_diff_sections.append(diff_lines)
+            if diff_lines:
+                all_diff_sections.append(diff_lines)
 
         combined_diff = []
         for i, diff_section in enumerate(all_diff_sections):

@@ -18,6 +18,7 @@ class Context(BaseModel):
     thread_id: str
     working_dir: Path
     approval_mode: ApprovalMode = ApprovalMode.SEMI_ACTIVE
+    bash_mode: bool = False
     current_input_tokens: int | None = None
     current_output_tokens: int | None = None
     total_cost: float | None = None
@@ -76,3 +77,8 @@ class Context(BaseModel):
         next_index = (current_index + 1) % len(modes)
         self.approval_mode = modes[next_index]
         return self.approval_mode
+
+    def toggle_bash_mode(self) -> bool:
+        """Toggle bash mode on/off."""
+        self.bash_mode = not self.bash_mode
+        return self.bash_mode

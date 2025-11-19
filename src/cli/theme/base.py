@@ -131,3 +131,8 @@ class BaseTheme(Protocol):
     def spinner_color(self) -> str:
         """Color for loading spinners and progress indicators."""
         ...
+
+    @property
+    def danger_color(self) -> str:
+        """Color for dangerous/destructive actions."""
+        ...

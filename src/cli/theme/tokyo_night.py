@@ -170,3 +170,7 @@ class TokyoNightTheme(BaseTheme):
     @property
     def spinner_color(self) -> str:
         return self.colors.teal
+
+    @property
+    def danger_color(self) -> str:
+        return self.colors.pink

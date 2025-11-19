@@ -7,6 +7,7 @@ from langgraph.graph.state import CompiledStateGraph
 from src.cli.bootstrap.initializer import initializer
 from src.cli.core.context import Context
 from src.cli.dispatchers import CommandDispatcher, MessageDispatcher
+from src.cli.handlers.bash import BashDispatcher
 from src.cli.theme import console, theme
 from src.cli.ui.prompt import InteractivePrompt
 from src.cli.ui.renderer import Renderer
@@ -26,12 +27,14 @@ class Session:
         self.renderer = Renderer()
         self.command_dispatcher = CommandDispatcher(self)
         self.message_dispatcher = MessageDispatcher(self)
+        self.bash_dispatcher = BashDispatcher(self)
         self.prompt = InteractivePrompt(
             self.context, list(self.command_dispatcher.commands.keys()), session=self
         )
 
-        # Set up mode change callback
+        # Set up mode change callbacks
         self.prompt.set_mode_change_callback(self._handle_approval_mode_change)
+        self.prompt.set_bash_mode_toggle_callback(self._handle_bash_mode_toggle)
 
         # Session state
         self.graph: CompiledStateGraph | None = None
@@ -69,6 +72,10 @@ class Session:
                 content, is_slash_command = await self.prompt.get_input()
 
                 if not content:
+                    continue
+
+                if self.context.bash_mode:
+                    await self.bash_dispatcher.dispatch(content)
                     continue
 
                 if is_slash_command:
@@ -126,5 +133,11 @@ class Session:
     def _handle_approval_mode_change(self) -> None:
         """Handle approval mode cycling from keyboard shortcut."""
         self.context.cycle_approval_mode()
+        # Refresh the prompt style to reflect the new mode
+        self.prompt.refresh_style()
+
+    def _handle_bash_mode_toggle(self) -> None:
+        """Handle bash mode toggle from keyboard shortcut."""
+        self.context.toggle_bash_mode()
         # Refresh the prompt style to reflect the new mode
         self.prompt.refresh_style()

@@ -119,6 +119,7 @@ lg = "src.cli.bootstrap.app:cli"
 version_toml = ["pyproject.toml:project.version"]
 commit_parser = "angular"
 major_on_zero = false
+build_command = "uv lock"
 
 [tool.semantic_release.commit_parser_options]
 allowed_tags = ["feat", "fix", "perf", "refactor", "docs", "test", "build", "ci", "chore"]

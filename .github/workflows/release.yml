@@ -74,7 +74,4 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
         run: |
           uv run semantic-release version --${{ steps.bump_type.outputs.bump }}
-          uv lock --upgrade-package langrepl
-          git add uv.lock
-          git commit --amend --no-edit
           uv run semantic-release publish

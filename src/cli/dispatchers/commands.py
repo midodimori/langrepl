@@ -40,6 +40,7 @@ class CommandDispatcher:
         """Register all available commands."""
         return {
             "/help": self.cmd_help,
+            "/hotkeys": self.cmd_hotkeys,
             "/agents": self.cmd_agents,
             "/model": self.cmd_model,
             "/tools": self.cmd_tools,
@@ -84,6 +85,10 @@ class CommandDispatcher:
     async def cmd_help(self, args: list[str]) -> None:
         """Show help information."""
         self.session.renderer.render_help(self.commands)
+
+    async def cmd_hotkeys(self, args: list[str]) -> None:
+        """Show keyboard shortcuts."""
+        self.session.renderer.render_hotkeys(self.session.prompt.hotkeys)
 
     async def cmd_agents(self, args: list[str]) -> None:
         """Handle agents command with interactive selector."""

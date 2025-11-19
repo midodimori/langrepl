@@ -41,7 +41,21 @@ class InteractivePrompt:
         self._last_ctrl_c_time: float | None = None
         self._ctrl_c_timeout = 0.5  # 500ms window for double-press detection
         self._show_quit_message = False
+        self.hotkeys: dict[str, str] = {}
         self._setup_session()
+
+    @staticmethod
+    def _format_key_name(key) -> str:
+        """Format key enum to human-readable string."""
+        key_str = str(key)
+        replacements = {
+            "Keys.Control": "Ctrl+",
+            "Keys.Back": "Shift+",
+            "Keys.": "",
+        }
+        for old, new in replacements.items():
+            key_str = key_str.replace(old, new)
+        return key_str
 
     def _setup_session(self) -> None:
         """Set up the prompt session with all configurations."""
@@ -80,6 +94,7 @@ class InteractivePrompt:
     def _create_key_bindings(self) -> KeyBindings:
         """Create custom key bindings."""
         kb = KeyBindings()
+        self.hotkeys.clear()
 
         @kb.add(Keys.ControlC)
         def _(event):
@@ -127,6 +142,13 @@ class InteractivePrompt:
             if self.bash_mode_toggle_callback:
                 self.bash_mode_toggle_callback()
 
+        @kb.add(Keys.ControlK)
+        def _(event):
+            """Ctrl-K: Show keyboard shortcuts."""
+            buffer = event.current_buffer
+            buffer.text = "/hotkeys"
+            buffer.validate_and_handle()
+
         @kb.add(Keys.Enter, filter=completion_is_selected)
         def _(event):
             """Enter when completion is selected: apply completion."""
@@ -166,6 +188,17 @@ class InteractivePrompt:
                     # For @ references, add space
                     if not buffer.text.lstrip().startswith("/"):
                         buffer.insert_text(" ")
+
+        # Register hotkey descriptions
+        self.hotkeys = {
+            self._format_key_name(Keys.ControlC): "Clear input (press twice to quit)",
+            self._format_key_name(Keys.ControlJ): "Insert newline for multiline input",
+            self._format_key_name(Keys.BackTab): "Cycle approval mode",
+            self._format_key_name(Keys.ControlB): "Toggle bash mode",
+            self._format_key_name(Keys.ControlK): "Show keyboard shortcuts",
+            "Tab": "Apply first completion",
+            "Enter": "Apply selected completion or submit",
+        }
 
         return kb
 

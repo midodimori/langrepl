@@ -103,6 +103,7 @@ dev = [
     "mypy>=1.18.2",
     "pre-commit>=4.3.0",
     "pytest>=8.4.2",
+    "python-semantic-release>=10.5.2",
     "pyupgrade>=3.21.0",
 ]
 
@@ -113,3 +114,20 @@ packages = ["src", "resources"]
 [project.scripts]
 langrepl = "src.cli.bootstrap.app:cli"
 lg = "src.cli.bootstrap.app:cli"
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+build_command = "uv build"
+commit_parser = "angular"
+major_on_zero = false
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = ["feat", "fix", "perf", "refactor", "docs", "test", "build", "ci", "chore"]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf", "refactor"]
+
+[tool.semantic_release.changelog]
+exclude_commit_patterns = []
+
+[tool.semantic_release.changelog.environment]
+keep_trailing_newline = true

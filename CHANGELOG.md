@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.6.4 (2025-11-21)
+
+### Bug Fixes
+
+- Improve renderer indentation and HTML preservation ([#52](https://github.com/midodimori/langrepl/pull/52),
+  [`c327848`](https://github.com/midodimori/langrepl/commit/c327848a0f8e7964f4e2f7be47e3e0f1deb5de95))
+
+### Continuous Integration
+
+- Simplify workflow, PSR handles uv.lock automatically
+  ([`bff83cc`](https://github.com/midodimori/langrepl/commit/bff83cc1648f64fa429afabd2abf986cf82e0309))
+
+
 ## v1.6.3 (2025-11-20)
 
 ### Bug Fixes

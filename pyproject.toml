@@ -121,7 +121,6 @@ commit_parser = "angular"
 major_on_zero = false
 commit_author = "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
 build_command = "uv lock --upgrade-package langrepl"
-assets = ["CHANGELOG.md", "uv.lock"]
 
 [tool.semantic_release.commit_parser_options]
 allowed_tags = ["feat", "fix", "perf", "refactor", "docs", "test", "build", "ci", "chore"]
@@ -130,6 +129,10 @@ patch_tags = ["fix", "perf", "refactor"]
 
 [tool.semantic_release.changelog]
 exclude_commit_patterns = []
+
+[tool.semantic_release.changelog.default_templates]
+changelog_file = "CHANGELOG.md"
+output_format = "md"
 
 [tool.semantic_release.changelog.environment]
 keep_trailing_newline = true

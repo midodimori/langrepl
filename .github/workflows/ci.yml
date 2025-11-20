@@ -8,6 +8,8 @@ on:
 
 jobs:
   lint-and-test:
+    # Skip CI for release commits made by github-actions bot
+    if: github.actor != 'github-actions[bot]'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

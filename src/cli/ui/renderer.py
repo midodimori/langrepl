@@ -1,9 +1,13 @@
 """Rich-based UI rendering and message formatting."""
 
+import html
+import re
+from html.parser import HTMLParser
 from typing import Any, cast
 
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, ToolMessage
 from langchain_core.runnables.graph import Graph
+from rich.cells import cell_len
 from rich.console import Console, ConsoleOptions, Group, NewLine, RenderableType
 from rich.markdown import CodeBlock, Markdown
 from rich.panel import Panel
@@ -17,6 +21,30 @@ from src.cli.core.context import Context
 from src.cli.theme import console
 from src.core.constants import UNKNOWN
 from src.core.settings import settings
+
+
+class _HTMLTagDetector(HTMLParser):
+    """HTML parser for detecting complete HTML tags on a single line."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.tag_stack: list[str] = []
+        self.is_complete = False
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """Track opening tags."""
+        self.tag_stack.append(tag)
+
+    def handle_endtag(self, tag: str) -> None:
+        """Track closing tags and detect when structure is complete."""
+        if self.tag_stack and self.tag_stack[-1] == tag:
+            self.tag_stack.pop()
+            if not self.tag_stack:
+                self.is_complete = True
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        """Handle self-closing tags like <br/> or <img/>."""
+        self.is_complete = True
 
 
 class TransparentSyntax(Syntax):
@@ -81,10 +109,16 @@ class PrefixedMarkdown:
         self.code_theme = code_theme
 
     def __rich_console__(self, console: Console, options: ConsoleOptions):
-        """Render markdown with prefix on first line by prepending to content."""
-        # Render all content as markdown
+        """Render markdown with prefix on first line and indent all subsequent lines."""
+        # Calculate indentation width using visual cell width
+        indent_width = cell_len(self.prefix)
+
+        # Adjust rendering width to account for prefix/indent
+        adjusted_options = options.update_width(options.max_width - indent_width)
+
+        # Render all content as markdown with adjusted width
         markdown = TransparentMarkdown(self.content, code_theme=self.code_theme)
-        segments = list(console.render(markdown, options))
+        segments = list(console.render(markdown, adjusted_options))
 
         if not segments:
             return
@@ -93,19 +127,45 @@ class PrefixedMarkdown:
         prefix_style = console.get_style(self.prefix_style)
         prefix_segment = Segment(self.prefix, prefix_style)
 
-        # Find the first non-empty, non-newline segment to insert prefix before
-        for i, segment in enumerate(segments):
-            # Skip empty segments and initial newlines
-            if segment.text and segment.text not in ("", "\n"):
-                # Yield prefix segment
-                yield prefix_segment
-                # Yield all segments from this point
-                yield from segments[i:]
-                return
+        # Create indentation segment
+        indent = " " * indent_width
+        indent_segment = Segment(indent)
 
-        # If we only found empty/newline segments, just yield prefix and all segments
-        yield prefix_segment
-        yield from segments
+        # Track whether we've added the prefix yet
+        prefix_added = False
+        at_line_start = True
+
+        for segment in segments:
+            # Skip completely empty segments
+            if not segment.text:
+                continue
+
+            # Split segment by newlines to handle indentation per line
+            lines = segment.text.split("\n")
+
+            for i, line in enumerate(lines):
+                # Add prefix to first line content
+                if not prefix_added and line:
+                    yield prefix_segment
+                    prefix_added = True
+                    at_line_start = False
+                # Add indentation to subsequent lines
+                elif at_line_start and line:
+                    yield indent_segment
+                    at_line_start = False
+
+                # Yield the line content
+                if line or i < len(lines) - 1:  # Include empty lines except trailing
+                    yield Segment(line, segment.style)
+
+                # Handle newlines between lines
+                if i < len(lines) - 1:
+                    yield Segment("\n")
+                    at_line_start = True
+
+        # Handle case where no content was found
+        if not prefix_added:
+            yield prefix_segment
 
 
 class Renderer:
@@ -126,7 +186,22 @@ class Renderer:
     def render_user_message(message: HumanMessage) -> None:
         """Render user message."""
         content = getattr(message, "short_content", None) or message.text
-        console.print(f"[prompt]{settings.cli.prompt_style}[/prompt]{content}")
+
+        # Calculate the visual width of the prompt prefix
+        prompt_prefix = settings.cli.prompt_style
+        prefix_width = cell_len(prompt_prefix)
+        indent = " " * prefix_width
+
+        # Split content into lines and add indentation
+        lines = content.split("\n")
+        formatted_lines = []
+        for i, line in enumerate(lines):
+            if i == 0:
+                formatted_lines.append(f"[prompt]{prompt_prefix}[/prompt]{line}")
+            else:
+                formatted_lines.append(f"{indent}{line}")
+
+        console.print("\n".join(formatted_lines))
         console.print("")
 
     @staticmethod
@@ -262,6 +337,7 @@ class Renderer:
 
         # Render main content
         content = Renderer._fix_malformed_code_blocks(content)
+        content = Renderer._escape_html_outside_code_blocks(content)
         if content:
             parts.append(
                 PrefixedMarkdown(
@@ -376,8 +452,6 @@ class Renderer:
         Returns:
             Tuple of (cleaned_content, thinking_content)
         """
-        import re
-
         content_stripped = content.lstrip()
 
         # Only extract if content starts with <think> tag (provider-generated pattern)
@@ -397,10 +471,166 @@ class Renderer:
         return content, None
 
     @staticmethod
+    def _has_unescaped_html_chars(line: str) -> bool:
+        """Check if line contains unescaped HTML-like tags or special chars."""
+        # Remove all valid HTML entities temporarily to check for raw chars
+        temp_line = line
+        temp_line = re.sub(r"&lt;", "", temp_line)
+        temp_line = re.sub(r"&gt;", "", temp_line)
+        temp_line = re.sub(r"&amp;", "", temp_line)
+        temp_line = re.sub(r"&quot;", "", temp_line)
+        temp_line = re.sub(r"&#\d+;", "", temp_line)
+        temp_line = re.sub(r"&#x[0-9a-fA-F]+;", "", temp_line)
+
+        # Check if there are any raw special chars remaining
+        return bool(re.search(r"[<>&]", temp_line))
+
+    @staticmethod
+    def _is_complete_html_tag(line: str) -> bool:
+        """Check if line has complete HTML tags (both opening and closing)."""
+        detector = _HTMLTagDetector()
+        try:
+            detector.feed(line.strip())
+            return detector.is_complete
+        except Exception:
+            # If parsing fails, fall back to assuming it's not complete
+            return False
+
+    @staticmethod
+    def _is_multiline_html_start(
+        current_idx: int, lines: list[str], has_html_fn
+    ) -> bool:
+        """Check if current line starts a multi-line HTML block via look-ahead."""
+        # Look ahead up to 3 lines to detect multi-line HTML
+        for j in range(current_idx + 1, min(current_idx + 3, len(lines))):
+            next_line = lines[j].strip()
+            if next_line and has_html_fn(lines[j]):
+                return True
+        return False
+
+    @staticmethod
+    def _process_fenced_block_boundary(
+        line: str, state: dict[str, Any], output: list[str]
+    ) -> None:
+        """Process a line that marks a fenced code block boundary (```)."""
+        # Flush any open HTML block before entering/exiting fenced block
+        if state["in_html_block"]:
+            Renderer._flush_html_block(state, output)
+            state["in_html_block"] = False
+
+        # Toggle fenced block state
+        state["in_fenced_block"] = not state["in_fenced_block"]
+        output.append(line)
+
+    @staticmethod
+    def _flush_html_block(state: dict[str, Any], output: list[str]) -> None:
+        """Flush accumulated HTML lines as a code block."""
+        if state["html_block_lines"]:
+            output.append("```html")
+            output.extend(state["html_block_lines"])
+            output.append("```")
+            state["html_block_lines"] = []
+
+    @staticmethod
+    def _process_html_line(
+        line: str,
+        stripped: str,
+        current_idx: int,
+        lines: list[str],
+        state: dict[str, Any],
+        output: list[str],
+    ) -> None:
+        """Process a line containing HTML characters."""
+        is_complete = Renderer._is_complete_html_tag(line)
+        is_multiline_start = False
+
+        if not is_complete:
+            is_multiline_start = Renderer._is_multiline_html_start(
+                current_idx, lines, Renderer._has_unescaped_html_chars
+            )
+
+        # Determine how to handle this HTML line
+        if is_multiline_start or (
+            state["in_html_block"]
+            and (stripped or Renderer._has_unescaped_html_chars(line))
+        ):
+            # Part of multi-line HTML block - accumulate
+            if not state["in_html_block"]:
+                state["in_html_block"] = True
+            state["html_block_lines"].append(line)
+
+        elif is_complete:
+            # Complete single-line HTML - wrap in its own code block
+            if state["in_html_block"]:
+                Renderer._flush_html_block(state, output)
+                state["in_html_block"] = False
+            output.append("```html")
+            output.append(line)
+            output.append("```")
+
+        else:
+            # Simple tag-like text or special chars - escape it
+            if state["in_html_block"]:
+                Renderer._flush_html_block(state, output)
+                state["in_html_block"] = False
+            output.append(html.escape(line))
+
+    @staticmethod
+    def _process_non_html_line(
+        line: str, stripped: str, state: dict[str, Any], output: list[str]
+    ) -> None:
+        """Process a line without HTML characters."""
+        if state["in_html_block"]:
+            if stripped:
+                # Non-empty line without HTML tags ends the HTML block
+                Renderer._flush_html_block(state, output)
+                state["in_html_block"] = False
+                output.append(line)
+            else:
+                # Empty line might be part of HTML block
+                state["html_block_lines"].append(line)
+        else:
+            output.append(line)
+
+    @staticmethod
+    def _escape_html_outside_code_blocks(content: str) -> str:
+        """Escape HTML special characters outside code blocks."""
+        lines = content.split("\n")
+        output: list[str] = []
+        state = {
+            "in_fenced_block": False,
+            "in_html_block": False,
+            "html_block_lines": [],
+        }
+
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+
+            # Process fenced code block boundaries
+            if stripped.startswith("```"):
+                Renderer._process_fenced_block_boundary(line, state, output)
+                continue
+
+            # Pass through lines inside fenced code blocks
+            if state["in_fenced_block"]:
+                output.append(line)
+                continue
+
+            # Process HTML vs non-HTML lines
+            if Renderer._has_unescaped_html_chars(line):
+                Renderer._process_html_line(line, stripped, i, lines, state, output)
+            else:
+                Renderer._process_non_html_line(line, stripped, state, output)
+
+        # Flush any remaining HTML block
+        if state["in_html_block"]:
+            Renderer._flush_html_block(state, output)
+
+        return "\n".join(output)
+
+    @staticmethod
     def _fix_malformed_code_blocks(content: str) -> str:
         """Fix malformed code blocks where closing ``` are escaped or malformed."""
-        import re
-
         # First, fix escaped backticks that should be proper markdown delimiters
         # This handles cases where LLMs escape closing backticks: ``` -> \`\`\`
         # Pattern 1: Fix escaped closing backticks in potential code blocks

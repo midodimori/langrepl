@@ -1,5 +1,7 @@
 """Tests for Renderer critical logic."""
 
+import re
+
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from src.cli.ui.renderer import Renderer
@@ -386,3 +388,220 @@ class TestRendererUserMessage:
         message = HumanMessage(content="Regular message")
         # Should use regular content
         Renderer.render_user_message(message)
+
+
+class TestRendererHTMLWrapping:
+    """Tests for HTML wrapping in code blocks to preserve formatting."""
+
+    def test_pure_html_block_wrapped(self):
+        """Test that a pure HTML block gets wrapped in code fences."""
+        content = """<table border="1">
+  <tr>
+    <th>Header 1</th>
+    <th>Header 2</th>
+  </tr>
+</table>"""
+        result = Renderer._escape_html_outside_code_blocks(content)
+        assert result.startswith("```html\n")
+        assert result.endswith("\n```")
+        assert "<table" in result
+        assert "  <tr>" in result
+
+    def test_html_already_in_code_block_not_wrapped(self):
+        """Test that HTML already in code blocks is not wrapped again."""
+        content = """```html
+<div>Already in code block</div>
+```"""
+        result = Renderer._escape_html_outside_code_blocks(content)
+        assert result.count("```html") == 1
+        assert result.count("```") == 2
+
+    def test_html_mixed_with_markdown_text(self):
+        """Test HTML blocks separated from markdown prose."""
+        content = """Here is some markdown text.
+
+<table>
+  <tr><td>Cell</td></tr>
+</table>
+
+And here is more markdown text."""
+        result = Renderer._escape_html_outside_code_blocks(content)
+        assert "Here is some markdown text." in result
+        assert "And here is more markdown text." in result
+        assert "```html" in result
+        assert result.count("```") == 2
+
+    def test_inline_html_in_prose(self):
+        """Test inline HTML tags in prose get wrapped."""
+        content = "This is a paragraph with <strong>bold</strong> text."
+        result = Renderer._escape_html_outside_code_blocks(content)
+        assert "```html" in result
+        assert "<strong>bold</strong>" in result
+
+    def test_multiple_separate_html_blocks(self):
+        """Test multiple HTML blocks are each wrapped separately."""
+        content = """<div>Block 1</div>
+
+Some text between.
+
+<span>Block 2</span>"""
+        result = Renderer._escape_html_outside_code_blocks(content)
+        assert result.count("```html") == 2
+        assert result.count("```") == 4
+        assert "Some text between." in result
+
+    def test_xml_tags_treated_as_html(self):
+        """Test XML tags are wrapped like HTML."""
+        content = """<config>
+  <setting>value</setting>
+</config>"""
+        result = Renderer._escape_html_outside_code_blocks(content)
+        assert "```html" in result
+        assert "<config>" in result
+
+    def test_already_escaped_html_not_wrapped(self):
+        """Test already escaped HTML is left as-is."""
+        content = "&lt;div&gt;Already escaped&lt;/div&gt;"
+        result = Renderer._escape_html_outside_code_blocks(content)
+        assert "```html" not in result
+        assert result == content
+
+    def test_empty_lines_between_html_tags_included(self):
+        """Test that HTML block includes empty lines between tags."""
+        content = """<div>
+
+</div>"""
+        result = Renderer._escape_html_outside_code_blocks(content)
+        assert "```html" in result
+
+    def test_html_with_code_blocks_and_prose(self):
+        """Test complex mixing of code blocks, HTML, and prose."""
+        content = """# Title
+
+Some text here.
+
+```python
+print("code")
+```
+
+<table>
+  <tr><td>Data</td></tr>
+</table>
+
+More text.
+
+```js
+const x = 1;
+```
+
+<div>HTML</div>"""
+        result = Renderer._escape_html_outside_code_blocks(content)
+        assert "# Title" in result
+        assert "Some text here." in result
+        assert "```python" in result
+        assert "```js" in result
+        assert result.count("```html") == 2
+        assert "<table>" in result
+        assert "<div>HTML</div>" in result
+
+    def test_partial_html_tag_not_wrapped(self):
+        """Test malformed/partial HTML without closing > is escaped (not wrapped in code block)."""
+        content = "<div incomplete"
+        result = Renderer._escape_html_outside_code_blocks(content)
+        assert "```html" not in result
+        # Partial tags should be escaped to prevent Rich from stripping them
+        assert result == "&lt;div incomplete"
+
+    def test_consecutive_lines_with_html_kept_together(self):
+        """Test consecutive HTML lines stay in same code block."""
+        content = """<ul>
+<li>Item 1</li>
+<li>Item 2</li>
+</ul>"""
+        result = Renderer._escape_html_outside_code_blocks(content)
+        assert result.count("```html") == 1
+        assert result.count("```") == 2
+
+    def test_non_html_lines_between_html_split_blocks(self):
+        """Test that non-HTML lines split HTML into multiple blocks."""
+        content = """<div>Block 1</div>
+Regular text
+<div>Block 2</div>"""
+        result = Renderer._escape_html_outside_code_blocks(content)
+        assert result.count("```html") == 2
+        assert "Regular text" in result
+        # Verify "Regular text" appears outside HTML code blocks by checking
+        # it's not between ```html and ``` markers
+
+        # Remove all HTML code blocks from result
+        result_without_html_blocks = re.sub(
+            r"```html\n.*?\n```", "", result, flags=re.DOTALL
+        )
+        # "Regular text" should still be present after removing HTML blocks
+        assert "Regular text" in result_without_html_blocks
+
+    def test_code_block_with_different_language(self):
+        """Test existing code blocks with languages are preserved."""
+        content = """```typescript
+const foo: string = "<not html>";
+```
+
+<div>Real HTML</div>"""
+        result = Renderer._escape_html_outside_code_blocks(content)
+        assert "```typescript" in result
+        assert "```html" in result
+        assert result.count("```") == 4
+
+    def test_empty_content(self):
+        """Test empty content returns empty string."""
+        content = ""
+        result = Renderer._escape_html_outside_code_blocks(content)
+        assert result == ""
+
+    def test_mixed_raw_html_and_entities_wrapped(self):
+        """Test that lines with both raw HTML tags and HTML entities are properly wrapped.
+
+        Regression test for security issue where `<div>&amp;</div>` was
+        incorrectly passing through unescaped.
+        """
+        content = "<div>&amp;</div>"
+        result = Renderer._escape_html_outside_code_blocks(content)
+        # Should be wrapped in code block, not pass through unchanged
+        assert "```html" in result
+        assert "<div>&amp;</div>" in result
+        # Verify it's wrapped, not just escaped
+        assert result.startswith("```html\n")
+        assert result.endswith("\n```")
+
+    def test_only_markdown_no_html(self):
+        """Test pure markdown without HTML is unchanged."""
+        content = """# Heading
+
+Some **bold** text and *italic* text.
+
+- List item 1
+- List item 2"""
+        result = Renderer._escape_html_outside_code_blocks(content)
+        assert result == content
+        assert "```html" not in result
+
+    def test_html_attribute_containing_greater_than(self):
+        """Test HTML with > inside attribute value is correctly wrapped."""
+        content = '<div title="test>more">content</div>'
+        result = Renderer._escape_html_outside_code_blocks(content)
+        assert "```html" in result
+        assert '<div title="test>more">content</div>' in result
+
+    def test_multiple_tags_on_single_line(self):
+        """Test multiple complete HTML tags on same line are wrapped."""
+        content = "<div>test</div><span>more</span>"
+        result = Renderer._escape_html_outside_code_blocks(content)
+        assert "```html" in result
+        assert "<div>test</div><span>more</span>" in result
+
+    def test_nested_html_tags(self):
+        """Test nested HTML tags are correctly detected and wrapped."""
+        content = "<div><span>test</span></div>"
+        result = Renderer._escape_html_outside_code_blocks(content)
+        assert "```html" in result
+        assert "<div><span>test</span></div>" in result

@@ -109,6 +109,14 @@ class TestInteractivePromptCtrlCBehavior:
         app = MagicMock()
         app.invalidate = MagicMock()
 
+        async def simulate_call_later(delay, callback):
+            await asyncio.sleep(delay)
+            callback()
+
+        app.loop.call_later = lambda delay, callback: asyncio.create_task(
+            simulate_call_later(delay, callback)
+        )
+
         prompt._show_quit_message = True
         prompt._last_ctrl_c_time = time.time()
 

@@ -1,6 +1,5 @@
 """Prompt-toolkit session and input handling."""
 
-import asyncio
 import os
 import time
 from pathlib import Path
@@ -279,13 +278,12 @@ class InteractivePrompt:
     def _schedule_hide_message(self, app):
         """Schedule hiding the quit message after timeout."""
 
-        async def hide_after_timeout():
-            await asyncio.sleep(self._ctrl_c_timeout)
+        def hide():
             self._show_quit_message = False
             self._last_ctrl_c_time = None
             app.invalidate()
 
-        asyncio.create_task(hide_after_timeout())
+        app.loop.call_later(self._ctrl_c_timeout, hide)
 
     def _get_prompt_color(self) -> str:
         """Get prompt color based on approval mode and bash mode."""

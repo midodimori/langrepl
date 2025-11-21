@@ -2,6 +2,49 @@
 
 <!-- version list -->
 
+## v1.6.5 (2025-11-21)
+
+### Bug Fixes
+
+- Configure PSR for incremental changelog updates
+  ([`cf88659`](https://github.com/midodimori/langrepl/commit/cf88659a43b95fd1371ccb99854b59617b876735))
+
+- Handle None values and skip empty diffs in approval rendering
+  ([`be58af9`](https://github.com/midodimori/langrepl/commit/be58af98ac50dd371e740edea2499e129031019c))
+
+- Improve renderer indentation and HTML preservation (#52)
+  ([#52](https://github.com/midodimori/langrepl/pull/52),
+  [`c327848`](https://github.com/midodimori/langrepl/commit/c32784893e6617652c1c5c494765123cf1c1e1be))
+
+- Use prompt_toolkit event loop to prevent input freeze after idle
+  ([`ae8ec90`](https://github.com/midodimori/langrepl/commit/ae8ec902e04380293ca164695ed092753cac2128))
+
+### Chores
+
+- Add gemini 3
+  ([`a060d6a`](https://github.com/midodimori/langrepl/commit/a060d6a6689f092dfc24511772c5548b0b8d0545))
+
+- Suppress langsmith warning
+  ([`04fee7f`](https://github.com/midodimori/langrepl/commit/04fee7f14a9dc7104622f09b5845ab2583cc6505))
+
+- Sync deps
+  ([`0eabe29`](https://github.com/midodimori/langrepl/commit/0eabe294c9ae60a4af48226cf8e7f6fdf50ab00b))
+
+### Continuous Integration
+
+- Simplify release workflow with PSR CLI
+  ([`c83b40e`](https://github.com/midodimori/langrepl/commit/c83b40e0bf20fd4c5e26cb6ba8f716b07d93942d))
+
+- Simplify workflow, PSR handles uv.lock automatically
+  ([`bff83cc`](https://github.com/midodimori/langrepl/commit/bff83cc1648f64fa429afabd2abf986cf82e0309))
+
+- Skip CI on release commits and fix PSR changelog config
+  ([`afab928`](https://github.com/midodimori/langrepl/commit/afab928cd21e2161aa30fdce84940163234b3feb))
+
+- Use PAT to trigger publish workflow and sync uv.lock
+  ([`c3ba0ca`](https://github.com/midodimori/langrepl/commit/c3ba0ca4e39a72515208607217123239334c1e9e))
+
+
 ## v1.6.4 (2025-11-21)
 
 ### Bug Fixes

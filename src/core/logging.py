@@ -33,6 +33,14 @@ def configure_logging(show_logs: bool = False) -> None:
     # Suppress langchain_aws warnings
     warnings.filterwarnings("ignore", module="langchain_aws.chat_models.bedrock")
 
+    # Suppress LangSmith UUID v7 deprecation warning
+    warnings.filterwarnings(
+        "ignore",
+        message="LangSmith now uses UUID v7",
+        category=UserWarning,
+        module="pydantic.v1.main",
+    )
+
     # Add console handler only if show_logs is True
     if show_logs:
         console_handler = logging.StreamHandler()

@@ -89,6 +89,9 @@ ignore_missing_imports = true
 # Add the project root to the Python path so that tests can import from src
 pythonpath = ["."]
 testpaths = ["tests"]
+filterwarnings = [
+    "ignore:LangSmith now uses UUID v7:UserWarning:pydantic.v1.main",
+]
 
 [build-system]
 requires = ["hatchling"]

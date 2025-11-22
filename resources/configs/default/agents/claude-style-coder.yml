@@ -1,3 +1,4 @@
+version: 1.0.0
 name: claude-style-coder
 description: "An agent that mimics Claude Code's behavior for software development tasks"
 prompt:

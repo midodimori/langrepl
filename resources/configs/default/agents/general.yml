@@ -1,3 +1,4 @@
+version: 1.0.0
 name: general
 description: "General-purpose agent for research, writing, analysis, and planning tasks"
 prompt:

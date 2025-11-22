@@ -1,4 +1,5 @@
-- model: deepseek/deepseek-r1-0528-qwen3-8b
+- version: 1.0.0
+  model: deepseek/deepseek-r1-0528-qwen3-8b
   alias: deepseek-r1-local
   provider: lmstudio
   max_tokens: 8192

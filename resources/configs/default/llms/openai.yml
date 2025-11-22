@@ -1,4 +1,5 @@
-- model: gpt-5-mini-2025-08-07
+- version: 1.0.0
+  model: gpt-5-mini-2025-08-07
   alias: gpt-5-mini-thinking
   provider: openai
   max_tokens: 10000

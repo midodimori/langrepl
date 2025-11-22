@@ -1,4 +1,5 @@
-- model: glm-4.6
+- version: 1.0.0
+  model: glm-4.6
   alias: glm-4.6
   provider: zhipuai
   max_tokens: 8192
@@ -7,7 +8,8 @@
   input_cost_per_mtok: 0.60
   output_cost_per_mtok: 2.20
 
-- model: glm-4.6
+- version: 1.0.0
+  model: glm-4.6
   alias: glm-4.6-thinking
   provider: zhipuai
   max_tokens: 10000

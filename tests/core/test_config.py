@@ -332,3 +332,167 @@ class TestFilenameValidation:
 
         assert len(agents_config.agents) == 1
         assert len(checkpointers_config.checkpointers) == 1
+
+
+class TestVersionMigration:
+    @pytest.mark.asyncio
+    async def test_llm_config_migration_from_no_version(self, temp_dir):
+        file_path = temp_dir / "config.llms.yml"
+        file_path.write_text(
+            yaml.dump(
+                {
+                    "llms": [
+                        {
+                            "alias": "test-model",
+                            "provider": "anthropic",
+                            "model": "claude-3-5-sonnet-20241022",
+                            "max_tokens": 4096,
+                            "temperature": 0.7,
+                        }
+                    ]
+                }
+            )
+        )
+
+        config = await BatchLLMConfig.from_yaml(file_path=file_path)
+        assert len(config.llms) == 1
+        assert config.llms[0].alias == "test-model"
+
+        content = yaml.safe_load(file_path.read_text())
+        assert content["llms"][0]["version"] == "1.0.0"
+
+    @pytest.mark.asyncio
+    async def test_agent_config_migration_from_old_version(
+        self, temp_dir, mock_llm_config
+    ):
+        file_path = temp_dir / "config.agents.yml"
+        file_path.write_text(
+            yaml.dump(
+                {
+                    "agents": [
+                        {
+                            "version": "0.5.0",
+                            "name": "test-agent",
+                            "default": True,
+                            "llm": "test-model",
+                        }
+                    ]
+                }
+            )
+        )
+
+        config = await BatchAgentConfig.from_yaml(
+            file_path=file_path, batch_llm_config=BatchLLMConfig(llms=[mock_llm_config])
+        )
+        assert len(config.agents) == 1
+        assert config.agents[0].name == "test-agent"
+
+        content = yaml.safe_load(file_path.read_text())
+        assert content["agents"][0]["version"] == "1.0.0"
+
+    @pytest.mark.asyncio
+    async def test_checkpointer_config_no_migration_when_current(self, temp_dir):
+        file_path = temp_dir / "config.checkpointers.yml"
+        file_path.write_text(
+            yaml.dump({"checkpointers": [{"version": "1.0.0", "type": "sqlite"}]})
+        )
+        original_mtime = file_path.stat().st_mtime
+
+        config = await BatchCheckpointerConfig.from_yaml(file_path=file_path)
+        assert len(config.checkpointers) == 1
+        assert abs(file_path.stat().st_mtime - original_mtime) < 1
+
+    @pytest.mark.asyncio
+    async def test_multi_file_config_migration(self, temp_dir, mock_llm_config):
+        dir_path = temp_dir / "agents"
+        dir_path.mkdir()
+        (dir_path / "agent1.yml").write_text(
+            yaml.dump({"name": "agent1", "default": True, "llm": "test-model"})
+        )
+        (dir_path / "agent2.yml").write_text(
+            yaml.dump({"name": "agent2", "llm": "test-model"})
+        )
+
+        config = await BatchAgentConfig.from_yaml(
+            dir_path=dir_path, batch_llm_config=BatchLLMConfig(llms=[mock_llm_config])
+        )
+        assert len(config.agents) == 2
+
+        for f in ["agent1.yml", "agent2.yml"]:
+            assert yaml.safe_load((dir_path / f).read_text())["version"] == "1.0.0"
+
+    @pytest.mark.asyncio
+    async def test_mixed_version_migration(self, temp_dir):
+        file_path = temp_dir / "config.llms.yml"
+        file_path.write_text(
+            yaml.dump(
+                {
+                    "llms": [
+                        {
+                            "version": "1.0.0",
+                            "alias": "model1",
+                            "provider": "anthropic",
+                            "model": "claude-3-5-sonnet-20241022",
+                            "max_tokens": 4096,
+                            "temperature": 0.7,
+                        },
+                        {
+                            "alias": "model2",
+                            "provider": "openai",
+                            "model": "gpt-4",
+                            "max_tokens": 8192,
+                            "temperature": 0.5,
+                        },
+                    ]
+                }
+            )
+        )
+
+        config = await BatchLLMConfig.from_yaml(file_path=file_path)
+        assert len(config.llms) == 2
+
+        content = yaml.safe_load(file_path.read_text())
+        assert all(item["version"] == "1.0.0" for item in content["llms"])
+
+    @pytest.mark.asyncio
+    async def test_multi_item_file_preserves_all_items(self, temp_dir):
+        dir_path = temp_dir / "llms"
+        dir_path.mkdir()
+        (dir_path / "anthropic.yml").write_text(
+            yaml.dump(
+                [
+                    {
+                        "alias": "model1",
+                        "provider": "anthropic",
+                        "model": "claude-3-5-sonnet-20241022",
+                        "max_tokens": 4096,
+                        "temperature": 0.7,
+                    },
+                    {
+                        "version": "0.5.0",
+                        "alias": "model2",
+                        "provider": "anthropic",
+                        "model": "claude-3-5-haiku-20241022",
+                        "max_tokens": 8192,
+                        "temperature": 0.5,
+                    },
+                    {
+                        "version": "1.0.0",
+                        "alias": "model3",
+                        "provider": "anthropic",
+                        "model": "claude-3-opus-20240229",
+                        "max_tokens": 2048,
+                        "temperature": 0.3,
+                    },
+                ]
+            )
+        )
+
+        config = await BatchLLMConfig.from_yaml(dir_path=dir_path)
+        assert len(config.llms) == 3
+        assert {llm.alias for llm in config.llms} == {"model1", "model2", "model3"}
+
+        content = yaml.safe_load((dir_path / "anthropic.yml").read_text())
+        assert isinstance(content, list) and len(content) == 3
+        assert all(item["version"] == "1.0.0" for item in content)
+        assert {item["alias"] for item in content} == {"model1", "model2", "model3"}

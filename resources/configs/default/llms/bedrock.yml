@@ -1,4 +1,5 @@
-- model: eu.anthropic.claude-sonnet-4-5-20250929-v1:0
+- version: 1.0.0
+  model: eu.anthropic.claude-sonnet-4-5-20250929-v1:0
   alias: sonnet-4.5-bedrock
   provider: bedrock
   max_tokens: 5000
@@ -13,7 +14,8 @@
     check_every_n_seconds: 0.05
     max_bucket_size: 100
 
-- model: eu.anthropic.claude-sonnet-4-5-20250929-v1:0
+- version: 1.0.0
+  model: eu.anthropic.claude-sonnet-4-5-20250929-v1:0
   alias: sonnet-4.5-bedrock-thinking
   provider: bedrock
   max_tokens: 10000
@@ -31,7 +33,8 @@
     check_every_n_seconds: 0.05
     max_bucket_size: 100
 
-- model: eu.anthropic.claude-haiku-4-5-20251001-v1:0
+- version: 1.0.0
+  model: eu.anthropic.claude-haiku-4-5-20251001-v1:0
   alias: haiku-4.5-bedrock
   provider: bedrock
   max_tokens: 10000

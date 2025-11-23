@@ -1,4 +1,5 @@
-- model: gemini-3-pro-preview
+- version: 1.0.0
+  model: gemini-3-pro-preview
   alias: gemini-3-pro
   provider: google
   max_tokens: 10000
@@ -7,7 +8,8 @@
   input_cost_per_mtok: 2.00
   output_cost_per_mtok: 12.00
 
-- model: gemini-2.5-pro
+- version: 1.0.0
+  model: gemini-2.5-pro
   alias: gemini-2.5-pro
   provider: google
   max_tokens: 10000
@@ -16,7 +18,8 @@
   input_cost_per_mtok: 0.10
   output_cost_per_mtok: 0.40
 
-- model: gemini-2.5-pro
+- version: 1.0.0
+  model: gemini-2.5-pro
   alias: gemini-2.5-pro-thinking
   provider: google
   max_tokens: 10000

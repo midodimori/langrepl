@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import re
 from enum import Enum
 from pathlib import Path
@@ -7,22 +8,64 @@ from typing import Any, cast
 
 import aiofiles
 import yaml
+from packaging import version as pkg_version
 from pydantic import BaseModel, Field, model_validator
 
+from src.core.constants import (
+    AGENT_CONFIG_VERSION,
+    CHECKPOINTER_CONFIG_VERSION,
+    LLM_CONFIG_VERSION,
+)
 from src.utils.render import render_templates
+
+logger = logging.getLogger(__name__)
+
+
+def _migrate_items(
+    items: list[dict], config_class: type["VersionedConfig"], file_path: Path
+) -> tuple[list[dict], bool]:
+    """Migrate config items to latest version.
+
+    Returns:
+        Tuple of (migrated_items, needs_save)
+    """
+    migrated_items: list[dict] = []
+    needs_save = False
+    latest_version = config_class.get_latest_version()
+
+    for item in items:
+        current_version = item.get("version", "0.0.0")
+
+        if pkg_version.parse(current_version) < pkg_version.parse(latest_version):
+            migrated_item = config_class.migrate(item, current_version)
+            migrated_item["version"] = latest_version
+            migrated_items.append(migrated_item)
+            needs_save = True
+        else:
+            migrated_items.append(item)
+
+    if needs_save:
+        logger.warning(
+            f"Migrating {config_class.__name__} to version {latest_version}: {file_path}"
+        )
+
+    return migrated_items, needs_save
+
+
+async def _atomic_write(file_path: Path, content: str) -> None:
+    """Write content to file atomically using temp file and replace."""
+    temp_file = file_path.with_suffix(".tmp")
+    try:
+        await asyncio.to_thread(temp_file.write_text, content)
+        await asyncio.to_thread(temp_file.replace, file_path)
+    except Exception:
+        if temp_file.exists():
+            await asyncio.to_thread(temp_file.unlink)
+        raise
 
 
 def _validate_no_duplicates(items: list[dict], key: str, config_type: str) -> None:
-    """Validate that all items have the required key and no duplicates exist.
-
-    Args:
-        items: Config items to validate
-        key: Key to check (e.g., 'name', 'alias', 'type')
-        config_type: Type of config for error message (e.g., 'Agent', 'LLM')
-
-    Raises:
-        ValueError: If any item is missing the key or duplicates are found
-    """
+    """Validate no duplicate keys in config items."""
     seen = set()
     for idx, item in enumerate(items):
         if key not in item:
@@ -38,24 +81,39 @@ def _validate_no_duplicates(items: list[dict], key: str, config_type: str) -> No
         seen.add(value)
 
 
-async def _load_yaml_items(
-    dir_path: Path, key: str | None = None, config_type: str | None = None
+async def _load_dir_items(
+    dir_path: Path,
+    key: str | None = None,
+    config_type: str | None = None,
+    config_class: type["VersionedConfig"] | None = None,
 ) -> list[dict]:
-    """Load YAML files from directory with optional filename validation."""
+    """Load and migrate config items from directory."""
     if not dir_path.exists():
         return []
 
-    items = []
+    items: list[dict] = []
     yml_files = await asyncio.to_thread(lambda: sorted(dir_path.glob("*.yml")))
     for yml_file in yml_files:
         content = await asyncio.to_thread(yml_file.read_text)
         data = yaml.safe_load(content)
 
-        file_items = (
-            data if isinstance(data, list) else [data] if isinstance(data, dict) else []
-        )
+        is_list = isinstance(data, list)
+        file_items = data if is_list else [data] if isinstance(data, dict) else []
 
-        # Validate filename matches key value
+        if config_class:
+            migrated_items, needs_save = _migrate_items(
+                file_items, config_class, yml_file
+            )
+
+            if needs_save:
+                save_data = migrated_items if is_list else migrated_items[0]
+                yaml_str = yaml.dump(
+                    save_data, default_flow_style=False, sort_keys=False
+                )
+                await _atomic_write(yml_file, yaml_str)
+
+            file_items = migrated_items
+
         if key and config_type:
             for item in file_items:
                 if (item_key := item.get(key)) and item_key != yml_file.stem:
@@ -67,6 +125,38 @@ async def _load_yaml_items(
         items.extend(file_items)
 
     return items
+
+
+async def _load_single_file(
+    file_path: Path, key: str, config_class: type["VersionedConfig"]
+) -> list[dict]:
+    """Load and migrate config items from single file."""
+    yaml_content = await asyncio.to_thread(file_path.read_text)
+    data = yaml.safe_load(yaml_content)
+    items = data.get(key, []) if isinstance(data, dict) else []
+
+    migrated_items, needs_save = _migrate_items(items, config_class, file_path)
+
+    if needs_save:
+        data[key] = migrated_items
+        yaml_str = yaml.dump(data, default_flow_style=False, sort_keys=False)
+        await _atomic_write(file_path, yaml_str)
+
+    return migrated_items
+
+
+class VersionedConfig(BaseModel):
+    """Base class for versioned configs with migration support."""
+
+    @classmethod
+    def get_latest_version(cls) -> str:
+        """Return latest version for this config type. Must be overridden by subclasses."""
+        raise NotImplementedError(f"{cls.__name__} must implement get_latest_version()")
+
+    @classmethod
+    def migrate(cls, data: dict, from_version: str) -> dict:
+        """Migrate config data from older version."""
+        return data
 
 
 class LLMProvider(str, Enum):
@@ -111,7 +201,10 @@ class RateConfig(BaseModel):
     )
 
 
-class LLMConfig(BaseModel):
+class LLMConfig(VersionedConfig):
+    version: str = Field(
+        default=LLM_CONFIG_VERSION, description="Config schema version"
+    )
     provider: LLMProvider = Field(description="The provider of the LLM")
     model: str = Field(description="The model to use")
     alias: str = Field(default="", description="Display alias for the model")
@@ -135,6 +228,10 @@ class LLMConfig(BaseModel):
         description="Extended reasoning/thinking configuration (provider-agnostic)",
     )
 
+    @classmethod
+    def get_latest_version(cls) -> str:
+        return LLM_CONFIG_VERSION
+
     @model_validator(mode="after")
     def set_alias_default(self) -> "LLMConfig":
         """Set alias to model name if not provided."""
@@ -143,11 +240,18 @@ class LLMConfig(BaseModel):
         return self
 
 
-class CheckpointerConfig(BaseModel):
+class CheckpointerConfig(VersionedConfig):
+    version: str = Field(
+        default=CHECKPOINTER_CONFIG_VERSION, description="Config schema version"
+    )
     type: CheckpointerProvider = Field(description="The checkpointer type")
 
+    @classmethod
+    def get_latest_version(cls) -> str:
+        return CHECKPOINTER_CONFIG_VERSION
 
-class MCPServerConfig(BaseModel):
+
+class MCPServerConfig(VersionedConfig):
     command: str | None = Field(
         default=None, description="The command to execute the server"
     )
@@ -239,12 +343,10 @@ class BatchLLMConfig(BaseModel):
         llms = []
 
         if file_path and file_path.exists():
-            yaml_content = await asyncio.to_thread(file_path.read_text)
-            data = yaml.safe_load(yaml_content)
-            llms.extend(data.get("llms", []))
+            llms.extend(await _load_single_file(file_path, "llms", LLMConfig))
 
         if dir_path:
-            llms.extend(await _load_yaml_items(dir_path))
+            llms.extend(await _load_dir_items(dir_path, config_class=LLMConfig))
 
         _validate_no_duplicates(llms, key="alias", config_type="LLM")
         return cls.model_validate({"llms": llms})
@@ -275,13 +377,18 @@ class BatchCheckpointerConfig(BaseModel):
         checkpointers = []
 
         if file_path and file_path.exists():
-            yaml_content = await asyncio.to_thread(file_path.read_text)
-            data = yaml.safe_load(yaml_content)
-            checkpointers.extend(data.get("checkpointers", []))
+            checkpointers.extend(
+                await _load_single_file(file_path, "checkpointers", CheckpointerConfig)
+            )
 
         if dir_path:
             checkpointers.extend(
-                await _load_yaml_items(dir_path, key="type", config_type="Checkpointer")
+                await _load_dir_items(
+                    dir_path,
+                    key="type",
+                    config_type="Checkpointer",
+                    config_class=CheckpointerConfig,
+                )
             )
 
         _validate_no_duplicates(checkpointers, key="type", config_type="Checkpointer")
@@ -302,7 +409,10 @@ class CompressionConfig(BaseModel):
     )
 
 
-class AgentConfig(BaseModel):
+class AgentConfig(VersionedConfig):
+    version: str = Field(
+        default=AGENT_CONFIG_VERSION, description="Config schema version"
+    )
     name: str = Field(default="Unknown", description="The name of the agent")
     prompt: str | list[str] = Field(
         default="",
@@ -334,6 +444,10 @@ class AgentConfig(BaseModel):
         default=None,
         description="Maximum tokens per tool output. Larger outputs stored in virtual filesystem.",
     )
+
+    @classmethod
+    def get_latest_version(cls) -> str:
+        return AGENT_CONFIG_VERSION
 
 
 class BatchAgentConfig(BaseModel):
@@ -445,14 +559,17 @@ class BatchAgentConfig(BaseModel):
         prompt_base_path = None
 
         if file_path and file_path.exists():
-            yaml_content = await asyncio.to_thread(file_path.read_text)
-            data = yaml.safe_load(yaml_content)
-            agents.extend(data.get("agents", []))
+            agents.extend(await _load_single_file(file_path, "agents", AgentConfig))
             prompt_base_path = file_path.parent
 
         if dir_path and dir_path.exists():
             agents.extend(
-                await _load_yaml_items(dir_path, key="name", config_type="Agent")
+                await _load_dir_items(
+                    dir_path,
+                    key="name",
+                    config_type="Agent",
+                    config_class=AgentConfig,
+                )
             )
             prompt_base_path = dir_path.parent
 

@@ -1,3 +1,4 @@
+version: 1.0.0
 name: code-reviewer
 description: "Code review agent focusing on quality, security, performance, and software principles"
 prompt:

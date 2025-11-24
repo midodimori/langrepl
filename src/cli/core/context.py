@@ -57,6 +57,10 @@ class Context(BaseModel):
         else:
             llm_config = agent_config.llm
 
+        tool_output_max_tokens = (
+            agent_config.tools.output_max_tokens if agent_config.tools else None
+        )
+
         return cls(
             agent=agent or agent_config.name,
             model=model or agent_config.llm.alias,
@@ -67,7 +71,7 @@ class Context(BaseModel):
             input_cost_per_mtok=llm_config.input_cost_per_mtok,
             output_cost_per_mtok=llm_config.output_cost_per_mtok,
             recursion_limit=agent_config.recursion_limit,
-            tool_output_max_tokens=agent_config.tool_output_max_tokens,
+            tool_output_max_tokens=tool_output_max_tokens,
         )
 
     def cycle_approval_mode(self) -> ApprovalMode:

@@ -12,7 +12,7 @@ from prompt_toolkit.layout.controls import FormattedTextControl
 
 from src.cli.bootstrap.initializer import initializer
 from src.cli.theme import console, theme
-from src.core.config import AgentConfig, LLMConfig
+from src.core.config import AgentConfig, LLMConfig, SubAgentConfig
 from src.core.logging import get_logger
 from src.core.settings import settings
 
@@ -33,7 +33,7 @@ class ModelHandler:
                 self.session.context.agent, self.session.context.working_dir
             )
 
-            agents_to_show = [
+            agents_to_show: list[tuple[str, str, AgentConfig | SubAgentConfig]] = [
                 ("agent", self.session.context.agent, current_agent_config)
             ]
 
@@ -115,8 +115,8 @@ class ModelHandler:
             logger.debug("Model switch error", exc_info=True)
 
     async def _get_agent_selection(
-        self, agents: list[tuple[str, str, AgentConfig]]
-    ) -> tuple[str, str, AgentConfig] | None:
+        self, agents: list[tuple[str, str, AgentConfig | SubAgentConfig]]
+    ) -> tuple[str, str, AgentConfig | SubAgentConfig] | None:
         """Get agent selection from user (current agent + subagents).
 
         Args:
@@ -263,7 +263,9 @@ class ModelHandler:
             return ""
 
     def _format_agent_list(
-        self, agents: list[tuple[str, str, AgentConfig]], selected_index: int
+        self,
+        agents: list[tuple[str, str, AgentConfig | SubAgentConfig]],
+        selected_index: int,
     ):
         """Format the agent list with highlighting.
 

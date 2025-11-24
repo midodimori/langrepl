@@ -100,7 +100,7 @@ class CommandDispatcher:
 
     async def cmd_tools(self, args: list[str]) -> None:
         """Handle tools command with interactive selector."""
-        await self.tools_handler.handle(initializer.cached_tools)
+        await self.tools_handler.handle(initializer.cached_llm_tools)
 
     async def cmd_mcp(self, args: list[str]) -> None:
         """Handle MCP management command."""

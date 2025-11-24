@@ -1,4 +1,4 @@
-version: 1.0.0
+version: 2.0.0
 name: general
 description: "General-purpose agent for research, writing, analysis, and planning tasks"
 prompt:
@@ -8,13 +8,15 @@ llm: haiku-4.5
 checkpointer: sqlite
 default: true
 recursion_limit: 40
-tool_output_max_tokens: 10000
 tools:
-  - impl:web:*
-  - impl:file_system:read_file
-  - impl:grep_search:*
-  - internal:*:*
-  - mcp:*:*
+  patterns:
+    - impl:web:*
+    - impl:file_system:read_file
+    - impl:grep_search:*
+    - internal:*:*
+    - mcp:*:*
+  use_catalog: false
+  output_max_tokens: 10000
 subagents:
   - general-purpose
   - explorer

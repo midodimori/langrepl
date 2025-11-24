@@ -299,18 +299,21 @@ Configs are auto-generated in `.langrepl/` on first run.
 `.langrepl/agents/*.yml`:
 ```yaml
 # agents/my-agent.yml (filename must match agent name)
+version: 2.0.0
 name: my-agent
 prompt: prompts/my_agent.md  # Single file or array of files
 llm: haiku-4.5               # References llms/*.yml
 checkpointer: sqlite         # References checkpointers/*.yml
 recursion_limit: 40
-tool_output_max_tokens: 10000
 default: true
 tools:
-  - impl:file_system:read_file
-  - mcp:context7:resolve-library-id
+  patterns:
+    - impl:file_system:read_file
+    - mcp:context7:resolve-library-id
+  use_catalog: false         # Use tool catalog to reduce token usage
+  output_max_tokens: 10000   # Max tokens per tool output
 subagents:
-  - general-purpose         # References subagents/*.yml
+  - general-purpose          # References subagents/*.yml
 compression:
   auto_compress_enabled: true
   auto_compress_threshold: 0.8
@@ -322,16 +325,19 @@ compression:
 
 ```yaml
 agents:
-  - name: my-agent
+  - version: 2.0.0
+    name: my-agent
     prompt: prompts/my_agent.md
     llm: haiku-4.5
     checkpointer: sqlite
     recursion_limit: 40
-    tool_output_max_tokens: 10000
     default: true
     tools:
-      - impl:file_system:read_file
-      - mcp:context7:resolve-library-id
+      patterns:
+        - impl:file_system:read_file
+        - mcp:context7:resolve-library-id
+      use_catalog: false         # Use tool catalog to reduce token usage
+      output_max_tokens: 10000   # Max tokens per tool output
     subagents:
       - general-purpose
     compression:
@@ -347,12 +353,15 @@ agents:
 - `impl:file_system:read_*` - All read_* tools in file_system
 - `mcp:server:*` - All tools from MCP server
 
+**Tool catalog**: When `use_catalog: true`, impl/mcp tools are wrapped in a unified catalog interface to reduce token usage. The agent receives catalog tools instead of individual tool definitions.
+
 ### LLMs
 
 `.langrepl/llms/*.yml`:
 ```yaml
 # llms/anthropic.yml (organize by provider, filename is flexible)
-- model: claude-haiku-4-5
+- version: 1.0.0
+  model: claude-haiku-4-5
   alias: haiku-4.5
   provider: anthropic
   max_tokens: 10000
@@ -367,7 +376,8 @@ agents:
 
 ```yaml
 llms:
-  - model: claude-haiku-4-5
+  - version: 1.0.0
+    model: claude-haiku-4-5
     alias: haiku-4.5
     provider: anthropic
     max_tokens: 10000
@@ -384,12 +394,14 @@ llms:
 `.langrepl/checkpointers/*.yml`:
 ```yaml
 # checkpointers/sqlite.yml (filename must match checkpointer type)
+version: 1.0.0
 type: sqlite
 max_connections: 10
 ```
 
 ```yaml
 # checkpointers/memory.yml (filename must match checkpointer type)
+version: 1.0.0
 type: memory
 max_connections: 1
 ```
@@ -399,9 +411,11 @@ max_connections: 1
 
 ```yaml
 checkpointers:
-  - type: sqlite
+  - version: 1.0.0
+    type: sqlite
     max_connections: 10
-  - type: memory
+  - version: 1.0.0
+    type: memory
     max_connections: 1
 ```
 
@@ -418,10 +432,14 @@ Sub-agents use the same config structure as main agents.
 `.langrepl/subagents/*.yml`:
 ```yaml
 # subagents/code-reviewer.yml (filename must match subagent name)
+version: 2.0.0
 name: code-reviewer
 prompt: prompts/code-reviewer.md
 llm: haiku-4.5
-tools: [impl:file_system:read_file]
+tools:
+  patterns: [impl:file_system:read_file]
+  use_catalog: false
+  output_max_tokens: 10000
 ```
 
 <details>
@@ -429,10 +447,14 @@ tools: [impl:file_system:read_file]
 
 ```yaml
 agents:
-  - name: code-reviewer
+  - version: 2.0.0
+    name: code-reviewer
     prompt: prompts/code-reviewer.md
     llm: haiku-4.5
-    tools: [impl:file_system:read_file]
+    tools:
+      patterns: [impl:file_system:read_file]
+      use_catalog: false
+      output_max_tokens: 10000
 ```
 
 </details>

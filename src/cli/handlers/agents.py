@@ -32,12 +32,12 @@ class AgentHandler:
             config_data = await initializer.load_agents_config(
                 self.session.context.working_dir
             )
-            agents = config_data.agents
-
             # Filter out current agent from the list
             current_agent_name = self.session.context.agent
             available_agents = [
-                agent for agent in agents if agent.name != current_agent_name
+                agent
+                for agent in config_data.agents
+                if isinstance(agent, AgentConfig) and agent.name != current_agent_name
             ]
 
             if not available_agents:

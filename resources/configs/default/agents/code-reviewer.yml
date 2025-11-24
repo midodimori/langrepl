@@ -1,4 +1,4 @@
-version: 1.0.0
+version: 2.0.0
 name: code-reviewer
 description: "Code review agent focusing on quality, security, performance, and software principles"
 prompt:
@@ -9,12 +9,14 @@ llm: haiku-4.5
 checkpointer: sqlite
 default: false
 recursion_limit: 40
-tool_output_max_tokens: 10000
 tools:
-  - impl:file_system:read_file
-  - impl:grep_search:*
-  - internal:memory:*
-  - mcp:*:*
+  patterns:
+    - impl:file_system:read_file
+    - impl:grep_search:*
+    - internal:memory:*
+    - mcp:*:*
+  use_catalog: false
+  output_max_tokens: 10000
 subagents:
   - general-purpose
   - explorer

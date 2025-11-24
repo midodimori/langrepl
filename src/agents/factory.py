@@ -9,7 +9,12 @@ from langgraph.graph.state import CompiledStateGraph
 
 from src.agents import ContextSchemaType, StateSchemaType
 from src.agents.deep_agent import create_deep_agent
-from src.core.config import AgentConfig, LLMConfig, MCPConfig
+from src.core.config import AgentConfig, LLMConfig, MCPConfig, SubAgentConfig
+from src.core.constants import (
+    TOOL_CATEGORY_IMPL,
+    TOOL_CATEGORY_INTERNAL,
+    TOOL_CATEGORY_MCP,
+)
 from src.core.logging import get_logger
 from src.llms.factory import LLMFactory
 from src.mcp.factory import MCPFactory
@@ -84,11 +89,11 @@ class GraphFactory:
 
             tool_type, module_pattern, tool_pattern = parts
 
-            if tool_type == "impl":
+            if tool_type == TOOL_CATEGORY_IMPL:
                 impl_patterns.append(f"{module_pattern}:{tool_pattern}")
-            elif tool_type == "mcp":
+            elif tool_type == TOOL_CATEGORY_MCP:
                 mcp_patterns.append(f"{module_pattern}:{tool_pattern}")
-            elif tool_type == "internal":
+            elif tool_type == TOOL_CATEGORY_INTERNAL:
                 internal_patterns.append(f"{module_pattern}:{tool_pattern}")
             else:
                 logger.warning(f"Unknown tool type: {tool_type}")
@@ -136,7 +141,7 @@ class GraphFactory:
 
     def _create_subagent(
         self,
-        subagent_config,
+        subagent_config: SubAgentConfig,
         impl_tool_dict: dict[str, BaseTool],
         mcp_tool_dict: dict[str, BaseTool],
         internal_tool_dict: dict[str, BaseTool],
@@ -146,8 +151,11 @@ class GraphFactory:
         template_context: dict[str, Any] | None,
     ) -> SubAgent:
         sub_llm = self.llm_factory.create(subagent_config.llm)
+        sub_tool_patterns = (
+            subagent_config.tools.patterns if subagent_config.tools else None
+        )
         sub_impl_patterns, sub_mcp_patterns, sub_internal_patterns = (
-            self._parse_tool_references(subagent_config.tools)
+            self._parse_tool_references(sub_tool_patterns)
         )
         sub_impl_tools = self._filter_tools(
             impl_tool_dict, sub_impl_patterns, impl_module_map
@@ -158,16 +166,26 @@ class GraphFactory:
         sub_internal_tools = self._filter_tools(
             internal_tool_dict, sub_internal_patterns, internal_module_map
         )
+
+        use_catalog = (
+            subagent_config.tools.use_catalog if subagent_config.tools else False
+        )
+        sub_llm_tools = sub_impl_tools + sub_mcp_tools + [think]
+        tools_in_catalog = []
+        if use_catalog:
+            tools_in_catalog = sub_impl_tools + sub_mcp_tools
+            sub_llm_tools = [*self.tool_factory.get_catalog_tools(), think]
+
         rendered_sub_prompt = cast(
             str, render_templates(subagent_config.prompt, template_context or {})
         )
         return SubAgent(
-            name=subagent_config.name,
-            description=subagent_config.description,
+            config=subagent_config,
             prompt=rendered_sub_prompt,
             llm=sub_llm,
-            tools=sub_impl_tools + sub_mcp_tools + [think],
+            tools=sub_llm_tools,
             internal_tools=sub_internal_tools,
+            tools_in_catalog=tools_in_catalog,
         )
 
     async def create(
@@ -208,12 +226,20 @@ class GraphFactory:
         internal_module_map = self.tool_factory.get_internal_module_map()
         mcp_module_map = mcp_client.get_mcp_module_map()
 
+        tool_patterns = config.tools.patterns if config.tools else None
+        use_catalog = config.tools.use_catalog if config.tools else False
+
         impl_patterns, mcp_patterns, internal_patterns = self._parse_tool_references(
-            config.tools
+            tool_patterns
         )
 
-        tools = self._filter_tools(mcp_tool_dict, mcp_patterns, mcp_module_map)
-        tools += self._filter_tools(impl_tool_dict, impl_patterns, impl_module_map)
+        llm_tools = self._filter_tools(mcp_tool_dict, mcp_patterns, mcp_module_map)
+        llm_tools += self._filter_tools(impl_tool_dict, impl_patterns, impl_module_map)
+        tools_in_catalog = []
+        if use_catalog:
+            tools_in_catalog = llm_tools
+            llm_tools = self.tool_factory.get_catalog_tools()
+
         internal_tools = self._filter_tools(
             internal_tool_dict, internal_patterns, internal_module_map
         )
@@ -248,7 +274,7 @@ class GraphFactory:
 
         agent = self.agent_factory.create(
             name=config.name,
-            tools=tools,
+            tools=llm_tools,
             internal_tools=internal_tools,
             llm=llm,
             prompt=rendered_prompt,
@@ -257,6 +283,6 @@ class GraphFactory:
             checkpointer=checkpointer,
             subagents=resolved_subagents,
         )
-        # Store tools for cache access
-        agent._tools = tools + internal_tools  # type: ignore
+        agent._llm_tools = llm_tools + internal_tools  # type: ignore
+        agent._tools_in_catalog = tools_in_catalog  # type: ignore
         return agent

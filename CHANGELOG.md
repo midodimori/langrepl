@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.7.2 (2025-11-25)
+
+### Chores
+
+- Add version warning
+  ([`91c621e`](https://github.com/midodimori/langrepl/commit/91c621e3592704db93ba0fb36a23d88746997403))
+
+
 ## v1.7.1 (2025-11-25)
 
 ### Chores

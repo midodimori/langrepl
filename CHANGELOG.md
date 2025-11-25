@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.7.0 (2025-11-25)
+
+### Features
+
+- Add config versioning with automatic migration (#53)
+  ([#53](https://github.com/midodimori/langrepl/pull/53),
+  [`a1d7159`](https://github.com/midodimori/langrepl/commit/a1d715926fa97bc527b4bd1d653897ab28afd2d8))
+
+- Implement tool catalog system with config schema v2 (#54)
+  ([#54](https://github.com/midodimori/langrepl/pull/54),
+  [`98b835f`](https://github.com/midodimori/langrepl/commit/98b835ffac216050472a25c03f09b747d01f4e6c))
+
+
 ## v1.6.5 (2025-11-21)
 
 ### Bug Fixes

@@ -4,6 +4,7 @@ import importlib.metadata
 import importlib.resources
 from pathlib import Path
 
+import httpx
 import yaml
 
 
@@ -38,3 +39,32 @@ def get_latest_features() -> list[str]:
         return features[:max_display]
     except Exception:
         return []
+
+
+def check_for_updates() -> tuple[str, str] | None:
+    """Check PyPI for latest version and return upgrade message if newer version exists."""
+    try:
+        current_version = get_version()
+        if current_version == "unknown":
+            return None
+
+        # Fetch latest version from PyPI
+        response = httpx.get(
+            "https://pypi.org/pypi/langrepl/json", timeout=2.0, follow_redirects=True
+        )
+        if response.status_code != 200:
+            return None
+
+        latest_version = response.json()["info"]["version"]
+
+        # Compare versions using tuple comparison for semver
+        def parse_version(v: str) -> tuple[int, ...]:
+            return tuple(int(x) for x in v.split("."))
+
+        if parse_version(latest_version) > parse_version(current_version):
+            upgrade_command = "uv tool install langrepl --upgrade"
+            return latest_version, upgrade_command
+
+        return None
+    except Exception:
+        return None

@@ -55,6 +55,7 @@ class TokyoNightTheme(BaseTheme):
                 "primary": Style(color=c.light_blue_white),
                 "secondary": Style(color=c.muted_blue),
                 "muted": Style(color=c.blue_gray),
+                "muted.bold": Style(color=c.blue_gray, bold=True),
                 "disabled": Style(color=c.dark_gray),
                 # Accent styles
                 "accent": Style(color=c.bright_blue, bold=True),

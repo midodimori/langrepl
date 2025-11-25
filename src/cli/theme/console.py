@@ -23,6 +23,10 @@ class ThemedConsole:
         """Print error message."""
         self.console.print(f"[error]✗[/error] {content}")
 
+    def print_warning(self, content: str):
+        """Print warning message."""
+        self.console.print(f"[warning]⚠︎[/warning] {content}")
+
     def print_success(self, content: str):
         """Print success message."""
         self.console.print(f"[success]✓[/success] {content}")

@@ -12,6 +12,7 @@ from src.cli.theme import console, theme
 from src.cli.ui.prompt import InteractivePrompt
 from src.cli.ui.renderer import Renderer
 from src.core.logging import get_logger
+from src.utils.version import check_for_updates
 
 logger = get_logger(__name__)
 
@@ -62,6 +63,17 @@ class Session:
                 if show_welcome:
                     console.print("")
                     self.renderer.show_welcome(self.context)
+
+                    # Check for updates
+                    updates = check_for_updates()
+                    if updates:
+                        latest_version, upgrade_command = updates
+                        if latest_version and upgrade_command:
+                            console.print_warning(
+                                f"[muted]New version available ({latest_version}). Upgrade with: [muted.bold]uv tool install langrepl --upgrade[/muted.bold][/muted]"
+                            )
+                            console.print("")
+
                 await self._main_loop()
 
     async def _main_loop(self) -> None:

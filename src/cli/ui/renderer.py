@@ -21,6 +21,7 @@ from src.cli.core.context import Context
 from src.cli.theme import console
 from src.core.constants import UNKNOWN
 from src.core.settings import settings
+from src.utils.version import get_latest_features
 
 
 class _HTMLTagDetector(HTMLParser):
@@ -173,14 +174,32 @@ class Renderer:
 
     @staticmethod
     def show_welcome(context: Context) -> None:
-        """Display ASCII logo and session information."""
+        """Display ASCII logo with features in a responsive table."""
         logo = r"""
  |▔|__ _ _ _  __ _ _ _ ___ _ __|▔|
  | / _` | ' \/ _` | '_/ -_) '_ \ |
  |_\__,_|_||_\__, |_| \___| .__/_|
              |___/        |_|
 """
-        console.print(Text(logo, style="accent"))
+        features = get_latest_features()
+
+        # Build the features' list with header
+        features_lines = ["What's New:"]
+        for feature in features:
+            features_lines.append(f"• {feature}")
+
+        # Create responsive table
+        table = Table.grid(padding=(0, 2), expand=False)
+        table.add_column(style="accent", no_wrap=True)
+        table.add_column(ratio=1)
+
+        table.add_row(
+            Text(logo.strip("\n"), style="accent"),
+            Text("\n".join(features_lines), style="muted"),
+        )
+
+        console.print(table)
+        console.print("")
 
     @staticmethod
     def render_user_message(message: HumanMessage) -> None:

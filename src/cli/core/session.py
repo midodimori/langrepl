@@ -60,6 +60,7 @@ class Session:
                 self.graph = graph
                 status.stop()
                 if show_welcome:
+                    console.print("")
                     self.renderer.show_welcome(self.context)
                 await self._main_loop()
 

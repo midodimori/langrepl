@@ -21,6 +21,7 @@ from src.core.config import ApprovalMode
 from src.core.constants import CONFIG_HISTORY_FILE_NAME
 from src.core.settings import settings
 from src.utils.cost import calculate_context_percentage, format_cost, format_tokens
+from src.utils.version import get_version
 
 
 class InteractivePrompt:
@@ -246,13 +247,14 @@ class InteractivePrompt:
         return HTML(f"<placeholder>{agent_name}{usage_info}</placeholder>")
 
     def _get_bottom_toolbar(self) -> HTML:
-        """Generate bottom toolbar text with working directory and approval mode."""
+        """Generate bottom toolbar text with version, working directory and approval mode."""
         if self._show_quit_message:
             return HTML("<muted> Ctrl+C again to quit</muted>")
 
         mode_name = self.context.approval_mode.value
         terminal_width = os.get_terminal_size().columns if os.isatty(1) else 80
-        left_content = f" {self.context.working_dir}"
+        version = get_version()
+        left_content = f" v{version} | {self.context.working_dir}"
 
         # Build right content with bash mode if active
         right_parts = (

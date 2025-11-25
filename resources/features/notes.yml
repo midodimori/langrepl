@@ -1,0 +1,49 @@
+features_by_version:
+  "1.7.x":
+    - "Tool catalog system for reducing token usage"
+    - "Config versioning with automatic migration"
+
+  "1.6.x":
+    - "Bash mode via Ctrl-B for direct shell commands"
+    - "/hotkeys command via Ctrl-K"
+    - "Improved HTML rendering and indentation"
+
+  "1.5.x":
+    - "Token-by-token streaming with 3-line preview"
+    - "ZhipuAI streaming with thinking blocks"
+
+  "1.4.x":
+    - "Directory-based config (agents/, llms/)"
+    - "One-shot mode with -r flag"
+
+  "1.3.x":
+    - "Image support via @:image: and clipboard paste"
+    - "Untracked files in completion"
+
+  "1.2.x":
+    - "Model indicators [current]/[default] in /model"
+
+  "1.1.x":
+    - "Visual indicators: ⚙ for tools, ◆︎ for AI"
+    - "Ctrl-C to cancel streaming"
+    - "Tool call/result pairing in rendering"
+
+  "1.0.x":
+    - "LangChain v1.0 with context-based architecture"
+    - "AgentContext for runtime configuration"
+
+  "0.3.x":
+    - "@ reference completion for file paths"
+    - "Handles directory paths with spaces"
+
+  "0.2.x":
+    - "Model switching for subagents via /model"
+    - "/replay with checkpoint deletion"
+    - "Improved tool error handling"
+
+  "0.1.x":
+    - "ZhipuAI GLM support"
+    - "Agent switching with model sync"
+    - "MCP repair command for failed servers"
+
+max_display: 4

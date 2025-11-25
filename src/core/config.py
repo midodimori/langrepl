@@ -409,7 +409,23 @@ class CompressionConfig(BaseModel):
     )
 
 
-class AgentConfig(VersionedConfig):
+class ToolsConfig(BaseModel):
+    patterns: list[str] = Field(
+        default_factory=list, description="Tool reference patterns"
+    )
+    use_catalog: bool = Field(
+        default=False,
+        description="Use tool catalog to reduce token usage (wraps impl/mcp tools)",
+    )
+    output_max_tokens: int | None = Field(
+        default=None,
+        description="Maximum tokens per tool output. Larger outputs stored in virtual filesystem.",
+    )
+
+
+class BaseAgentConfig(VersionedConfig):
+    """Base configuration shared between agents and subagents."""
+
     version: str = Field(
         default=AGENT_CONFIG_VERSION, description="Config schema version"
     )
@@ -419,38 +435,181 @@ class AgentConfig(VersionedConfig):
         description="The prompt to use for the agent (single file path or list of file paths)",
     )
     llm: LLMConfig = Field(description="The LLM to use for the agent")
-    checkpointer: CheckpointerConfig | None = Field(
-        default=None,
-        description="The checkpointer configuration (optional for subagents)",
-    )
-    default: bool = Field(
-        default=False, description="Whether this is the default agent"
+    tools: ToolsConfig | None = Field(default=None, description="Tool configuration")
+    description: str = Field(
+        default="",
+        description="Description of the agent",
     )
     recursion_limit: int = Field(
         default=25, description="Maximum number of execution steps"
-    )
-    tools: list[str] | None = Field(default=None, description="Tool references")
-    description: str = Field(
-        default="",
-        description="Description of the agent (used for subagents in task tool)",
-    )
-    subagents: list["AgentConfig"] | None = Field(
-        default=None, description="List of resolved subagent configurations"
-    )
-    compression: CompressionConfig | None = Field(
-        default=None, description="Compression configuration for context management"
-    )
-    tool_output_max_tokens: int | None = Field(
-        default=None,
-        description="Maximum tokens per tool output. Larger outputs stored in virtual filesystem.",
     )
 
     @classmethod
     def get_latest_version(cls) -> str:
         return AGENT_CONFIG_VERSION
 
+    @classmethod
+    def migrate(cls, data: dict, from_version: str) -> dict:
+        """Migrate config data from older version."""
+        # Migrate 1.x -> 2.0.0: tools: list[str] -> tools: ToolsConfig
+        if pkg_version.parse(from_version) < pkg_version.parse("2.0.0"):
+            tool_output_max_tokens = data.pop("tool_output_max_tokens", None)
 
-class BatchAgentConfig(BaseModel):
+            if "tools" in data and isinstance(data["tools"], list):
+                data["tools"] = {
+                    "patterns": data["tools"],
+                    "use_catalog": False,
+                    "output_max_tokens": tool_output_max_tokens,
+                }
+            elif "tools" in data and isinstance(data["tools"], dict):
+                if (
+                    "output_max_tokens" not in data["tools"]
+                    and tool_output_max_tokens is not None
+                ):
+                    data["tools"]["output_max_tokens"] = tool_output_max_tokens
+            elif (
+                "tools" in data
+                and data["tools"] is None
+                and tool_output_max_tokens is not None
+            ):
+                data["tools"] = {
+                    "patterns": [],
+                    "use_catalog": False,
+                    "output_max_tokens": tool_output_max_tokens,
+                }
+            elif "tools" not in data and tool_output_max_tokens is not None:
+                data["tools"] = {
+                    "patterns": [],
+                    "use_catalog": False,
+                    "output_max_tokens": tool_output_max_tokens,
+                }
+        return data
+
+
+class SubAgentConfig(BaseAgentConfig):
+    """Configuration for subagents (no checkpointer, no default, no compression)."""
+
+
+class AgentConfig(BaseAgentConfig):
+    """Configuration for main agents."""
+
+    checkpointer: CheckpointerConfig | None = Field(
+        default=None,
+        description="The checkpointer configuration",
+    )
+    default: bool = Field(
+        default=False, description="Whether this is the default agent"
+    )
+    subagents: list[SubAgentConfig] | None = Field(
+        default=None, description="List of resolved subagent configurations"
+    )
+    compression: CompressionConfig | None = Field(
+        default=None, description="Compression configuration for context management"
+    )
+
+
+class BaseBatchConfig(BaseModel):
+    """Base class for batch configurations with shared functionality."""
+
+    @staticmethod
+    async def _load_prompt_content(base_path: Path, prompt: str | list[str]) -> str:
+        """Load and concatenate prompt content from one or more files.
+
+        Args:
+            base_path: Base directory containing prompt files
+            prompt: Single file path or list of file paths relative to base_path
+
+        Returns:
+            Concatenated prompt content with double newline separators
+        """
+        if isinstance(prompt, str):
+            prompt_path = base_path / prompt
+            if prompt_path.exists() and prompt_path.is_file():
+                return await asyncio.to_thread(prompt_path.read_text)
+            return prompt
+
+        contents = []
+        for prompt_file in prompt:
+            prompt_path = base_path / prompt_file
+            if prompt_path.exists() and prompt_path.is_file():
+                content = await asyncio.to_thread(prompt_path.read_text)
+                contents.append(content)
+            else:
+                contents.append(prompt_file)
+
+        return "\n\n".join(contents)
+
+
+class BatchSubAgentConfig(BaseBatchConfig):
+    """Batch configuration for subagents."""
+
+    subagents: list[SubAgentConfig] = Field(description="The subagents in this batch")
+
+    @property
+    def subagent_names(self) -> list[str]:
+        return [subagent.name for subagent in self.subagents]
+
+    def get_subagent_config(self, subagent_name: str) -> SubAgentConfig | None:
+        """Get subagent config by name."""
+        return next((s for s in self.subagents if s.name == subagent_name), None)
+
+    @classmethod
+    async def from_yaml(
+        cls,
+        file_path: Path | None = None,
+        dir_path: Path | None = None,
+        batch_llm_config: BatchLLMConfig | None = None,
+    ) -> "BatchSubAgentConfig":
+        """Load subagent configurations from YAML files."""
+        subagents = []
+        prompt_base_path = None
+
+        if file_path and file_path.exists():
+            subagents.extend(
+                await _load_single_file(file_path, "agents", SubAgentConfig)
+            )
+            prompt_base_path = file_path.parent
+
+        if dir_path and dir_path.exists():
+            subagents.extend(
+                await _load_dir_items(
+                    dir_path,
+                    key="name",
+                    config_type="SubAgent",
+                    config_class=SubAgentConfig,
+                )
+            )
+            prompt_base_path = dir_path.parent
+
+        if not subagents:
+            raise ValueError("No subagents found in YAML file")
+
+        _validate_no_duplicates(subagents, key="name", config_type="SubAgent")
+
+        validated_subagents: list[SubAgentConfig] = []
+        for subagent in subagents:
+            if prompt_content := subagent.get("prompt", ""):
+                subagent["prompt"] = await cls._load_prompt_content(
+                    prompt_base_path or Path(), prompt_content
+                )
+
+            if batch_llm_config and isinstance(subagent.get("llm"), str):
+                llm_name = subagent["llm"]
+                resolved_llm = batch_llm_config.get_llm_config(llm_name)
+                if not resolved_llm:
+                    raise ValueError(
+                        f"LLM '{llm_name}' not found. Available: {batch_llm_config.llm_names}"
+                    )
+                subagent["llm"] = resolved_llm
+
+            validated_subagents.append(SubAgentConfig.model_validate(subagent))
+
+        return cls.model_validate({"subagents": validated_subagents})
+
+
+class BatchAgentConfig(BaseBatchConfig):
+    """Batch configuration for main agents."""
+
     agents: list[AgentConfig] = Field(description="The agents to use for the graph")
 
     @property
@@ -458,35 +617,36 @@ class BatchAgentConfig(BaseModel):
         return [agent.name for agent in self.agents]
 
     def get_agent_config(self, agent_name: str | None) -> AgentConfig | None:
-        """Get agent config by name, or default agent if name is None."""
+        """Get main agent config by name, or default agent if name is None."""
         if agent_name is None:
             return self.get_default_agent()
-        return next((agent for agent in self.agents if agent.name == agent_name), None)
+        return next((a for a in self.agents if a.name == agent_name), None)
 
     def get_default_agent(self) -> AgentConfig | None:
         """Get the default agent.
 
         Returns:
-            The agent marked as default, or the first agent if none marked, or None if no agents.
+            The agent marked as default, or the first agent if none marked, or None.
         """
+        if not self.agents:
+            return None
         default = next((a for a in self.agents if a.default), None)
-        if default:
-            return default
-        return self.agents[0] if self.agents else None
+        return default or self.agents[0]
 
     @model_validator(mode="after")
     def validate_default_agent(self) -> "BatchAgentConfig":
         """Ensure exactly one default agent when there's only one agent, and at most one default otherwise."""
+        if not self.agents:
+            return self
+
         defaults = [a for a in self.agents if a.default]
 
-        # If only one agent exists, it must be marked as default
         if len(self.agents) == 1 and not self.agents[0].default:
             raise ValueError(
                 f"Agent '{self.agents[0].name}' must be marked as default=true "
                 "when it is the only agent in the configuration."
             )
 
-        # Ensure at most one agent is marked as default
         if len(defaults) > 1:
             raise ValueError(
                 f"Multiple agents marked as default: {[a.name for a in defaults]}. "
@@ -553,8 +713,9 @@ class BatchAgentConfig(BaseModel):
         dir_path: Path | None = None,
         batch_llm_config: BatchLLMConfig | None = None,
         batch_checkpointer_config: BatchCheckpointerConfig | None = None,
-        batch_subagent_config: "BatchAgentConfig | None" = None,
+        batch_subagent_config: BatchSubAgentConfig | None = None,
     ) -> "BatchAgentConfig":
+        """Load agent configurations from YAML files."""
         agents = []
         prompt_base_path = None
 
@@ -578,6 +739,7 @@ class BatchAgentConfig(BaseModel):
 
         _validate_no_duplicates(agents, key="name", config_type="Agent")
 
+        validated_agents: list[AgentConfig] = []
         for agent in agents:
             if prompt_content := agent.get("prompt", ""):
                 agent["prompt"] = await cls._load_prompt_content(
@@ -608,12 +770,12 @@ class BatchAgentConfig(BaseModel):
                 subagent_names = agent["subagents"]
                 resolved_subagents = []
                 for subagent_name in subagent_names:
-                    resolved_subagent = batch_subagent_config.get_agent_config(
+                    resolved_subagent = batch_subagent_config.get_subagent_config(
                         subagent_name
                     )
                     if not resolved_subagent:
                         raise ValueError(
-                            f"Subagent '{subagent_name}' not found. Available: {batch_subagent_config.agent_names}"
+                            f"For agent '{agent["name"]}': subagent '{subagent_name}' not found. Available: {batch_subagent_config.subagent_names}"
                         )
                     resolved_subagents.append(resolved_subagent)
                 agent["subagents"] = resolved_subagents
@@ -634,39 +796,9 @@ class BatchAgentConfig(BaseModel):
                 elif compression.get("compression_llm") is None:
                     compression["compression_llm"] = agent["llm"]
 
-        return cls.model_validate({"agents": agents})
+            validated_agents.append(AgentConfig.model_validate(agent))
 
-    @staticmethod
-    async def _load_prompt_content(base_path: Path, prompt: str | list[str]) -> str:
-        """Load and concatenate prompt content from one or more files.
-
-        Args:
-            base_path: Base directory containing prompt files
-            prompt: Single file path or list of file paths relative to base_path
-
-        Returns:
-            Concatenated prompt content with double newline separators
-        """
-        # Handle single prompt path
-        if isinstance(prompt, str):
-            prompt_path = base_path / prompt
-            if prompt_path.exists() and prompt_path.is_file():
-                return await asyncio.to_thread(prompt_path.read_text)
-            return prompt
-
-        # Handle list of prompt paths
-        contents = []
-        for prompt_file in prompt:
-            prompt_path = base_path / prompt_file
-            if prompt_path.exists() and prompt_path.is_file():
-                content = await asyncio.to_thread(prompt_path.read_text)
-                contents.append(content)
-            else:
-                # If path doesn't exist, treat as literal string
-                contents.append(prompt_file)
-
-        # Join with double newlines for clear separation
-        return "\n\n".join(contents)
+        return cls.model_validate({"agents": validated_agents})
 
 
 class ToolApprovalRule(BaseModel):

@@ -11,6 +11,7 @@ from src.core.config import (
     BatchAgentConfig,
     BatchCheckpointerConfig,
     BatchLLMConfig,
+    BatchSubAgentConfig,
     CheckpointerConfig,
     CheckpointerProvider,
     LLMConfig,
@@ -405,8 +406,8 @@ class TestInitializer:
     async def test_load_subagents_config_returns_batch_config(
         self, config_dir, initializer
     ):
-        """Test that load_subagents_config returns BatchAgentConfig."""
+        """Test that load_subagents_config returns BatchSubAgentConfig."""
         result = await initializer.load_subagents_config(config_dir)
 
-        assert isinstance(result, BatchAgentConfig)
-        assert hasattr(result, "agents")
+        assert isinstance(result, BatchSubAgentConfig)
+        assert hasattr(result, "subagents")

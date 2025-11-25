@@ -9,18 +9,27 @@ from src.agents import StateSchemaType
 from src.agents.context import AgentContext
 from src.agents.react_agent import create_react_agent
 from src.agents.state import AgentState
+from src.core.config import SubAgentConfig
 from src.utils.render import create_tool_message
 
 
 class SubAgent(BaseModel):
-    name: str
-    description: str
+    config: SubAgentConfig
     prompt: str
     llm: BaseChatModel
     tools: list[BaseTool]
     internal_tools: list[BaseTool]
+    tools_in_catalog: list[BaseTool] = []
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @property
+    def name(self) -> str:
+        return self.config.name
+
+    @property
+    def description(self) -> str:
+        return self.config.description
 
 
 def create_task_tool(
@@ -36,6 +45,10 @@ def create_task_tool(
             state_schema=state_schema,
         )
         for subagent in subagents
+    }
+
+    subagent_catalogs = {
+        subagent.name: subagent.tools_in_catalog for subagent in subagents
     }
 
     descriptions = "\n".join(
@@ -60,9 +73,21 @@ def create_task_tool(
                 f"the only allowed types are {allowed}"
             )
         subagent = agents[subagent_type]
+        subagent_obj = next(sa for sa in subagents if sa.name == subagent_type)
         state = runtime.state.copy()
         state["messages"] = [HumanMessage(content=description)]
-        result = await subagent.ainvoke(state)
+
+        context = None
+        if runtime.context:
+            context = runtime.context.model_copy(deep=True)
+            if subagent_type in subagent_catalogs:
+                context.tool_catalog = subagent_catalogs[subagent_type]
+            if subagent_obj.config.tools:
+                context.tool_output_max_tokens = (
+                    subagent_obj.config.tools.output_max_tokens
+                )
+
+        result = await subagent.ainvoke(state, context=context)
 
         last_message: AnyMessage = result["messages"][-1]
         final_message = create_tool_message(

@@ -1,5 +1,6 @@
 from langchain_core.tools import BaseTool
 
+from src.tools.catalog import CATALOG_TOOLS
 from src.tools.impl.file_system import FILE_SYSTEM_TOOLS
 from src.tools.impl.grep_search import GREP_SEARCH_TOOLS
 from src.tools.impl.terminal import TERMINAL_TOOLS
@@ -12,6 +13,7 @@ class ToolFactory:
     def __init__(self):
         self.impl_tools = []
         self.internal_tools = []
+        self.catalog_tools = list(CATALOG_TOOLS)
         self._impl_module_map: dict[str, str] = {}
         self._internal_module_map: dict[str, str] = {}
 
@@ -41,6 +43,9 @@ class ToolFactory:
 
     def get_internal_tools(self) -> list[BaseTool]:
         return self.internal_tools
+
+    def get_catalog_tools(self) -> list[BaseTool]:
+        return self.catalog_tools
 
     def get_impl_module_map(self) -> dict[str, str]:
         return self._impl_module_map

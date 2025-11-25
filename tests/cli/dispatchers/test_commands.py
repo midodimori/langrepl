@@ -164,7 +164,7 @@ class TestCommandDispatcher:
         dispatcher = CommandDispatcher(mock_session)
         dispatcher.tools_handler = mock_tools_handler
         mock_tools_handler.handle = AsyncMock()
-        mock_initializer_patch.cached_tools = ["tool1", "tool2"]
+        mock_initializer_patch.cached_llm_tools = ["tool1", "tool2"]
 
         await dispatcher.cmd_tools([])
 

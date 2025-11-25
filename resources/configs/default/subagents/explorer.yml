@@ -1,4 +1,4 @@
-version: 1.0.0
+version: 2.0.0
 name: explorer
 description: "Specialized agent for exploring codebases to understand structure, find implementations, and analyze code patterns. Use this when you need to find where functionality is implemented, understand code organization, or explore how components work."
 prompt:
@@ -6,8 +6,10 @@ prompt:
   - prompts/subagents/explorer.md
   - prompts/suffixes/environments.md
 llm: haiku-4.5
-tool_output_max_tokens: 10000
 tools:
-  - impl:*:*
-  - internal:*:*
-  - mcp:*:*
+  patterns:
+    - impl:*:*
+    - internal:*:*
+    - mcp:*:*
+  use_catalog: false
+  output_max_tokens: 10000

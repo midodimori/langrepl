@@ -23,6 +23,7 @@ from src.core.config import (
     BatchAgentConfig,
     BatchCheckpointerConfig,
     BatchLLMConfig,
+    BatchSubAgentConfig,
     CheckpointerConfig,
     LLMConfig,
     MCPConfig,
@@ -65,7 +66,8 @@ class Initializer:
             llm_factory=self.llm_factory,
         )
         # Cached tools
-        self.cached_tools: list[BaseTool] = []
+        self.cached_llm_tools: list[BaseTool] = []
+        self.cached_tools_in_catalog: list[BaseTool] = []
 
     @staticmethod
     async def _ensure_config_dir(working_dir: Path):
@@ -134,7 +136,7 @@ class Initializer:
             dir_path=Path(working_dir) / CONFIG_CHECKPOINTERS_DIR,
         )
 
-    async def load_subagents_config(self, working_dir: Path) -> BatchAgentConfig:
+    async def load_subagents_config(self, working_dir: Path) -> BatchSubAgentConfig:
         """Load subagents configuration."""
         await self._ensure_config_dir(working_dir)
 
@@ -144,7 +146,7 @@ class Initializer:
         ).exists():
             llm_config = await self.load_llms_config(working_dir)
 
-        return await BatchAgentConfig.from_yaml(
+        return await BatchSubAgentConfig.from_yaml(
             file_path=Path(working_dir) / CONFIG_SUBAGENTS_FILE_NAME,
             dir_path=Path(working_dir) / CONFIG_SUBAGENTS_DIR,
             batch_llm_config=llm_config,
@@ -187,10 +189,9 @@ class Initializer:
         agent_config = agent_configs.get_agent_config(agent)
         if agent_config:
             return agent_config
-        else:
-            raise ValueError(
-                f"Agent '{agent}' not found. Available: {agent_configs.agent_names}"
-            )
+        raise ValueError(
+            f"Agent '{agent}' not found. Available: {agent_configs.agent_names}"
+        )
 
     @staticmethod
     async def load_mcp_config(working_dir: Path) -> MCPConfig:
@@ -315,7 +316,10 @@ class Initializer:
                     template_context=template_context,
                 )
 
-            self.cached_tools = getattr(compiled_graph, "_tools", [])
+            self.cached_llm_tools = getattr(compiled_graph, "_llm_tools", [])
+            self.cached_tools_in_catalog = getattr(
+                compiled_graph, "_tools_in_catalog", []
+            )
             yield compiled_graph
 
     async def get_threads(self, agent: str, working_dir: Path) -> list[dict]:

@@ -219,9 +219,12 @@ class TestContextCreate:
         )
 
         assert context.recursion_limit == mock_agent_config.recursion_limit
-        assert (
-            context.tool_output_max_tokens == mock_agent_config.tool_output_max_tokens
+        expected_tool_output_max_tokens = (
+            mock_agent_config.tools.output_max_tokens
+            if mock_agent_config.tools
+            else None
         )
+        assert context.tool_output_max_tokens == expected_tool_output_max_tokens
 
     @pytest.mark.asyncio
     @patch("src.cli.core.context.initializer")

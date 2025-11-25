@@ -1,4 +1,4 @@
-version: 1.0.0
+version: 2.0.0
 name: claude-style-coder
 description: "An agent that mimics Claude Code's behavior for software development tasks"
 prompt:
@@ -9,11 +9,13 @@ llm: haiku-4.5
 checkpointer: sqlite
 default: false
 recursion_limit: 40
-tool_output_max_tokens: 10000
 tools:
-  - impl:*:*
-  - internal:*:*
-  - mcp:*:*
+  patterns:
+    - impl:*:*
+    - internal:*:*
+    - mcp:*:*
+  use_catalog: false
+  output_max_tokens: 10000
 subagents:
   - general-purpose
   - explorer

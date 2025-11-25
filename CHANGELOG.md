@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.7.1 (2025-11-25)
+
+### Chores
+
+- Add version and feature notes
+  ([`ff31f6d`](https://github.com/midodimori/langrepl/commit/ff31f6d249c21c7f426761bd5e8ab2aea55e538e))
+
+
 ## v1.7.0 (2025-11-25)
 
 ### Features

@@ -1,6 +1,6 @@
 [project]
 name = "langrepl"
-version = "1.7.3"
+version = "1.7.4"
 description = "Interactive terminal CLI for building and running LLM agents. Built with LangChain, LangGraph, Prompt Toolkit, and Rich."
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.13"

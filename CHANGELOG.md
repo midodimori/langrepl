@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.7.4 (2025-11-26)
+
+### Bug Fixes
+
+- Add repair json (#56) ([#56](https://github.com/midodimori/langrepl/pull/56),
+  [`6fa1cee`](https://github.com/midodimori/langrepl/commit/6fa1ceec1d4b9739974f6fe17d058939901b0ec2))
+
+
 ## v1.7.3 (2025-11-26)
 
 ### Bug Fixes

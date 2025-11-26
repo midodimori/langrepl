@@ -96,6 +96,47 @@ async def test_edit_file(create_test_graph, agent_context, temp_dir: Path):
 
 
 @pytest.mark.asyncio
+async def test_edit_file_with_json_string(
+    create_test_graph, agent_context, temp_dir: Path
+):
+    """Test editing a file when edits are passed as JSON string (LLM bug workaround)."""
+    # Setup: create initial file
+    (temp_dir / "edit_json.txt").write_text("line 1\nline 2\nline 3")
+
+    app = create_test_graph([edit_file])
+
+    # Simulate LLM passing edits as JSON string instead of list
+    initial_state = {
+        "messages": [
+            HumanMessage(content="Edit file"),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "call_1",
+                        "name": "edit_file",
+                        "args": {
+                            "file_path": "edit_json.txt",
+                            "edits": '[{"old_content": "line 2", "new_content": "modified line 2"}]',
+                        },
+                    }
+                ],
+            ),
+        ],
+    }
+
+    await app.ainvoke(
+        initial_state,
+        config={"configurable": {"thread_id": "test"}},
+        context=agent_context,
+    )
+
+    # Verify edit was applied even though edits was a JSON string
+    content = (temp_dir / "edit_json.txt").read_text()
+    assert content == "line 1\nmodified line 2\nline 3"
+
+
+@pytest.mark.asyncio
 async def test_create_and_delete_dir(create_test_graph, agent_context, temp_dir: Path):
     """Test creating and deleting directories through the graph."""
     app = create_test_graph([create_dir, delete_dir])

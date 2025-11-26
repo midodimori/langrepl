@@ -1,4 +1,5 @@
 import shutil
+from typing import Annotated
 
 from langchain.tools import ToolRuntime, tool
 from langchain_core.messages import ToolMessage
@@ -9,6 +10,7 @@ from src.agents.context import AgentContext
 from src.cli.theme import theme
 from src.utils.path import resolve_path
 from src.utils.render import format_diff_rich, generate_diff
+from src.utils.validators import json_safe_tool
 
 
 class EditOperation(BaseModel):
@@ -185,19 +187,20 @@ write_file.metadata = {
 }
 
 
-@tool
+@json_safe_tool
 async def edit_file(
-    file_path: str,
-    edits: list[EditOperation],
+    file_path: Annotated[
+        str,
+        Field(
+            description="Path to the file to edit (relative to working directory or absolute)"
+        ),
+    ],
+    edits: Annotated[
+        list[EditOperation], Field(description="Edit operations to apply sequentially")
+    ],
     runtime: ToolRuntime[AgentContext],
 ) -> ToolMessage:
-    """
-    Use this tool to edit a file by replacing old content with new content.
-
-    Args:
-        file_path: Path to the file to edit (relative to working directory or absolute)
-        edits: Edit operations to apply sequentially
-    """
+    """Use this tool to edit a file by replacing old content with new content."""
     context: AgentContext = runtime.context
     working_dir = str(context.working_dir)
     path = resolve_path(working_dir, file_path)
@@ -309,17 +312,14 @@ move_file.metadata = {
 }
 
 
-@tool
+@json_safe_tool
 async def move_multiple_files(
-    moves: list[MoveOperation],
+    moves: Annotated[
+        list[MoveOperation], Field(description="List of move operations to apply")
+    ],
     runtime: ToolRuntime[AgentContext],
 ) -> str:
-    """
-    Use this tool to move multiple files in one operation.
-
-    Args:
-        moves: List of move operations to apply
-    """
+    """Use this tool to move multiple files in one operation."""
     context: AgentContext = runtime.context
     working_dir = str(context.working_dir)
     results = []

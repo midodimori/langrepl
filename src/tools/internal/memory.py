@@ -4,6 +4,8 @@ This module provides tools for managing a virtual filesystem stored in agent sta
 enabling context offloading and information persistence across agent interactions.
 """
 
+from typing import Annotated
+
 from langchain.tools import ToolRuntime, tool
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import ToolException
@@ -12,7 +14,9 @@ from pydantic import BaseModel, Field
 
 from src.agents import AgentContext
 from src.agents.state import AgentState
+from src.utils.matching import find_progressive_match, format_match_error
 from src.utils.render import format_diff_rich, generate_diff
+from src.utils.validators import json_safe_tool
 
 
 class EditOperation(BaseModel):
@@ -148,20 +152,19 @@ async def write_memory_file(
 write_memory_file.metadata = {"approval_config": {"always_approve": True}}
 
 
-@tool()
+@json_safe_tool
 async def edit_memory_file(
-    file_path: str,
-    edits: list[EditOperation],
+    file_path: Annotated[str, Field(description="Path to the memory file to edit")],
+    edits: Annotated[
+        list[EditOperation],
+        Field(description="List of edit operations to apply sequentially"),
+    ],
     runtime: ToolRuntime[AgentContext, AgentState],
 ) -> Command:
     """Edit a memory file by replacing old content with new content.
 
-    This tool makes targeted edits to existing memory files using exact string matching.
-    Always read the memory file first before editing to ensure you have the exact content to match.
-
-    Args:
-        file_path: Path to the memory file to edit
-        edits: List of edit operations to apply sequentially
+    This tool makes targeted edits to existing memory files.
+    Always read the memory file first before editing to ensure you understand the current content structure.
     """
     files = (runtime.state.get("files", {}) or {}).copy()
     if file_path not in files:
@@ -169,13 +172,19 @@ async def edit_memory_file(
 
     current_content = files[file_path]
 
-    for edit in edits:
-        if edit.old_content not in current_content:
-            raise ToolException(f"Old content not found in file: {file_path}")
+    matches = []
+    for i, edit in enumerate(edits):
+        found, start, end = find_progressive_match(current_content, edit.old_content)
+        if not found:
+            error_msg = format_match_error(
+                file_path, i + 1, edit.old_content, current_content
+            )
+            raise ToolException(error_msg)
+        matches.append((start, end, edit.new_content))
 
     updated_content = current_content
-    for edit in edits:
-        updated_content = updated_content.replace(edit.old_content, edit.new_content)
+    for start, end, new_content in sorted(matches, reverse=True):
+        updated_content = updated_content[:start] + new_content + updated_content[end:]
 
     files[file_path] = updated_content
 

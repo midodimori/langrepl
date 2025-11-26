@@ -3,9 +3,9 @@
 from pathlib import Path
 
 import pytest
-from langchain_core.messages import AIMessage, HumanMessage
 
 from src.tools.impl.grep_search import OutputMode, grep_search
+from tests.fixtures.tool_helpers import make_tool_call, run_tool
 
 
 @pytest.mark.asyncio
@@ -17,31 +17,13 @@ async def test_grep_search_content(create_test_graph, agent_context, temp_dir: P
 
     app = create_test_graph([grep_search])
 
-    initial_state = {
-        "messages": [
-            HumanMessage(content="Search for hello"),
-            AIMessage(
-                content="",
-                tool_calls=[
-                    {
-                        "id": "call_1",
-                        "name": "grep_search",
-                        "args": {
-                            "search_query": "hello",
-                            "directory_path": ".",
-                            "output_mode": OutputMode.CONTENT,
-                        },
-                    }
-                ],
-            ),
-        ],
-    }
-
-    result = await app.ainvoke(
-        initial_state,
-        config={"configurable": {"thread_id": "test"}},
-        context=agent_context,
+    state = make_tool_call(
+        "grep_search",
+        search_query="hello",
+        directory_path=".",
+        output_mode=OutputMode.CONTENT,
     )
+    result = await run_tool(app, state, agent_context)
 
     # Check that search results are in messages
     tool_messages = [m for m in result["messages"] if m.type == "tool"]
@@ -58,31 +40,13 @@ async def test_grep_search_files(create_test_graph, agent_context, temp_dir: Pat
 
     app = create_test_graph([grep_search])
 
-    initial_state = {
-        "messages": [
-            HumanMessage(content="Search for files"),
-            AIMessage(
-                content="",
-                tool_calls=[
-                    {
-                        "id": "call_1",
-                        "name": "grep_search",
-                        "args": {
-                            "search_query": "hello",
-                            "directory_path": ".",
-                            "output_mode": OutputMode.FILES,
-                        },
-                    }
-                ],
-            ),
-        ],
-    }
-
-    result = await app.ainvoke(
-        initial_state,
-        config={"configurable": {"thread_id": "test"}},
-        context=agent_context,
+    state = make_tool_call(
+        "grep_search",
+        search_query="hello",
+        directory_path=".",
+        output_mode=OutputMode.FILES,
     )
+    result = await run_tool(app, state, agent_context)
 
     # Check that filename results are in messages
     tool_messages = [m for m in result["messages"] if m.type == "tool"]
@@ -99,31 +63,13 @@ async def test_grep_search_both(create_test_graph, agent_context, temp_dir: Path
 
     app = create_test_graph([grep_search])
 
-    initial_state = {
-        "messages": [
-            HumanMessage(content="Search for hello"),
-            AIMessage(
-                content="",
-                tool_calls=[
-                    {
-                        "id": "call_1",
-                        "name": "grep_search",
-                        "args": {
-                            "search_query": "hello",
-                            "directory_path": ".",
-                            "output_mode": OutputMode.BOTH,
-                        },
-                    }
-                ],
-            ),
-        ],
-    }
-
-    result = await app.ainvoke(
-        initial_state,
-        config={"configurable": {"thread_id": "test"}},
-        context=agent_context,
+    state = make_tool_call(
+        "grep_search",
+        search_query="hello",
+        directory_path=".",
+        output_mode=OutputMode.BOTH,
     )
+    result = await run_tool(app, state, agent_context)
 
     # Check that both content and filename results are in messages
     tool_messages = [m for m in result["messages"] if m.type == "tool"]
@@ -141,31 +87,13 @@ async def test_grep_search_no_matches(create_test_graph, agent_context, temp_dir
 
     app = create_test_graph([grep_search])
 
-    initial_state = {
-        "messages": [
-            HumanMessage(content="Search for nonexistent"),
-            AIMessage(
-                content="",
-                tool_calls=[
-                    {
-                        "id": "call_1",
-                        "name": "grep_search",
-                        "args": {
-                            "search_query": "nonexistent_string_xyz",
-                            "directory_path": ".",
-                            "output_mode": OutputMode.BOTH,
-                        },
-                    }
-                ],
-            ),
-        ],
-    }
-
-    result = await app.ainvoke(
-        initial_state,
-        config={"configurable": {"thread_id": "test"}},
-        context=agent_context,
+    state = make_tool_call(
+        "grep_search",
+        search_query="nonexistent_string_xyz",
+        directory_path=".",
+        output_mode=OutputMode.BOTH,
     )
+    result = await run_tool(app, state, agent_context)
 
     # Check that no results message is returned
     tool_messages = [m for m in result["messages"] if m.type == "tool"]
@@ -184,31 +112,13 @@ async def test_grep_search_special_characters(
     app = create_test_graph([grep_search])
 
     # Test with potentially malicious input containing shell metacharacters
-    initial_state = {
-        "messages": [
-            HumanMessage(content="Search with special chars"),
-            AIMessage(
-                content="",
-                tool_calls=[
-                    {
-                        "id": "call_1",
-                        "name": "grep_search",
-                        "args": {
-                            "search_query": "test'; echo 'injected",
-                            "directory_path": ".",
-                            "output_mode": OutputMode.FILES,
-                        },
-                    }
-                ],
-            ),
-        ],
-    }
-
-    result = await app.ainvoke(
-        initial_state,
-        config={"configurable": {"thread_id": "test"}},
-        context=agent_context,
+    state = make_tool_call(
+        "grep_search",
+        search_query="test'; echo 'injected",
+        directory_path=".",
+        output_mode=OutputMode.FILES,
     )
+    result = await run_tool(app, state, agent_context)
 
     # Should complete without executing injected command
     tool_messages = [m for m in result["messages"] if m.type == "tool"]

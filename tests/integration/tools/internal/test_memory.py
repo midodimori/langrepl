@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-from langchain_core.messages import AIMessage, HumanMessage
 
 from src.tools.internal.memory import (
     edit_memory_file,
@@ -11,6 +10,7 @@ from src.tools.internal.memory import (
     read_memory_file,
     write_memory_file,
 )
+from tests.fixtures.tool_helpers import make_tool_call, run_tool
 
 
 @pytest.mark.asyncio
@@ -21,35 +21,14 @@ async def test_memory_file_workflow(create_test_graph, temp_dir: Path):
     )
 
     # Write memory file
-    initial_state = {
-        "messages": [
-            HumanMessage(content="Write memory file"),
-            AIMessage(
-                content="",
-                tool_calls=[
-                    {
-                        "id": "call_1",
-                        "name": "write_memory_file",
-                        "args": {
-                            "file_path": "notes.txt",
-                            "content": "My notes\nLine 2",
-                        },
-                    }
-                ],
-            ),
-        ],
-        "files": {},
-    }
-
-    result = await app.ainvoke(
-        initial_state,
-        config={
-            "configurable": {
-                "thread_id": "test",
-                "working_dir": str(temp_dir),
-                "approval_mode": "aggressive",
-            }
-        },
+    state = make_tool_call(
+        "write_memory_file",
+        file_path="notes.txt",
+        content="My notes\nLine 2",
+    )
+    state["files"] = {}
+    result = await run_tool(
+        app, state, working_dir=str(temp_dir), approval_mode="aggressive"
     )
 
     # Verify memory file was written to state
@@ -63,55 +42,29 @@ async def test_memory_file_list(create_test_graph, temp_dir: Path):
     app = create_test_graph([write_memory_file, list_memory_files])
 
     # First write some files
-    initial_state = {
-        "messages": [
-            HumanMessage(content="Setup"),
-            AIMessage(
-                content="",
-                tool_calls=[
-                    {
-                        "id": "call_1",
-                        "name": "write_memory_file",
-                        "args": {"file_path": "file1.txt", "content": "Content 1"},
-                    }
-                ],
-            ),
-        ],
-        "files": {},
-    }
-
-    result = await app.ainvoke(
-        initial_state,
-        config={
-            "configurable": {
-                "thread_id": "test1",
-                "working_dir": str(temp_dir),
-                "approval_mode": "aggressive",
-            }
-        },
+    state = make_tool_call(
+        "write_memory_file", file_path="file1.txt", content="Content 1"
+    )
+    state["files"] = {}
+    result = await run_tool(
+        app,
+        state,
+        thread_id="test1",
+        working_dir=str(temp_dir),
+        approval_mode="aggressive",
     )
 
     # Now list files
-    list_state = {
-        "messages": result["messages"]
-        + [
-            AIMessage(
-                content="",
-                tool_calls=[{"id": "call_2", "name": "list_memory_files", "args": {}}],
-            )
-        ],
-        "files": result["files"],
-    }
+    list_state = make_tool_call("list_memory_files", call_id="call_2")
+    list_state["messages"] = result["messages"] + list_state["messages"][1:]
+    list_state["files"] = result["files"]
 
-    list_result = await app.ainvoke(
+    list_result = await run_tool(
+        app,
         list_state,
-        config={
-            "configurable": {
-                "thread_id": "test1",
-                "working_dir": str(temp_dir),
-                "approval_mode": "aggressive",
-            }
-        },
+        thread_id="test1",
+        working_dir=str(temp_dir),
+        approval_mode="aggressive",
     )
 
     # Check list output
@@ -125,32 +78,10 @@ async def test_read_nonexistent_memory_file(create_test_graph, temp_dir: Path):
     """Test reading a non-existent memory file."""
     app = create_test_graph([read_memory_file])
 
-    initial_state = {
-        "messages": [
-            HumanMessage(content="Read nonexistent file"),
-            AIMessage(
-                content="",
-                tool_calls=[
-                    {
-                        "id": "call_1",
-                        "name": "read_memory_file",
-                        "args": {"file_path": "nonexistent.txt"},
-                    }
-                ],
-            ),
-        ],
-        "files": {},
-    }
-
-    result = await app.ainvoke(
-        initial_state,
-        config={
-            "configurable": {
-                "thread_id": "test",
-                "working_dir": str(temp_dir),
-                "approval_mode": "aggressive",
-            }
-        },
+    state = make_tool_call("read_memory_file", file_path="nonexistent.txt")
+    state["files"] = {}
+    result = await run_tool(
+        app, state, working_dir=str(temp_dir), approval_mode="aggressive"
     )
 
     # Check that error message is returned

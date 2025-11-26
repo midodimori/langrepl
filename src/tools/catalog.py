@@ -6,7 +6,7 @@ from langchain.tools import ToolRuntime, tool
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import BaseTool, ToolException
 from langgraph.types import Command
-from pydantic import create_model
+from pydantic import Field, create_model
 
 from src.agents.context import AgentContext
 
@@ -18,11 +18,31 @@ def _get_tool_schema(tool: BaseTool) -> dict:
     elif isinstance(args_schema, dict):
         parameters = args_schema
     else:
-        fields_to_include: dict[str, Any] = {
-            name: (field.annotation, field.default if not field.is_required() else ...)
-            for name, field in args_schema.model_fields.items()
-            if name != "runtime"
-        }
+        fields_to_include: dict[str, Any] = {}
+        for name, field in args_schema.model_fields.items():
+            if name == "runtime":
+                continue
+
+            # Preserve Field metadata (description, default_factory, etc.)
+            if field.default_factory:
+                field_obj = Field(
+                    default_factory=field.default_factory,
+                    description=field.description,
+                    title=field.title,
+                )
+            elif not field.is_required():
+                field_obj = Field(
+                    default=field.default,
+                    description=field.description,
+                    title=field.title,
+                )
+            else:
+                field_obj = Field(
+                    description=field.description,
+                    title=field.title,
+                )
+            fields_to_include[name] = (field.annotation, field_obj)
+
         user_schema = create_model("UserSchema", **fields_to_include)
         parameters = user_schema.model_json_schema()
 

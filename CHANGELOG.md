@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.7.3 (2025-11-26)
+
+### Bug Fixes
+
+- Handle JSON string serialization in tool parameters (#55)
+  ([#55](https://github.com/midodimori/langrepl/pull/55),
+  [`4d3de33`](https://github.com/midodimori/langrepl/commit/4d3de3331a4ad05ce6683b152c58a6c2499d56cc))
+
+
 ## v1.7.2 (2025-11-25)
 
 ### Chores

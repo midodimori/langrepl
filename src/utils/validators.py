@@ -5,6 +5,7 @@ import json
 from collections.abc import Callable
 from typing import Annotated, Any, get_args, get_origin
 
+from json_repair import repair_json
 from langchain.tools import tool
 from pydantic import BaseModel, ConfigDict, Field, create_model, field_validator
 from pydantic.fields import FieldInfo
@@ -14,19 +15,26 @@ def json_list_parser(model_cls: type[BaseModel]):
     """Parse JSON strings into list of models (handles LLM serialization bugs)."""
 
     def validator(v: Any) -> Any:
-        if isinstance(v, str):
-            try:
-                parsed = json.loads(v)
-            except (json.JSONDecodeError, ValueError) as e:
-                raise ValueError(f"Failed to parse JSON: {e}") from e
+        if not isinstance(v, str):
+            return v
 
-            if not isinstance(parsed, list):
+        try:
+            parsed = json.loads(v)
+        except (json.JSONDecodeError, ValueError) as e:
+            try:
+                parsed = json.loads(repair_json(v))
+            except Exception:
                 raise ValueError(
-                    f"Expected JSON array for {model_cls.__name__}, "
-                    f"got {type(parsed).__name__}: {parsed}"
-                )
-            return [model_cls.model_validate(item) for item in parsed]
-        return v
+                    f"Failed to parse JSON (auto-repair failed): {e}"
+                ) from e
+
+        if not isinstance(parsed, list):
+            raise TypeError(
+                f"Expected JSON array for {model_cls.__name__}, "
+                f"got {type(parsed).__name__}: {parsed}"
+            )
+
+        return [model_cls.model_validate(item) for item in parsed]
 
     return validator
 

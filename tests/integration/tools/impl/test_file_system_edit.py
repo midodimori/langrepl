@@ -396,3 +396,79 @@ async def test_repeated_content_first_match(
 
     await run_tool(app, state, agent_context)
     assert (temp_dir / "repeat.txt").read_text() == "XXX bar foo"
+
+
+@pytest.mark.asyncio
+async def test_edit_file_json_string_trailing_newline(
+    create_test_graph, agent_context, temp_dir: Path
+):
+    """Test JSON string with trailing newline (LLM bug)."""
+    (temp_dir / "newline.txt").write_text("line 1\nline 2\nline 3")
+
+    app = create_test_graph([edit_file])
+
+    state = make_tool_call(
+        "edit_file",
+        file_path="newline.txt",
+        edits='[{"old_content": "line 2", "new_content": "modified"}]\n',
+    )
+    await run_tool(app, state, agent_context)
+
+    assert (temp_dir / "newline.txt").read_text() == "line 1\nmodified\nline 3"
+
+
+@pytest.mark.asyncio
+async def test_edit_file_json_string_with_whitespace(
+    create_test_graph, agent_context, temp_dir: Path
+):
+    """Test JSON string with leading/trailing whitespace."""
+    (temp_dir / "whitespace.txt").write_text("foo bar baz")
+
+    app = create_test_graph([edit_file])
+
+    state = make_tool_call(
+        "edit_file",
+        file_path="whitespace.txt",
+        edits='  [{"old_content": "bar", "new_content": "qux"}]  \n\t',
+    )
+    await run_tool(app, state, agent_context)
+
+    assert (temp_dir / "whitespace.txt").read_text() == "foo qux baz"
+
+
+@pytest.mark.asyncio
+async def test_edit_file_json_string_trailing_comma(
+    create_test_graph, agent_context, temp_dir: Path
+):
+    """Test json-repair fixes trailing comma."""
+    (temp_dir / "comma.txt").write_text("hello world")
+
+    app = create_test_graph([edit_file])
+
+    state = make_tool_call(
+        "edit_file",
+        file_path="comma.txt",
+        edits='[{"old_content": "world", "new_content": "universe",}]',
+    )
+    await run_tool(app, state, agent_context)
+
+    assert (temp_dir / "comma.txt").read_text() == "hello universe"
+
+
+@pytest.mark.asyncio
+async def test_edit_file_json_string_missing_quote(
+    create_test_graph, agent_context, temp_dir: Path
+):
+    """Test json-repair fixes missing closing quote."""
+    (temp_dir / "quote.txt").write_text("alpha beta gamma")
+
+    app = create_test_graph([edit_file])
+
+    state = make_tool_call(
+        "edit_file",
+        file_path="quote.txt",
+        edits='[{"old_content": "beta", "new_content": "omega}]',
+    )
+    await run_tool(app, state, agent_context)
+
+    assert (temp_dir / "quote.txt").read_text() == "alpha omega gamma"

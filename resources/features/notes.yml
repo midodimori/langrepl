@@ -2,6 +2,7 @@ features_by_version:
   "1.7.x":
     - "Tool catalog system for reducing token usage"
     - "Config versioning with automatic migration"
+    - "Auto-repair malformed JSON tool calls"
 
   "1.6.x":
     - "Bash mode via Ctrl-B for direct shell commands"

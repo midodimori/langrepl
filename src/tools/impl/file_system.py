@@ -2,6 +2,7 @@ import json
 import shutil
 from typing import Annotated
 
+from json_repair import repair_json
 from langchain.tools import ToolRuntime, tool
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import ToolException
@@ -60,7 +61,10 @@ def _render_diff_args(args: dict, config: dict) -> str:
         try:
             edits = json.loads(edits)
         except (json.JSONDecodeError, ValueError):
-            pass
+            try:
+                edits = json.loads(repair_json(edits))
+            except Exception:
+                return f"[{theme.error_color}]Cannot parse edits (malformed JSON)[/{theme.error_color}]"
 
     if edits and isinstance(edits, list):
         all_diff_sections = []

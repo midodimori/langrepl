@@ -1,3 +1,4 @@
+import json
 import shutil
 from typing import Annotated
 
@@ -8,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from src.agents.context import AgentContext
 from src.cli.theme import theme
+from src.utils.matching import find_progressive_match, format_match_error
 from src.utils.path import resolve_path
 from src.utils.render import format_diff_rich, generate_diff
 from src.utils.validators import json_safe_tool
@@ -54,7 +56,13 @@ def _render_diff_args(args: dict, config: dict) -> str:
             pass
 
     edits = args.get("edits")
-    if edits:
+    if isinstance(edits, str):
+        try:
+            edits = json.loads(edits)
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    if edits and isinstance(edits, list):
         all_diff_sections = []
         for edit in edits:
             old_content = _get_attr(edit, "old_content")
@@ -211,13 +219,31 @@ async def edit_file(
     with open(path, encoding="utf-8") as f:
         current_content = f.read()
 
-    for edit in edits:
-        if edit.old_content not in current_content:
-            raise ToolException(f"Old content not found in file: {path}")
+    matches = []
+    for i, edit in enumerate(edits):
+        found, start, end = find_progressive_match(current_content, edit.old_content)
+        if not found:
+            error_msg = format_match_error(
+                str(path), i + 1, edit.old_content, current_content
+            )
+            raise ToolException(error_msg)
+        matches.append((i, start, end, edit.new_content))
+
+    # Check for overlapping ranges
+    sorted_matches = sorted(matches, key=lambda m: m[1])  # Sort by start position
+    for i in range(len(sorted_matches) - 1):
+        curr_idx, curr_start, curr_end, _ = sorted_matches[i]
+        next_idx, next_start, next_end, _ = sorted_matches[i + 1]
+        if next_start < curr_end:
+            raise ToolException(
+                f"Overlapping edits detected in {path}: "
+                f"edit #{curr_idx + 1} [{curr_start}:{curr_end}] overlaps with "
+                f"edit #{next_idx + 1} [{next_start}:{next_end}]"
+            )
 
     updated_content = current_content
-    for edit in edits:
-        updated_content = updated_content.replace(edit.old_content, edit.new_content)
+    for _, start, end, new_content in sorted(matches, key=lambda m: m[1], reverse=True):
+        updated_content = updated_content[:start] + new_content + updated_content[end:]
 
     with open(path, "w", encoding="utf-8") as f:
         f.write(updated_content)

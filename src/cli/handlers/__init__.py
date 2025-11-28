@@ -9,6 +9,7 @@ from src.cli.handlers.memory import MemoryHandler
 from src.cli.handlers.models import ModelHandler
 from src.cli.handlers.replay import ReplayHandler
 from src.cli.handlers.resume import ResumeHandler
+from src.cli.handlers.skills import SkillsHandler
 from src.cli.handlers.tools import ToolsHandler
 
 __all__ = [
@@ -21,5 +22,6 @@ __all__ = [
     "ModelHandler",
     "ReplayHandler",
     "ResumeHandler",
+    "SkillsHandler",
     "ToolsHandler",
 ]

@@ -14,6 +14,7 @@ from src.cli.handlers import (
     ModelHandler,
     ReplayHandler,
     ResumeHandler,
+    SkillsHandler,
     ToolsHandler,
 )
 from src.cli.theme import console
@@ -32,6 +33,7 @@ class CommandDispatcher:
         self.mcp_handler = MCPHandler(session)
         self.memory_handler = MemoryHandler(session)
         self.tools_handler = ToolsHandler(session)
+        self.skills_handler = SkillsHandler(session)
         self.replay_handler = ReplayHandler(session)
         self.compression_handler = CompressionHandler(session)
         self.graph_handler = GraphHandler(session)
@@ -44,6 +46,7 @@ class CommandDispatcher:
             "/agents": self.cmd_agents,
             "/model": self.cmd_model,
             "/tools": self.cmd_tools,
+            "/skills": self.cmd_skills,
             "/mcp": self.cmd_mcp,
             "/memory": self.cmd_memory,
             "/graph": self.cmd_graph,
@@ -101,6 +104,10 @@ class CommandDispatcher:
     async def cmd_tools(self, args: list[str]) -> None:
         """Handle tools command with interactive selector."""
         await self.tools_handler.handle(initializer.cached_llm_tools)
+
+    async def cmd_skills(self, args: list[str]) -> None:
+        """Handle skills command with interactive selector."""
+        await self.skills_handler.handle(initializer.cached_agent_skills)
 
     async def cmd_mcp(self, args: list[str]) -> None:
         """Handle MCP management command."""

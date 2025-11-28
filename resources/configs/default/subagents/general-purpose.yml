@@ -1,4 +1,4 @@
-version: 2.0.0
+version: 2.1.0
 name: general-purpose
 description: "General-purpose agent for complex, multi-step tasks that require research, analysis, and synthesis. Use this when you need to handle tasks that involve multiple searches, gathering information from various sources, or autonomous multi-step workflows."
 prompt:
@@ -11,3 +11,4 @@ tools:
     - mcp:*:*
   use_catalog: false
   output_max_tokens: 10000
+skills: {}

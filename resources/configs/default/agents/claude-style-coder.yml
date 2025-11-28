@@ -1,4 +1,4 @@
-version: 2.0.0
+version: 2.1.0
 name: claude-style-coder
 description: "An agent that mimics Claude Code's behavior for software development tasks"
 prompt:
@@ -19,6 +19,10 @@ tools:
 subagents:
   - general-purpose
   - explorer
+skills:
+  patterns:
+    - "*:*"
+  use_catalog: false
 compression:
   auto_compress_enabled: true
   auto_compress_threshold: 0.8

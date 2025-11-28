@@ -423,6 +423,16 @@ class ToolsConfig(BaseModel):
     )
 
 
+class SkillsConfig(BaseModel):
+    patterns: list[str] = Field(
+        default_factory=list, description="Skill reference patterns"
+    )
+    use_catalog: bool = Field(
+        default=False,
+        description="Use skill catalog to reduce token usage",
+    )
+
+
 class BaseAgentConfig(VersionedConfig):
     """Base configuration shared between agents and subagents."""
 
@@ -436,6 +446,9 @@ class BaseAgentConfig(VersionedConfig):
     )
     llm: LLMConfig = Field(description="The LLM to use for the agent")
     tools: ToolsConfig | None = Field(default=None, description="Tool configuration")
+    skills: SkillsConfig | None = Field(
+        default=None, description="Skills configuration"
+    )
     description: str = Field(
         default="",
         description="Description of the agent",
@@ -451,8 +464,10 @@ class BaseAgentConfig(VersionedConfig):
     @classmethod
     def migrate(cls, data: dict, from_version: str) -> dict:
         """Migrate config data from older version."""
+        from_ver = pkg_version.parse(from_version)
+
         # Migrate 1.x -> 2.0.0: tools: list[str] -> tools: ToolsConfig
-        if pkg_version.parse(from_version) < pkg_version.parse("2.0.0"):
+        if from_ver < pkg_version.parse("2.0.0"):
             tool_output_max_tokens = data.pop("tool_output_max_tokens", None)
 
             if "tools" in data and isinstance(data["tools"], list):
@@ -483,6 +498,15 @@ class BaseAgentConfig(VersionedConfig):
                     "use_catalog": False,
                     "output_max_tokens": tool_output_max_tokens,
                 }
+
+        # Migrate 2.0.0 -> 2.1.0: add skills: SkillsConfig
+        if from_ver < pkg_version.parse("2.1.0"):
+            if "skills" not in data:
+                data["skills"] = {
+                    "patterns": [],
+                    "use_catalog": False,
+                }
+
         return data
 
 

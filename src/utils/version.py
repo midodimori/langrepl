@@ -24,7 +24,7 @@ def get_version() -> str:
 
 
 def get_latest_features() -> list[str]:
-    """Get latest features for current minor version."""
+    """Get latest features across versions up to max_display limit."""
     try:
         features_yaml = (
             importlib.resources.files("resources")
@@ -33,10 +33,31 @@ def get_latest_features() -> list[str]:
         )
         data = yaml.safe_load(features_yaml)
         version = get_version()
-        minor_version = ".".join(version.split(".")[:2]) + ".x"
-        features = data.get("features_by_version", {}).get(minor_version, [])
+        current_minor = ".".join(version.split(".")[:2])
         max_display = data.get("max_display", 4)
-        return features[:max_display]
+
+        all_features = []
+        features_by_version = data.get("features_by_version", {})
+
+        # Extract version numbers and sort descending
+        version_keys = sorted(
+            features_by_version.keys(),
+            key=lambda v: tuple(int(x) for x in v.replace(".x", ".0").split(".")),
+            reverse=True,
+        )
+
+        # Start from current version and collect features
+        for version_key in version_keys:
+            version_minor = version_key.replace(".x", "")
+            if tuple(int(x) for x in version_minor.split(".")) <= tuple(
+                int(x) for x in current_minor.split(".")
+            ):
+                version_features = features_by_version[version_key]
+                all_features.extend(version_features)
+                if len(all_features) >= max_display:
+                    break
+
+        return all_features[:max_display]
     except Exception:
         return []
 

@@ -3,13 +3,14 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AnyMessage, HumanMessage
 from langchain_core.tools import BaseTool, ToolException
 from langgraph.types import Command
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.agents import StateSchemaType
 from src.agents.context import AgentContext
 from src.agents.react_agent import create_react_agent
 from src.agents.state import AgentState
 from src.core.config import SubAgentConfig
+from src.skills.factory import Skill
 from src.utils.render import create_tool_message
 
 
@@ -19,7 +20,8 @@ class SubAgent(BaseModel):
     llm: BaseChatModel
     tools: list[BaseTool]
     internal_tools: list[BaseTool]
-    tools_in_catalog: list[BaseTool] = []
+    tools_in_catalog: list[BaseTool] = Field(default_factory=list)
+    skills: list[Skill] = Field(default_factory=list)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -50,6 +52,8 @@ def create_task_tool(
     subagent_catalogs = {
         subagent.name: subagent.tools_in_catalog for subagent in subagents
     }
+
+    subagent_skill_catalogs = {subagent.name: subagent.skills for subagent in subagents}
 
     descriptions = "\n".join(
         f"- {subagent.name}: {subagent.description}" for subagent in subagents
@@ -82,6 +86,8 @@ def create_task_tool(
             context = runtime.context.model_copy(deep=True)
             if subagent_type in subagent_catalogs:
                 context.tool_catalog = subagent_catalogs[subagent_type]
+            if subagent_type in subagent_skill_catalogs:
+                context.skill_catalog = subagent_skill_catalogs[subagent_type]
             if subagent_obj.config.tools:
                 context.tool_output_max_tokens = (
                     subagent_obj.config.tools.output_max_tokens

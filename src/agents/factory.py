@@ -10,7 +10,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from src.agents import ContextSchemaType, StateSchemaType
 from src.agents.deep_agent import create_deep_agent
-from src.core.config import AgentConfig, LLMConfig, MCPConfig, SubAgentConfig
+from src.core.config import AgentConfig, LLMConfig, SubAgentConfig
 from src.core.constants import (
     TOOL_CATEGORY_IMPL,
     TOOL_CATEGORY_INTERNAL,
@@ -18,6 +18,7 @@ from src.core.constants import (
 )
 from src.core.logging import get_logger
 from src.llms.factory import LLMFactory
+from src.mcp.client import MCPClient
 from src.mcp.factory import MCPFactory
 from src.skills.factory import Skill, SkillFactory
 from src.tools.catalog.skills import get_skill
@@ -291,7 +292,7 @@ class GraphFactory:
         config: AgentConfig,
         state_schema: StateSchemaType,
         context_schema: ContextSchemaType | None,
-        mcp_config: MCPConfig,
+        mcp_client: MCPClient,
         checkpointer: BaseCheckpointSaver | None = None,
         llm_config: LLMConfig | None = None,
         skills_dir: Path | None = None,
@@ -302,7 +303,7 @@ class GraphFactory:
             config: Agent configuration including checkpointer settings
             state_schema: State schema for the graph
             context_schema: Optional context schema for the graph
-            mcp_config: MCP configuration for tool loading
+            mcp_client: MCP client for tool loading
             checkpointer: Optional checkpoint saver
             llm_config: Optional LLM configuration to override the one in config
             skills_dir: Optional path to skills directory
@@ -310,7 +311,6 @@ class GraphFactory:
         Returns:
             CompiledStateGraph: The state graph
         """
-        mcp_client = await self.mcp_factory.create(mcp_config)
 
         all_impl_tools = self.tool_factory.get_impl_tools()
         all_internal_tools = self.tool_factory.get_internal_tools()

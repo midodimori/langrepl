@@ -49,3 +49,19 @@ class TestMCPFactory:
         client2 = await factory.create(mock_mcp_config)
 
         assert client1 is client2
+
+    @pytest.mark.asyncio
+    async def test_cache_invalidated_on_config_change(
+        self, mock_mcp_config, mock_mcp_server_config
+    ):
+        mock_mcp_server_config.enabled = True
+        mock_mcp_server_config.headers = {"Authorization": "token1"}
+        mock_mcp_config.servers = {"test_server": mock_mcp_server_config}
+
+        factory = MCPFactory()
+        client1 = await factory.create(mock_mcp_config)
+
+        mock_mcp_config.servers["test_server"].headers = {"Authorization": "token2"}
+        client2 = await factory.create(mock_mcp_config)
+
+        assert client1 is not client2

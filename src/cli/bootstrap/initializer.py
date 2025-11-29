@@ -36,6 +36,7 @@ from src.core.constants import (
     CONFIG_DIR_NAME,
     CONFIG_LLMS_DIR,
     CONFIG_LLMS_FILE_NAME,
+    CONFIG_MCP_CACHE_DIR,
     CONFIG_MCP_FILE_NAME,
     CONFIG_MEMORY_FILE_NAME,
     CONFIG_SKILLS_DIR,
@@ -294,6 +295,11 @@ class Initializer:
                 str(working_dir / CONFIG_CHECKPOINTS_URL_FILE_NAME),
             )
 
+        with timer("Create MCP client"):
+            mcp_client = await self.mcp_factory.create(
+                mcp_config, working_dir / CONFIG_MCP_CACHE_DIR
+            )
+
         async with checkpointer_ctx as checkpointer:
             with timer("Create and compile graph"):
                 compiled_graph = await self.graph_factory.create(
@@ -301,7 +307,7 @@ class Initializer:
                     state_schema=AgentState,
                     context_schema=AgentContext,
                     checkpointer=checkpointer,
-                    mcp_config=mcp_config,
+                    mcp_client=mcp_client,
                     llm_config=llm_config,
                     skills_dir=working_dir / CONFIG_SKILLS_DIR,
                 )

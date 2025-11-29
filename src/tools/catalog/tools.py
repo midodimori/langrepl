@@ -1,56 +1,13 @@
 import json
 import re
-from typing import Any
 
 from langchain.tools import ToolRuntime, tool
 from langchain_core.messages import ToolMessage
-from langchain_core.tools import BaseTool, ToolException
+from langchain_core.tools import ToolException
 from langgraph.types import Command
-from pydantic import Field, create_model
 
 from src.agents.context import AgentContext
-
-
-def _get_tool_schema(tool: BaseTool) -> dict:
-    args_schema = tool.args_schema
-    if not args_schema:
-        parameters = {"type": "object", "properties": {}}
-    elif isinstance(args_schema, dict):
-        parameters = args_schema
-    else:
-        fields_to_include: dict[str, Any] = {}
-        for name, field in args_schema.model_fields.items():
-            if name == "runtime":
-                continue
-
-            # Preserve Field metadata (description, default_factory, etc.)
-            if field.default_factory:
-                field_obj = Field(
-                    default_factory=field.default_factory,
-                    description=field.description,
-                    title=field.title,
-                )
-            elif not field.is_required():
-                field_obj = Field(
-                    default=field.default,
-                    description=field.description,
-                    title=field.title,
-                )
-            else:
-                field_obj = Field(
-                    description=field.description,
-                    title=field.title,
-                )
-            fields_to_include[name] = (field.annotation, field_obj)
-
-        user_schema = create_model("UserSchema", **fields_to_include)
-        parameters = user_schema.model_json_schema()
-
-    return {
-        "name": tool.name,
-        "description": tool.description,
-        "parameters": parameters,
-    }
+from src.tools.schema import ToolSchema
 
 
 @tool
@@ -143,7 +100,7 @@ async def get_tool(tool_name: str, runtime: ToolRuntime[AgentContext]) -> str:
     if not tool:
         raise ToolException(f"Tool '{tool_name}' not found")
 
-    schema = _get_tool_schema(tool)
+    schema = ToolSchema.from_tool(tool).model_dump()
 
     return json.dumps(schema, indent=2)
 

@@ -13,6 +13,7 @@ from src.middleware import (
     CompressToolOutputMiddleware,
     ReturnDirectMiddleware,
     TokenCostMiddleware,
+    create_dynamic_prompt_middleware,
 )
 from src.tools.internal.memory import read_memory_file
 
@@ -28,13 +29,17 @@ def create_react_agent(
     name: str | None = None,
 ):
     """Create a ReAct agent using LangChain's create_agent."""
-    # Check if read_memory_file is available for compression
     has_read_memory = read_memory_file in tools
 
     # Middleware execution order:
     # - before_* hooks: First to last
     # - after_* hooks: Last to first (reverse)
     # - wrap_* hooks: Nested (first middleware wraps all others)
+
+    # Group 0: Dynamic prompt - Render template with runtime context
+    dynamic_prompt: list[AgentMiddleware[Any, Any]] = [
+        create_dynamic_prompt_middleware(prompt),
+    ]
 
     # Group 1: afterModel - After each model response
     after_model: list[AgentMiddleware[Any, Any]] = [
@@ -57,13 +62,12 @@ def create_react_agent(
 
     # Combine all middleware
     middleware: list[AgentMiddleware[Any, Any]] = (
-        after_model + wrap_tool_call + before_model
+        dynamic_prompt + after_model + wrap_tool_call + before_model
     )
 
     return create_agent(
         model=model,
         tools=tools,
-        system_prompt=prompt,
         state_schema=state_schema,
         context_schema=context_schema,
         checkpointer=checkpointer,

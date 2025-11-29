@@ -1,7 +1,7 @@
 import asyncio
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
@@ -23,7 +23,6 @@ from src.skills.factory import Skill, SkillFactory
 from src.tools.catalog.skills import get_skill
 from src.tools.factory import ToolFactory
 from src.tools.subagents.task import SubAgent, think
-from src.utils.render import render_templates
 
 logger = get_logger(__name__)
 
@@ -234,7 +233,6 @@ class GraphFactory:
         internal_module_map: dict[str, str],
         skill_dict: dict[str, Skill],
         skill_module_map: dict[str, str],
-        template_context: dict[str, Any] | None,
     ) -> SubAgent:
         sub_llm = self.llm_factory.create(subagent_config.llm)
         sub_tool_patterns = (
@@ -272,20 +270,15 @@ class GraphFactory:
         sub_skills = self._filter_skills(
             skill_dict, sub_skill_patterns_parsed, skill_module_map
         )
-        sub_prompt_str = cast(str, subagent_config.prompt)
+        sub_prompt_template = cast(str, subagent_config.prompt)
 
-        # Render templates first to avoid conflicts with skill descriptions containing braces
-        rendered_sub_prompt = cast(
-            str, render_templates(sub_prompt_str, template_context or {})
-        )
-
-        # Append skills text after rendering to prevent Jinja2 template errors
         if sub_skills:
             sub_llm_tools.extend(self._get_skill_tools(use_skill_catalog))
-            rendered_sub_prompt = f"{rendered_sub_prompt}{self._build_skills_text(sub_skills, use_skill_catalog)}"
+            sub_prompt_template = f"{sub_prompt_template}{self._build_skills_text(sub_skills, use_skill_catalog)}"
+
         return SubAgent(
             config=subagent_config,
-            prompt=rendered_sub_prompt,
+            prompt=sub_prompt_template,
             llm=sub_llm,
             tools=sub_llm_tools,
             internal_tools=sub_internal_tools,
@@ -301,7 +294,6 @@ class GraphFactory:
         mcp_config: MCPConfig,
         checkpointer: BaseCheckpointSaver | None = None,
         llm_config: LLMConfig | None = None,
-        template_context: dict[str, Any] | None = None,
         skills_dir: Path | None = None,
     ) -> CompiledStateGraph:
         """Create a compiled graph with optional checkpointer support.
@@ -313,7 +305,6 @@ class GraphFactory:
             mcp_config: MCP configuration for tool loading
             checkpointer: Optional checkpoint saver
             llm_config: Optional LLM configuration to override the one in config
-            template_context: Optional template variables for prompt rendering
             skills_dir: Optional path to skills directory
 
         Returns:
@@ -381,24 +372,19 @@ class GraphFactory:
                     internal_module_map,
                     skill_dict,
                     skill_module_map,
-                    template_context,
                 )
                 for sc in config.subagents
             ]
             resolved_subagents = await asyncio.gather(*tasks)
 
-        # Render main agent prompt with template context
-        prompt_str = cast(str, config.prompt)
-        template_context = template_context or {}
-        if template_context.get("user_memory") and "{user_memory}" not in prompt_str:
-            prompt_str = f"{prompt_str}\n\n{{user_memory}}"
-
-        rendered_prompt = cast(str, render_templates(prompt_str, template_context))
+        prompt_template = cast(str, config.prompt)
+        if "{user_memory}" not in prompt_template:
+            prompt_template = f"{prompt_template}\n\n{{user_memory}}"
 
         if skills:
             llm_tools.extend(self._get_skill_tools(use_skill_catalog))
-            rendered_prompt = (
-                f"{rendered_prompt}{self._build_skills_text(skills, use_skill_catalog)}"
+            prompt_template = (
+                f"{prompt_template}{self._build_skills_text(skills, use_skill_catalog)}"
             )
 
         agent = self.agent_factory.create(
@@ -406,7 +392,7 @@ class GraphFactory:
             tools=llm_tools,
             internal_tools=internal_tools,
             llm=llm,
-            prompt=rendered_prompt,
+            prompt=prompt_template,
             state_schema=state_schema,
             context_schema=context_schema,
             checkpointer=checkpointer,

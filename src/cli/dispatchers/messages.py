@@ -2,6 +2,8 @@
 
 import asyncio
 import hashlib
+import platform
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -55,9 +57,15 @@ class MessageDispatcher:
                 additional_kwargs={"reference_mapping": reference_mapping},
             )
             ctx = self.session.context
+            now = datetime.now(timezone.utc).astimezone()
+            user_memory = await initializer.load_user_memory(ctx.working_dir)
             agent_context = AgentContext(
                 approval_mode=ctx.approval_mode,
                 working_dir=ctx.working_dir,
+                platform=platform.system(),
+                os_version=platform.version(),
+                current_date_time_zoned=now.strftime("%Y-%m-%d %H:%M:%S %Z"),
+                user_memory=user_memory,
                 tool_catalog=initializer.cached_tools_in_catalog,
                 skill_catalog=initializer.cached_agent_skills,
                 input_cost_per_mtok=ctx.input_cost_per_mtok,

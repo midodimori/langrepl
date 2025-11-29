@@ -1,9 +1,7 @@
 import asyncio
-import platform
 import shutil
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
 from importlib.resources import files
 from pathlib import Path
 from typing import cast
@@ -55,7 +53,6 @@ class Initializer:
     """Centralized service"""
 
     def __init__(self):
-        # Core factories
         self.agent_factory = AgentFactory()
         self.tool_factory = ToolFactory()
         self.skill_factory = SkillFactory()
@@ -69,7 +66,6 @@ class Initializer:
             llm_factory=self.llm_factory,
             skill_factory=self.skill_factory,
         )
-        # Cached tools and skills
         self.cached_llm_tools: list[BaseTool] = []
         self.cached_tools_in_catalog: list[BaseTool] = []
         self.cached_agent_skills: list[Skill] = []
@@ -292,17 +288,6 @@ class Initializer:
                 )
                 llm_config = None
 
-        # Generate environment context for prompt template rendering
-        now = datetime.now(timezone.utc).astimezone()
-        user_memory = await self.load_user_memory(working_dir)
-        template_context = {
-            "working_dir": str(working_dir),
-            "platform": platform.system(),
-            "os_version": platform.version(),
-            "current_date_time_zoned": now.strftime("%Y-%m-%d %H:%M:%S %Z"),
-            "user_memory": user_memory,
-        }
-
         with timer("Create checkpointer"):
             checkpointer_ctx = self.checkpointer_factory.create(
                 cast(CheckpointerConfig, agent_config.checkpointer),
@@ -318,7 +303,6 @@ class Initializer:
                     checkpointer=checkpointer,
                     mcp_config=mcp_config,
                     llm_config=llm_config,
-                    template_context=template_context,
                     skills_dir=working_dir / CONFIG_SKILLS_DIR,
                 )
 

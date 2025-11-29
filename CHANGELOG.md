@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.8.1 (2025-11-29)
+
+### Chores
+
+- Improve skills instructions
+  ([`c26b054`](https://github.com/midodimori/langrepl/commit/c26b054f9e829cf0afbe647aba13d60f912389d1))
+
+
 ## v1.8.0 (2025-11-29)
 
 ### Features

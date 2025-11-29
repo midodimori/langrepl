@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.8.0 (2025-11-29)
+
+### Features
+
+- Add Anthropic skill system (#57) ([#57](https://github.com/midodimori/langrepl/pull/57),
+  [`6c85a0a`](https://github.com/midodimori/langrepl/commit/6c85a0aff5c8af8a24c52814a5768c3032f6e236))
+
+
 ## v1.7.4 (2025-11-26)
 
 ### Bug Fixes

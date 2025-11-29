@@ -201,16 +201,26 @@ class GraphFactory:
 
         return [skill_dict[key] for key in matched_keys]
 
-    @staticmethod
-    def _build_skills_text(skills: list[Skill]) -> str:
-        """Build skills documentation text for prompt injection."""
-        if not skills:
-            return ""
+    def _get_skill_tools(self, use_catalog: bool) -> list[BaseTool]:
+        """Get skill-related tools based on catalog mode."""
+        if use_catalog:
+            return self.tool_factory.get_skill_catalog_tools()
+        return [get_skill]
 
+    @staticmethod
+    def _build_skills_text(skills: list[Skill], use_catalog: bool = False) -> str:
+        """Build skills documentation text for prompt injection."""
         text = "\n\n# Available Skills\n\n"
-        text += "When users ask you to perform tasks, check if any of the available skills below can help complete the task more effectively. Skills provide specialized capabilities and domain knowledge.\n\n"
-        for skill in skills:
-            text += f"- **{skill.category}/{skill.name}**: {skill.description}\n"
+
+        if use_catalog:
+            text += "Skills are available to help with many types of tasks including coding, debugging, testing, documentation, analysis, and more. "
+            text += "Use `fetch_skills` to search for relevant skills or to browse all available skills. "
+            text += "Check for applicable skills at the start of tasks - they can significantly improve your responses.\n"
+        else:
+            text += "When users ask you to perform tasks, check if any of the available skills below can help complete the task more effectively.\n\n"
+            for skill in skills:
+                text += f"- **{skill.category}/{skill.name}**: {skill.description}\n"
+
         return text
 
     def _create_subagent(
@@ -263,11 +273,6 @@ class GraphFactory:
             skill_dict, sub_skill_patterns_parsed, skill_module_map
         )
         sub_prompt_str = cast(str, subagent_config.prompt)
-        if sub_skills:
-            if use_skill_catalog:
-                sub_llm_tools.extend(self.tool_factory.get_skill_catalog_tools())
-            else:
-                sub_llm_tools.append(get_skill)
 
         # Render templates first to avoid conflicts with skill descriptions containing braces
         rendered_sub_prompt = cast(
@@ -275,10 +280,9 @@ class GraphFactory:
         )
 
         # Append skills text after rendering to prevent Jinja2 template errors
-        if sub_skills and not use_skill_catalog:
-            rendered_sub_prompt = (
-                f"{rendered_sub_prompt}{self._build_skills_text(sub_skills)}"
-            )
+        if sub_skills:
+            sub_llm_tools.extend(self._get_skill_tools(use_skill_catalog))
+            rendered_sub_prompt = f"{rendered_sub_prompt}{self._build_skills_text(sub_skills, use_skill_catalog)}"
         return SubAgent(
             config=subagent_config,
             prompt=rendered_sub_prompt,
@@ -389,16 +393,13 @@ class GraphFactory:
         if template_context.get("user_memory") and "{user_memory}" not in prompt_str:
             prompt_str = f"{prompt_str}\n\n{{user_memory}}"
 
-        if skills:
-            if use_skill_catalog:
-                llm_tools.extend(self.tool_factory.get_skill_catalog_tools())
-            else:
-                llm_tools.append(get_skill)
-
         rendered_prompt = cast(str, render_templates(prompt_str, template_context))
 
-        if skills and not use_skill_catalog:
-            rendered_prompt = f"{rendered_prompt}{self._build_skills_text(skills)}"
+        if skills:
+            llm_tools.extend(self._get_skill_tools(use_skill_catalog))
+            rendered_prompt = (
+                f"{rendered_prompt}{self._build_skills_text(skills, use_skill_catalog)}"
+            )
 
         agent = self.agent_factory.create(
             name=config.name,

@@ -40,12 +40,14 @@ from src.core.constants import (
     CONFIG_LLMS_FILE_NAME,
     CONFIG_MCP_FILE_NAME,
     CONFIG_MEMORY_FILE_NAME,
+    CONFIG_SKILLS_DIR,
     CONFIG_SUBAGENTS_DIR,
     CONFIG_SUBAGENTS_FILE_NAME,
 )
 from src.core.settings import settings
 from src.llms.factory import LLMFactory
 from src.mcp.factory import MCPFactory
+from src.skills.factory import Skill, SkillFactory
 from src.tools.factory import ToolFactory
 
 
@@ -56,6 +58,7 @@ class Initializer:
         # Core factories
         self.agent_factory = AgentFactory()
         self.tool_factory = ToolFactory()
+        self.skill_factory = SkillFactory()
         self.llm_factory = LLMFactory(settings.llm)
         self.mcp_factory = MCPFactory()
         self.checkpointer_factory = CheckpointerFactory()
@@ -64,10 +67,12 @@ class Initializer:
             tool_factory=self.tool_factory,
             mcp_factory=self.mcp_factory,
             llm_factory=self.llm_factory,
+            skill_factory=self.skill_factory,
         )
-        # Cached tools
+        # Cached tools and skills
         self.cached_llm_tools: list[BaseTool] = []
         self.cached_tools_in_catalog: list[BaseTool] = []
+        self.cached_agent_skills: list[Skill] = []
 
     @staticmethod
     async def _ensure_config_dir(working_dir: Path):
@@ -314,12 +319,14 @@ class Initializer:
                     mcp_config=mcp_config,
                     llm_config=llm_config,
                     template_context=template_context,
+                    skills_dir=working_dir / CONFIG_SKILLS_DIR,
                 )
 
             self.cached_llm_tools = getattr(compiled_graph, "_llm_tools", [])
             self.cached_tools_in_catalog = getattr(
                 compiled_graph, "_tools_in_catalog", []
             )
+            self.cached_agent_skills = getattr(compiled_graph, "_agent_skills", [])
             yield compiled_graph
 
     async def get_threads(self, agent: str, working_dir: Path) -> list[dict]:

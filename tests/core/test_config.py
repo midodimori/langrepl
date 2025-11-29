@@ -283,7 +283,7 @@ class TestVersionMigration:
         )
 
         content = yaml.safe_load(file_path.read_text())
-        assert content["agents"][0]["version"] == "2.0.0"
+        assert content["agents"][0]["version"] == "2.1.0"
 
     @pytest.mark.asyncio
     async def test_tool_output_max_tokens_migration(self, temp_dir, mock_llm_config):

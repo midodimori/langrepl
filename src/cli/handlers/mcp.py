@@ -123,23 +123,17 @@ class MCPHandler:
 
             await app.run_async()
 
+            return modified
+
+        except (KeyboardInterrupt, EOFError):
+            return False
+        finally:
             # Clear the helper text and MCP list from screen
             num_lines = len(server_names) + 1  # +1 for helper text
             for _i in range(num_lines):
                 sys.stdout.write("\033[F")
                 sys.stdout.write("\033[K")
             sys.stdout.flush()
-
-            return modified
-
-        except (KeyboardInterrupt, EOFError):
-            # Clear the helper text and MCP list from screen
-            num_lines = len(server_names) + 1
-            for _i in range(num_lines):
-                sys.stdout.write("\033[F")
-                sys.stdout.write("\033[K")
-            sys.stdout.flush()
-            return False
 
     @staticmethod
     def _format_server_list(mcp_servers, server_names: list, selected_index: int):

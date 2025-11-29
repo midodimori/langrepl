@@ -1,5 +1,6 @@
 import asyncio
 from fnmatch import fnmatch
+from pathlib import Path
 from typing import Any, cast
 
 from langchain_core.language_models import BaseChatModel
@@ -18,6 +19,8 @@ from src.core.constants import (
 from src.core.logging import get_logger
 from src.llms.factory import LLMFactory
 from src.mcp.factory import MCPFactory
+from src.skills.factory import Skill, SkillFactory
+from src.tools.catalog.skills import get_skill
 from src.tools.factory import ToolFactory
 from src.tools.subagents.task import SubAgent, think
 from src.utils.render import render_templates
@@ -64,11 +67,13 @@ class GraphFactory:
         tool_factory: ToolFactory,
         mcp_factory: MCPFactory,
         llm_factory: LLMFactory,
+        skill_factory: SkillFactory,
     ):
         self.agent_factory = agent_factory
         self.tool_factory = tool_factory
         self.mcp_factory = mcp_factory
         self.llm_factory = llm_factory
+        self.skill_factory = skill_factory
 
     @staticmethod
     def _parse_tool_references(
@@ -139,6 +144,75 @@ class GraphFactory:
 
         return [tool_dict[name] for name in matched_names]
 
+    @staticmethod
+    def _parse_skill_references(skill_refs: list[str] | None) -> list[str] | None:
+        if not skill_refs:
+            return None
+
+        skill_patterns = []
+        for ref in skill_refs:
+            parts = ref.split(":")
+            if len(parts) != 2:
+                logger.warning(f"Invalid skill reference format: {ref}")
+                continue
+
+            category_pattern, skill_pattern = parts
+            skill_patterns.append(f"{category_pattern}:{skill_pattern}")
+
+        return skill_patterns or None
+
+    @staticmethod
+    def _build_skill_dict(
+        skills: dict[str, dict[str, Skill]],
+    ) -> dict[str, Skill]:
+        skill_dict = {}
+        for category, category_skills in skills.items():
+            for name, skill in category_skills.items():
+                # Use composite key to handle same skill name in different categories
+                composite_key = f"{category}:{name}"
+                skill_dict[composite_key] = skill
+        return skill_dict
+
+    @staticmethod
+    def _filter_skills(
+        skill_dict: dict[str, Skill],
+        patterns: list[str] | None,
+        module_map: dict[str, str],
+    ) -> list[Skill]:
+        if not patterns:
+            return []
+
+        matched_keys = set()
+        for pattern in patterns:
+            category_pattern, skill_pattern = pattern.split(":")
+            for composite_key in skill_dict:
+                # composite_key format: "category:name"
+                category_name = module_map.get(composite_key, "")
+                # Extract skill name from composite key
+                skill_name = (
+                    composite_key.split(":", 1)[1]
+                    if ":" in composite_key
+                    else composite_key
+                )
+                if fnmatch(category_name, category_pattern) and fnmatch(
+                    skill_name, skill_pattern
+                ):
+                    matched_keys.add(composite_key)
+
+        return [skill_dict[key] for key in matched_keys]
+
+    @staticmethod
+    def _build_skills_text(skills: list[Skill]) -> str:
+        """Build skills documentation text for prompt injection."""
+        if not skills:
+            return ""
+
+        text = "\n\n# Available Skills\n\n"
+        text += "When users ask you to perform tasks, check if any of the available skills below can help complete the task more effectively. Skills provide specialized capabilities and domain knowledge.\n\n"
+        for skill in skills:
+            text += f"- **{skill.category}/{skill.name}**: {skill.description}\n"
+        return text
+
     def _create_subagent(
         self,
         subagent_config: SubAgentConfig,
@@ -148,6 +222,8 @@ class GraphFactory:
         impl_module_map: dict[str, str],
         mcp_module_map: dict[str, str],
         internal_module_map: dict[str, str],
+        skill_dict: dict[str, Skill],
+        skill_module_map: dict[str, str],
         template_context: dict[str, Any] | None,
     ) -> SubAgent:
         sub_llm = self.llm_factory.create(subagent_config.llm)
@@ -176,9 +252,33 @@ class GraphFactory:
             tools_in_catalog = sub_impl_tools + sub_mcp_tools
             sub_llm_tools = [*self.tool_factory.get_catalog_tools(), think]
 
-        rendered_sub_prompt = cast(
-            str, render_templates(subagent_config.prompt, template_context or {})
+        sub_skill_patterns = (
+            subagent_config.skills.patterns if subagent_config.skills else None
         )
+        use_skill_catalog = (
+            subagent_config.skills.use_catalog if subagent_config.skills else False
+        )
+        sub_skill_patterns_parsed = self._parse_skill_references(sub_skill_patterns)
+        sub_skills = self._filter_skills(
+            skill_dict, sub_skill_patterns_parsed, skill_module_map
+        )
+        sub_prompt_str = cast(str, subagent_config.prompt)
+        if sub_skills:
+            if use_skill_catalog:
+                sub_llm_tools.extend(self.tool_factory.get_skill_catalog_tools())
+            else:
+                sub_llm_tools.append(get_skill)
+
+        # Render templates first to avoid conflicts with skill descriptions containing braces
+        rendered_sub_prompt = cast(
+            str, render_templates(sub_prompt_str, template_context or {})
+        )
+
+        # Append skills text after rendering to prevent Jinja2 template errors
+        if sub_skills and not use_skill_catalog:
+            rendered_sub_prompt = (
+                f"{rendered_sub_prompt}{self._build_skills_text(sub_skills)}"
+            )
         return SubAgent(
             config=subagent_config,
             prompt=rendered_sub_prompt,
@@ -186,6 +286,7 @@ class GraphFactory:
             tools=sub_llm_tools,
             internal_tools=sub_internal_tools,
             tools_in_catalog=tools_in_catalog,
+            skills=sub_skills,
         )
 
     async def create(
@@ -197,6 +298,7 @@ class GraphFactory:
         checkpointer: BaseCheckpointSaver | None = None,
         llm_config: LLMConfig | None = None,
         template_context: dict[str, Any] | None = None,
+        skills_dir: Path | None = None,
     ) -> CompiledStateGraph:
         """Create a compiled graph with optional checkpointer support.
 
@@ -208,6 +310,7 @@ class GraphFactory:
             checkpointer: Optional checkpoint saver
             llm_config: Optional LLM configuration to override the one in config
             template_context: Optional template variables for prompt rendering
+            skills_dir: Optional path to skills directory
 
         Returns:
             CompiledStateGraph: The state graph
@@ -246,6 +349,20 @@ class GraphFactory:
 
         llm = self.llm_factory.create(llm_config or cast(LLMConfig, config.llm))
 
+        skill_patterns = config.skills.patterns if config.skills else None
+        use_skill_catalog = config.skills.use_catalog if config.skills else False
+
+        all_skills = {}
+        if skills_dir:
+            all_skills = self.skill_factory.load_skills(skills_dir)
+        skill_dict = self._build_skill_dict(all_skills)
+        skill_module_map = self.skill_factory.get_module_map()
+        skill_patterns_parsed = self._parse_skill_references(skill_patterns)
+
+        skills = self._filter_skills(
+            skill_dict, skill_patterns_parsed, skill_module_map
+        )
+
         resolved_subagents = None
         if config.subagents:
             tasks = [
@@ -258,6 +375,8 @@ class GraphFactory:
                     impl_module_map,
                     mcp_module_map,
                     internal_module_map,
+                    skill_dict,
+                    skill_module_map,
                     template_context,
                 )
                 for sc in config.subagents
@@ -270,7 +389,16 @@ class GraphFactory:
         if template_context.get("user_memory") and "{user_memory}" not in prompt_str:
             prompt_str = f"{prompt_str}\n\n{{user_memory}}"
 
+        if skills:
+            if use_skill_catalog:
+                llm_tools.extend(self.tool_factory.get_skill_catalog_tools())
+            else:
+                llm_tools.append(get_skill)
+
         rendered_prompt = cast(str, render_templates(prompt_str, template_context))
+
+        if skills and not use_skill_catalog:
+            rendered_prompt = f"{rendered_prompt}{self._build_skills_text(skills)}"
 
         agent = self.agent_factory.create(
             name=config.name,
@@ -285,4 +413,5 @@ class GraphFactory:
         )
         agent._llm_tools = llm_tools + internal_tools  # type: ignore
         agent._tools_in_catalog = tools_in_catalog  # type: ignore
+        agent._agent_skills = skills  # type: ignore
         return agent

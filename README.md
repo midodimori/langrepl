@@ -33,6 +33,7 @@ https://github.com/user-attachments/assets/d95444c9-733f-481d-80c7-7d1cc28a732a
   - [Checkpointers](#checkpointers)
   - [Sub-Agents](#sub-agents)
   - [Custom Tools](#custom-tools)
+  - [Skills](#skills)
   - [MCP Servers](#mcp-servers-configmcpjson)
   - [Tool Approval](#tool-approval-configapprovaljson)
 - [Development](#development)
@@ -46,6 +47,7 @@ https://github.com/user-attachments/assets/d95444c9-733f-481d-80c7-7d1cc28a732a
 - **Multi-Provider LLM Support** - OpenAI, Anthropic, Google, AWS Bedrock, Ollama, DeepSeek, ZhipuAI, and local models (LMStudio, Ollama)
 - **Multimodal Image Support** - Send images to vision models via clipboard paste, drag-and-drop, or absolute paths
 - **Extensible Tool System** - File operations, web search, terminal access, grep search, and MCP server integration
+- **[Skill System](https://github.com/anthropics/skills)** - Modular knowledge packages that extend agent capabilities with specialized workflows and domain expertise
 - **Persistent Conversations** - SQLite-backed thread storage with resume, replay, and compression
 - **User Memory** - Project-specific custom instructions and preferences that persist across conversations
 - **Human-in-the-Loop** - Configurable tool approval system with regex-based allow/deny rules
@@ -249,7 +251,7 @@ Shows all configured models with interactive selector. Switch between models for
 <details>
 <summary><code>/tools</code> - View available tools</summary>
 
-Lists all tools from impl/, internal/, and MCP servers.
+Lists all tools available to the current agent from impl/, internal/, and MCP servers.
 
 </details>
 
@@ -268,6 +270,13 @@ prompts.
 
 **Advanced:** Use `{user_memory}` placeholder in custom agent prompts to control placement. If omitted, memory
 auto-appends to end.
+
+</details>
+
+<details>
+<summary><code>/skills</code> - View available skills</summary>
+
+Lists all skills available to the current agent with interactive selector. Skills are specialized knowledge packages that extend agent capabilities.
 
 </details>
 
@@ -299,7 +308,7 @@ Configs are auto-generated in `.langrepl/` on first run.
 `.langrepl/agents/*.yml`:
 ```yaml
 # agents/my-agent.yml (filename must match agent name)
-version: 2.0.0
+version: 2.1.0
 name: my-agent
 prompt: prompts/my_agent.md  # Single file or array of files
 llm: haiku-4.5               # References llms/*.yml
@@ -312,6 +321,9 @@ tools:
     - mcp:context7:resolve-library-id
   use_catalog: false         # Use tool catalog to reduce token usage
   output_max_tokens: 10000   # Max tokens per tool output
+skills:
+  patterns:
+    - general:skill-creator  # References skills/<category>/<name>
 subagents:
   - general-purpose          # References subagents/*.yml
 compression:
@@ -325,7 +337,7 @@ compression:
 
 ```yaml
 agents:
-  - version: 2.0.0
+  - version: 2.1.0
     name: my-agent
     prompt: prompts/my_agent.md
     llm: haiku-4.5
@@ -338,6 +350,9 @@ agents:
         - mcp:context7:resolve-library-id
       use_catalog: false         # Use tool catalog to reduce token usage
       output_max_tokens: 10000   # Max tokens per tool output
+    skills:
+      patterns:
+        - general:skill-creator  # References skills/<category>/<name>
     subagents:
       - general-purpose
     compression:
@@ -480,6 +495,32 @@ agents:
    ```
 
 3. Reference: `impl:my_tool:my_tool`
+
+### Skills
+
+Skills are modular knowledge packages that extend agent capabilities. See [anthropics/skills](https://github.com/anthropics/skills) for details.
+
+**Directory structure** (`.langrepl/skills/`):
+
+```text
+skills/
+├── general/
+│   └── skill-creator/
+│       ├── SKILL.md            # Required: metadata and instructions
+│       ├── scripts/            # Optional: executable code
+│       ├── references/         # Optional: documentation
+│       └── assets/             # Optional: templates, images, etc.
+└── custom-category/
+    └── my-skill/
+        └── SKILL.md
+```
+
+**Skill naming**: `<category>:<name>` with wildcard support
+- `general:skill-creator` - Specific skill
+- `general:*` - All skills in category
+- `*:*` - All skills
+
+**Built-in**: [skill-creator](https://www.aitmpl.com/component/skill/skill-creator) - Guide for creating custom skills
 
 ### MCP Servers (`config.mcp.json`)
 

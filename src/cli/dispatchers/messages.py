@@ -59,6 +59,7 @@ class MessageDispatcher:
                 approval_mode=ctx.approval_mode,
                 working_dir=ctx.working_dir,
                 tool_catalog=initializer.cached_tools_in_catalog,
+                skill_catalog=initializer.cached_agent_skills,
                 input_cost_per_mtok=ctx.input_cost_per_mtok,
                 output_cost_per_mtok=ctx.output_cost_per_mtok,
                 tool_output_max_tokens=ctx.tool_output_max_tokens,

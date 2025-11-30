@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from typing import TYPE_CHECKING
 
 from prompt_toolkit.application import Application
@@ -10,11 +9,12 @@ from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.layout import Layout
-from prompt_toolkit.layout.containers import Window
+from prompt_toolkit.layout.containers import HSplit, Window
 from prompt_toolkit.layout.controls import FormattedTextControl
 
 from src.cli.bootstrap.initializer import initializer
 from src.cli.theme import console, theme
+from src.cli.ui.shared import create_bottom_toolbar, create_prompt_style
 from src.core.logging import get_logger
 from src.core.settings import settings
 
@@ -27,7 +27,7 @@ logger = get_logger(__name__)
 class ModelHandler:
     """Handles model operations like switching and selection."""
 
-    def __init__(self, session):
+    def __init__(self, session) -> None:
         """Initialize with reference to CLI session."""
         self.session = session
 
@@ -164,30 +164,43 @@ class ModelHandler:
         def _(event):
             event.app.exit()
 
+        context = self.session.context
         app: Application = Application(
-            layout=Layout(Window(content=text_control)),
+            layout=Layout(
+                HSplit(
+                    [
+                        Window(content=text_control),
+                        Window(
+                            height=1,
+                            content=FormattedTextControl(
+                                lambda: create_bottom_toolbar(
+                                    context,
+                                    context.working_dir,
+                                    bash_mode=context.bash_mode,
+                                )
+                            ),
+                        ),
+                    ]
+                )
+            ),
             key_bindings=kb,
             full_screen=False,
+            style=create_prompt_style(context, bash_mode=context.bash_mode),
+            erase_when_done=True,
         )
+
+        selected_agent: tuple[str, str, AgentConfig | SubAgentConfig] | None = None
 
         try:
             await app.run_async()
 
             if selected[0]:
-                if sys.stdout.isatty():
-                    num_lines = len(agents)
-                    for _i in range(num_lines):
-                        sys.stdout.write("\033[F")
-                        sys.stdout.write("\033[K")
-                    sys.stdout.flush()
-                return agents[current_index]
-
-            console.print("")
-            return None
+                selected_agent = agents[current_index]
 
         except (KeyboardInterrupt, EOFError):
-            console.print("")
-            return None
+            pass
+
+        return selected_agent
 
     async def _get_model_selection(
         self, models: list[LLMConfig], current_model: str, default_model: str
@@ -241,31 +254,43 @@ class ModelHandler:
             event.app.exit()
 
         # Create application
+        context = self.session.context
         app: Application = Application(
-            layout=Layout(Window(content=text_control)),
+            layout=Layout(
+                HSplit(
+                    [
+                        Window(content=text_control),
+                        Window(
+                            height=1,
+                            content=FormattedTextControl(
+                                lambda: create_bottom_toolbar(
+                                    context,
+                                    context.working_dir,
+                                    bash_mode=context.bash_mode,
+                                )
+                            ),
+                        ),
+                    ]
+                )
+            ),
             key_bindings=kb,
             full_screen=False,
+            style=create_prompt_style(context, bash_mode=context.bash_mode),
+            erase_when_done=True,
         )
+
+        selected_model = ""
 
         try:
             await app.run_async()
 
             if selected[0]:
-                if sys.stdout.isatty():
-                    num_lines = len(models)
-                    for _i in range(num_lines):
-                        sys.stdout.write("\033[F")
-                        sys.stdout.write("\033[K")
-                    sys.stdout.flush()
-                model = models[current_index]
-                return model.alias
-
-            console.print("")
-            return ""
+                selected_model = models[current_index].alias
 
         except (KeyboardInterrupt, EOFError):
-            console.print("")
-            return ""
+            pass
+
+        return selected_model
 
     def _format_agent_list(
         self,

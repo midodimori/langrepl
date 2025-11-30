@@ -87,9 +87,8 @@ class TestMCPHandler:
         mock_app.run_async = AsyncMock()
         mock_app_cls.return_value = mock_app
 
-        with patch("src.cli.handlers.mcp.sys.stdout"):
-            await handler._get_mcp_selection(mcp_servers)
-            mock_app.run_async.assert_called_once()
+        await handler._get_mcp_selection(mcp_servers)
+        mock_app.run_async.assert_called_once()
 
     @pytest.mark.asyncio
     @patch("src.cli.handlers.mcp.Application")
@@ -104,10 +103,9 @@ class TestMCPHandler:
         mock_app.run_async = AsyncMock(side_effect=KeyboardInterrupt())
         mock_app_cls.return_value = mock_app
 
-        with patch("src.cli.handlers.mcp.sys.stdout"):
-            result = await handler._get_mcp_selection(mcp_servers)
+        result = await handler._get_mcp_selection(mcp_servers)
 
-            assert result is False
+        assert result is False
 
     @pytest.mark.asyncio
     @patch("src.cli.handlers.mcp.Application")
@@ -122,10 +120,9 @@ class TestMCPHandler:
         mock_app.run_async = AsyncMock(side_effect=EOFError())
         mock_app_cls.return_value = mock_app
 
-        with patch("src.cli.handlers.mcp.sys.stdout"):
-            result = await handler._get_mcp_selection(mcp_servers)
+        result = await handler._get_mcp_selection(mcp_servers)
 
-            assert result is False
+        assert result is False
 
     def test_format_server_list_formats_correctly(self, mock_mcp_server_config):
         """Test that _format_server_list formats servers correctly."""

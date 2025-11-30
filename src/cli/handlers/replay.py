@@ -2,19 +2,18 @@
 
 from __future__ import annotations
 
-import sys
-
 from langchain_core.runnables import RunnableConfig
 from prompt_toolkit.application import Application
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.layout import Layout
-from prompt_toolkit.layout.containers import Window
+from prompt_toolkit.layout.containers import HSplit, Window
 from prompt_toolkit.layout.controls import FormattedTextControl
 
 from src.cli.bootstrap.initializer import initializer
 from src.cli.theme import console, theme
+from src.cli.ui.shared import create_bottom_toolbar, create_prompt_style
 from src.core.logging import get_logger
 from src.core.settings import settings
 
@@ -24,7 +23,7 @@ logger = get_logger(__name__)
 class ReplayHandler:
     """Handles replaying conversation from a previous human message."""
 
-    def __init__(self, session):
+    def __init__(self, session) -> None:
         """Initialize with reference to CLI session."""
         self.session = session
 
@@ -185,30 +184,43 @@ class ReplayHandler:
         def _(event):
             event.app.exit()
 
+        context = self.session.context
         app: Application = Application(
-            layout=Layout(Window(content=text_control)),
+            layout=Layout(
+                HSplit(
+                    [
+                        Window(content=text_control),
+                        Window(
+                            height=1,
+                            content=FormattedTextControl(
+                                lambda: create_bottom_toolbar(
+                                    context,
+                                    context.working_dir,
+                                    bash_mode=context.bash_mode,
+                                )
+                            ),
+                        ),
+                    ]
+                )
+            ),
             key_bindings=kb,
             full_screen=False,
+            style=create_prompt_style(context, bash_mode=context.bash_mode),
+            erase_when_done=True,
         )
+
+        selected_index_result: int | None = None
 
         try:
             await app.run_async()
 
             if selected[0]:
-                # Clear the selector from screen
-                num_lines = min(len(messages), window_size)
-                for _i in range(num_lines):
-                    sys.stdout.write("\033[F")
-                    sys.stdout.write("\033[K")
-                sys.stdout.flush()
-                return current_index
-
-            console.print("")
-            return None
+                selected_index_result = current_index
 
         except (KeyboardInterrupt, EOFError):
-            console.print("")
-            return None
+            pass
+
+        return selected_index_result
 
     @staticmethod
     def _format_message_list(

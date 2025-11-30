@@ -10,7 +10,7 @@ logger = get_logger(__name__)
 class BashDispatcher:
     """Handles bash command execution."""
 
-    def __init__(self, session):
+    def __init__(self, session) -> None:
         """Initialize with reference to CLI session."""
         self.session = session
 

@@ -2,19 +2,18 @@
 
 from __future__ import annotations
 
-import sys
-
 from langchain_core.runnables import RunnableConfig
 from prompt_toolkit.application import Application
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.layout import Layout
-from prompt_toolkit.layout.containers import Window
+from prompt_toolkit.layout.containers import HSplit, Window
 from prompt_toolkit.layout.controls import FormattedTextControl
 
 from src.cli.bootstrap.initializer import initializer
 from src.cli.theme import console, theme
+from src.cli.ui.shared import create_bottom_toolbar, create_prompt_style
 from src.core.logging import get_logger
 from src.core.settings import settings
 from src.utils.time import format_relative_time
@@ -25,7 +24,7 @@ logger = get_logger(__name__)
 class ResumeHandler:
     """Handles resuming threads."""
 
-    def __init__(self, session):
+    def __init__(self, session) -> None:
         """Initialize with reference to CLI session."""
         self.session = session
 
@@ -128,32 +127,43 @@ class ResumeHandler:
             event.app.exit()
 
         # Create application
+        context = self.session.context
         app: Application = Application(
-            layout=Layout(Window(content=text_control)),
+            layout=Layout(
+                HSplit(
+                    [
+                        Window(content=text_control),
+                        Window(
+                            height=1,
+                            content=FormattedTextControl(
+                                lambda: create_bottom_toolbar(
+                                    context,
+                                    context.working_dir,
+                                    bash_mode=context.bash_mode,
+                                )
+                            ),
+                        ),
+                    ]
+                )
+            ),
             key_bindings=kb,
             full_screen=False,
+            style=create_prompt_style(context, bash_mode=context.bash_mode),
+            erase_when_done=True,
         )
+
+        selected_thread_id = ""
 
         try:
             await app.run_async()
 
-            # Clear the thread list from screen
             if selected[0]:
-                # Calculate number of lines to clear (visible threads)
-                num_lines = min(len(threads), window_size)
-                # Move cursor up and clear lines
-                for _i in range(num_lines):
-                    sys.stdout.write("\033[F")  # Move cursor up one line
-                    sys.stdout.write("\033[K")  # Clear line
-                sys.stdout.flush()
-                return threads[current_index].get("thread_id", "")
-
-            console.print("")
-            return ""
+                selected_thread_id = threads[current_index].get("thread_id", "")
 
         except (KeyboardInterrupt, EOFError):
-            console.print("")
-            return ""
+            pass
+
+        return selected_thread_id
 
     @staticmethod
     def _format_thread_list(

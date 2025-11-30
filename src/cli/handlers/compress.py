@@ -19,7 +19,7 @@ logger = get_logger(__name__)
 class CompressionHandler:
     """Handles conversation history compression."""
 
-    def __init__(self, session):
+    def __init__(self, session) -> None:
         """Initialize with reference to CLI session."""
         self.session = session
 

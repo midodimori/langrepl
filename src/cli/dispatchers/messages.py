@@ -39,10 +39,10 @@ logger = get_logger(__name__)
 class MessageDispatcher:
     """Dispatch user message processing and AI response streaming."""
 
-    def __init__(self, session):
+    def __init__(self, session) -> None:
         """Initialize with reference to CLI session."""
         self.session = session
-        self.interrupt_handler = InterruptHandler()
+        self.interrupt_handler = InterruptHandler(session=session)
         self.message_builder = MessageContentBuilder(Path(session.context.working_dir))
         self._pending_compression = False
 

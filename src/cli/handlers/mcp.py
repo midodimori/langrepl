@@ -12,7 +12,11 @@ from prompt_toolkit.layout.controls import FormattedTextControl
 
 from src.cli.bootstrap.initializer import initializer
 from src.cli.theme import console, theme
-from src.cli.ui.shared import create_bottom_toolbar, create_prompt_style
+from src.cli.ui.shared import (
+    create_bottom_toolbar,
+    create_instruction,
+    create_prompt_style,
+)
 from src.core.logging import get_logger
 from src.core.settings import settings
 
@@ -117,6 +121,7 @@ class MCPHandler:
             layout=Layout(
                 HSplit(
                     [
+                        *create_instruction("Space: toggle, Enter: save"),
                         Window(content=text_control),
                         Window(
                             height=1,
@@ -136,9 +141,6 @@ class MCPHandler:
         )
 
         try:
-            # Show helper text
-            console.print("[muted]Space: toggle, Enter: save[/muted]")
-
             await app.run_async()
 
             return modified

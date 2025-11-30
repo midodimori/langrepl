@@ -14,7 +14,11 @@ from prompt_toolkit.layout.containers import HSplit, Window
 from prompt_toolkit.layout.controls import FormattedTextControl
 
 from src.cli.theme import console, theme
-from src.cli.ui.shared import create_bottom_toolbar, create_prompt_style
+from src.cli.ui.shared import (
+    create_bottom_toolbar,
+    create_instruction,
+    create_prompt_style,
+)
 from src.core.logging import get_logger
 from src.core.settings import settings
 
@@ -109,6 +113,7 @@ class ToolsHandler:
             layout=Layout(
                 HSplit(
                     [
+                        *create_instruction("Enter: expand/collapse"),
                         Window(content=text_control),
                         Window(
                             height=1,
@@ -128,10 +133,6 @@ class ToolsHandler:
         )
 
         try:
-            # Show helper text
-            console.print("[muted]Enter: expand/collapse")
-            console.print("")
-
             await app.run_async()
 
         except (KeyboardInterrupt, EOFError):

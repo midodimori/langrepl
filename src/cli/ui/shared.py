@@ -1,8 +1,11 @@
 """Shared UI functions for consistent styling across prompt sessions."""
 
+import html
 import os
 
-from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.formatted_text import HTML, FormattedText
+from prompt_toolkit.layout.containers import Window
+from prompt_toolkit.layout.controls import FormattedTextControl
 from prompt_toolkit.styles import Style
 
 from src.cli.theme import theme
@@ -73,9 +76,12 @@ def create_bottom_toolbar(context, working_dir: str, bash_mode: bool = False):
     """Create bottom toolbar with version, directory, and mode info."""
     terminal_width = os.get_terminal_size().columns if os.isatty(1) else 80
     version = get_version()
+    working_dir_str = str(working_dir)
 
     # Left side: version + directory
-    left_content = f" v{version} | {working_dir}"
+    escaped_working_dir = html.escape(working_dir_str)
+    left_text = f" v{version} | {working_dir_str}"
+    left_content = f" v{version} | {escaped_working_dir}"
 
     # Right side: mode info
     mode_name = context.approval_mode.value
@@ -84,7 +90,7 @@ def create_bottom_toolbar(context, working_dir: str, bash_mode: bool = False):
     right_content = " | ".join(right_parts)
 
     # Calculate padding
-    padding = " " * max(0, terminal_width - len(left_content) - len(right_content) - 1)
+    padding = " " * max(0, terminal_width - len(left_text) - len(right_content) - 1)
 
     # Build styled output
     if bash_mode:
@@ -93,3 +99,19 @@ def create_bottom_toolbar(context, working_dir: str, bash_mode: bool = False):
         styled_right = f"<toolbar.mode>{mode_name}</toolbar.mode>"
 
     return HTML(f"<muted>{left_content}{padding}</muted>{styled_right}<muted> </muted>")
+
+
+def create_instruction(message: str, spacer: bool = True) -> list[Window]:
+    """Create instruction window with optional spacer for interactive lists."""
+    windows = [
+        Window(
+            height=1,
+            content=FormattedTextControl(
+                lambda: FormattedText([("class:muted", message)])
+            ),
+            dont_extend_height=True,
+        )
+    ]
+    if spacer:
+        windows.append(Window(height=1, char=" "))
+    return windows

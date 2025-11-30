@@ -7,10 +7,10 @@ def test_create_bottom_toolbar_escapes_working_dir(mock_context, monkeypatch):
     """Ensure working directory is escaped before embedding in HTML."""
     monkeypatch.setattr("src.cli.ui.shared.get_version", lambda: "0.0.0")
 
-    working_dir = "/tmp/<foo&bar>"
+    working_dir = "example/<foo&bar>"
     toolbar = create_bottom_toolbar(mock_context, working_dir)
 
-    assert "/tmp/&lt;foo&amp;bar&gt;" in toolbar.value
+    assert "example/&lt;foo&amp;bar&gt;" in toolbar.value
     assert "<foo&bar>" not in toolbar.value
 
 

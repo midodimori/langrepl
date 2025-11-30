@@ -2,6 +2,9 @@
 
 <!-- version list -->
 
+## v1.8.3 (2025-11-30)
+
+
 ## v1.8.2 (2025-11-30)
 
 ### Performance Improvements

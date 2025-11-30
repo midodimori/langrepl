@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.8.5 (2025-11-30)
+
+### Bug Fixes
+
+- Use async for skills loading
+  ([`d98a91b`](https://github.com/midodimori/langrepl/commit/d98a91b842137f8a5beb968a3d0320f7a96ef81a))
+
+
 ## v1.8.4 (2025-11-30)
 
 ### Features

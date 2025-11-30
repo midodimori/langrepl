@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from src.agents.deep_agent import create_deep_agent
+from src.core.config import LLMConfig
 from src.core.constants import (
     TOOL_CATEGORY_IMPL,
     TOOL_CATEGORY_INTERNAL,
@@ -24,7 +25,6 @@ if TYPE_CHECKING:
     from src.agents import ContextSchemaType, StateSchemaType
     from src.core.config import (
         AgentConfig,
-        LLMConfig,
         SkillsConfig,
         SubAgentConfig,
         ToolsConfig,
@@ -372,7 +372,7 @@ class AgentFactory:
             internal_module_map=self.tool_factory.get_internal_module_map(),
         )
 
-        skills = self.skill_factory.load_skills(skills_dir)
+        skills = await self.skill_factory.load_skills(skills_dir)
 
         skill_resources = SkillResources(
             skill_dict=self._build_skill_dict(skills),

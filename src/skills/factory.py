@@ -1,3 +1,4 @@
+import asyncio
 import re
 from pathlib import Path
 
@@ -21,9 +22,9 @@ class Skill(BaseModel):
             return ""
 
     @classmethod
-    def from_file(cls, skill_md: Path, category: str) -> "Skill | None":
+    async def from_file(cls, skill_md: Path, category: str) -> "Skill | None":
         try:
-            content = skill_md.read_text()
+            content = await asyncio.to_thread(skill_md.read_text)
             frontmatter_match = re.match(r"^---\n(.*?)\n---", content, re.DOTALL)
             if not frontmatter_match:
                 return None
@@ -48,38 +49,41 @@ class SkillFactory:
         self._skills: dict[str, dict[str, Skill]] = {}
         self._module_map: dict[str, str] = {}
 
-    def load_skills(self, skills_dir: Path) -> dict[str, dict[str, Skill]]:
-        if not skills_dir.exists():
+    async def load_skills(self, skills_dir: Path) -> dict[str, dict[str, Skill]]:
+        if not await asyncio.to_thread(skills_dir.exists):
             self._skills = {}
             self._module_map = {}
             return {}
 
         skills: dict[str, dict[str, Skill]] = {}
-        self._module_map = {}
+        module_map: dict[str, str] = {}
 
-        for category_dir in skills_dir.iterdir():
+        category_dirs = await asyncio.to_thread(lambda: list(skills_dir.iterdir()))
+        for category_dir in category_dirs:
             if not category_dir.is_dir():
                 continue
 
             category_name = category_dir.name
             skills[category_name] = {}
 
-            for skill_dir in category_dir.iterdir():
+            skill_dirs = await asyncio.to_thread(lambda: list(category_dir.iterdir()))
+            for skill_dir in skill_dirs:
                 if not skill_dir.is_dir():
                     continue
 
                 skill_md = skill_dir / "SKILL.md"
-                if not skill_md.exists():
+                if not await asyncio.to_thread(skill_md.exists):
                     continue
 
-                skill = Skill.from_file(skill_md, category_name)
+                skill = await Skill.from_file(skill_md, category_name)
                 if skill:
                     skills[category_name][skill.name] = skill
                     # Use composite key to handle same skill name in different categories
                     composite_key = f"{category_name}:{skill.name}"
-                    self._module_map[composite_key] = category_name
+                    module_map[composite_key] = category_name
 
         self._skills = skills
+        self._module_map = module_map
         return skills
 
     def get_module_map(self) -> dict[str, str]:

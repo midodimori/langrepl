@@ -1,12 +1,13 @@
 """Middleware for tool approval flow in agents."""
 
+from __future__ import annotations
+
 import re
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from langchain.agents.middleware import AgentMiddleware
-from langchain.tools.tool_node import ToolCallRequest
-from langchain_core.messages import ToolMessage
 from langgraph.errors import GraphInterrupt
 from langgraph.types import Command, interrupt
 from pydantic import BaseModel
@@ -17,6 +18,10 @@ from src.core.config import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
 from src.core.constants import CONFIG_APPROVAL_FILE_NAME
 from src.core.logging import get_logger
 from src.utils.render import create_tool_message
+
+if TYPE_CHECKING:
+    from langchain.tools.tool_node import ToolCallRequest
+    from langchain_core.messages import ToolMessage
 
 logger = get_logger(__name__)
 

@@ -1,5 +1,7 @@
 """Compression handling for chat sessions."""
 
+from __future__ import annotations
+
 import uuid
 
 from langchain_core.runnables import RunnableConfig

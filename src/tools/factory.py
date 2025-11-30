@@ -1,4 +1,6 @@
-from langchain_core.tools import BaseTool
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from src.tools.catalog import CATALOG_TOOLS, SKILL_CATALOG_TOOLS
 from src.tools.impl.file_system import FILE_SYSTEM_TOOLS
@@ -7,6 +9,9 @@ from src.tools.impl.terminal import TERMINAL_TOOLS
 from src.tools.impl.web import WEB_TOOLS
 from src.tools.internal.memory import MEMORY_TOOLS
 from src.tools.internal.todo import TODO_TOOLS
+
+if TYPE_CHECKING:
+    from langchain_core.tools import BaseTool
 
 
 class ToolFactory:

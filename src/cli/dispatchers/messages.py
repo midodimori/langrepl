@@ -1,11 +1,13 @@
 """Message handling for chat sessions."""
 
+from __future__ import annotations
+
 import asyncio
 import hashlib
 import platform
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langchain_core.messages import (
     AIMessage,
@@ -15,7 +17,7 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_core.runnables import RunnableConfig
-from langgraph.types import Command, Interrupt
+from langgraph.types import Command
 from rich.console import Group
 from rich.markup import render
 from rich.text import Text
@@ -27,6 +29,9 @@ from src.cli.handlers import CompressionHandler, InterruptHandler
 from src.cli.theme import console, theme
 from src.core.logging import get_logger
 from src.utils.compression import should_auto_compress
+
+if TYPE_CHECKING:
+    from langgraph.types import Interrupt
 
 logger = get_logger(__name__)
 

@@ -1,7 +1,11 @@
-from typing import Any
+from __future__ import annotations
 
-from langchain_core.tools import BaseTool
+from typing import TYPE_CHECKING, Any
+
 from pydantic import BaseModel, Field, create_model
+
+if TYPE_CHECKING:
+    from langchain_core.tools import BaseTool
 
 
 class ToolSchema(BaseModel):
@@ -10,7 +14,7 @@ class ToolSchema(BaseModel):
     parameters: dict[str, Any] | None = None
 
     @classmethod
-    def from_tool(cls, tool: BaseTool) -> "ToolSchema":
+    def from_tool(cls, tool: BaseTool) -> ToolSchema:
         args_schema = tool.args_schema
         if not args_schema:
             parameters = {"type": "object", "properties": {}}

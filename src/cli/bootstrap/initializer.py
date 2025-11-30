@@ -1,17 +1,17 @@
+from __future__ import annotations
+
 import asyncio
 import shutil
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from importlib.resources import files
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import BaseTool
-from langgraph.graph.state import CompiledStateGraph
 
 from src.agents.context import AgentContext
-from src.agents.factory import AgentFactory, GraphFactory
+from src.agents.factory import AgentFactory
 from src.agents.state import AgentState
 from src.checkpointer.base import BaseCheckpointer
 from src.checkpointer.factory import CheckpointerFactory
@@ -46,24 +46,27 @@ from src.core.constants import (
 from src.core.settings import settings
 from src.llms.factory import LLMFactory
 from src.mcp.factory import MCPFactory
-from src.skills.factory import Skill, SkillFactory
+from src.skills.factory import SkillFactory
 from src.tools.factory import ToolFactory
+
+if TYPE_CHECKING:
+    from langchain_core.tools import BaseTool
+    from langgraph.graph.state import CompiledStateGraph
+
+    from src.skills.factory import Skill
 
 
 class Initializer:
     """Centralized service"""
 
     def __init__(self):
-        self.agent_factory = AgentFactory()
         self.tool_factory = ToolFactory()
         self.skill_factory = SkillFactory()
         self.llm_factory = LLMFactory(settings.llm)
         self.mcp_factory = MCPFactory()
         self.checkpointer_factory = CheckpointerFactory()
-        self.graph_factory = GraphFactory(
-            agent_factory=self.agent_factory,
+        self.agent_factory = AgentFactory(
             tool_factory=self.tool_factory,
-            mcp_factory=self.mcp_factory,
             llm_factory=self.llm_factory,
             skill_factory=self.skill_factory,
         )
@@ -302,7 +305,7 @@ class Initializer:
 
         async with checkpointer_ctx as checkpointer:
             with timer("Create and compile graph"):
-                compiled_graph = await self.graph_factory.create(
+                compiled_graph = await self.agent_factory.create(
                     config=agent_config,
                     state_schema=AgentState,
                     context_schema=AgentContext,

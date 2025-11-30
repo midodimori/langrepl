@@ -1,10 +1,12 @@
 """Middleware for compressing large tool outputs to virtual filesystem."""
 
+from __future__ import annotations
+
 from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING
 
 from langchain.agents.middleware import AgentMiddleware
 from langchain.tools.tool_node import ToolCallRequest
-from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, ToolMessage
 from langgraph.types import Command
 
@@ -12,6 +14,9 @@ from src.agents import AgentState
 from src.agents.context import AgentContext
 from src.tools.internal.memory import read_memory_file
 from src.utils.compression import calculate_message_tokens
+
+if TYPE_CHECKING:
+    from langchain_core.language_models import BaseChatModel
 
 
 class CompressToolOutputMiddleware(AgentMiddleware[AgentState, AgentContext]):

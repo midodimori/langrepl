@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import asyncio
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from langchain_core.tools import BaseTool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.sessions import Connection
 
@@ -11,6 +13,9 @@ from src.core.logging import get_logger
 from src.mcp.tool import LazyMCPTool
 from src.tools.schema import ToolSchema
 from src.utils.bash import execute_bash_command
+
+if TYPE_CHECKING:
+    from langchain_core.tools import BaseTool
 
 logger = get_logger(__name__)
 

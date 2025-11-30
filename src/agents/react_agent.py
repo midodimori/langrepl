@@ -1,13 +1,9 @@
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 from langchain.agents import create_agent
-from langchain.agents.middleware import AgentMiddleware
-from langchain_core.language_models import BaseChatModel
-from langchain_core.tools import BaseTool
-from langgraph.checkpoint.base import BaseCheckpointSaver
-from langgraph.store.base import BaseStore
 
-from src.agents import ContextSchemaType, StateSchemaType
 from src.middleware import (
     ApprovalMiddleware,
     CompressToolOutputMiddleware,
@@ -16,6 +12,15 @@ from src.middleware import (
     create_dynamic_prompt_middleware,
 )
 from src.tools.internal.memory import read_memory_file
+
+if TYPE_CHECKING:
+    from langchain.agents.middleware import AgentMiddleware
+    from langchain_core.language_models import BaseChatModel
+    from langchain_core.tools import BaseTool
+    from langgraph.checkpoint.base import BaseCheckpointSaver
+    from langgraph.store.base import BaseStore
+
+    from src.agents import ContextSchemaType, StateSchemaType
 
 
 def create_react_agent(

@@ -1,9 +1,14 @@
-from typing import cast
+from __future__ import annotations
 
-from langchain.agents.middleware import ModelRequest, dynamic_prompt
+from typing import TYPE_CHECKING, cast
+
+from langchain.agents.middleware import dynamic_prompt
 
 from src.agents.context import AgentContext
 from src.utils.render import render_templates
+
+if TYPE_CHECKING:
+    from langchain.agents.middleware import ModelRequest
 
 
 def create_dynamic_prompt_middleware(template: str):

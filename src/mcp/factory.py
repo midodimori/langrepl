@@ -1,10 +1,14 @@
+from __future__ import annotations
+
 import hashlib
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from src.core.config import MCPConfig, MCPServerConfig
 from src.core.settings import settings
 from src.mcp.client import MCPClient
+
+if TYPE_CHECKING:
+    from src.core.config import MCPConfig, MCPServerConfig
 
 
 class MCPFactory:
@@ -46,7 +50,7 @@ class MCPFactory:
         self,
         config: MCPConfig,
         cache_dir: Path | None = None,
-    ) -> "MCPClient":
+    ) -> MCPClient:
         config_hash = self._get_config_hash(config, cache_dir)
         if self._client and self._config_hash == config_hash:
             return self._client

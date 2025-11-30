@@ -1,12 +1,16 @@
 """Base checkpointer with extended methods for langrepl."""
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from langchain_core.messages import BaseMessage
 from langgraph.checkpoint.base import BaseCheckpointSaver as _BaseCheckpointSaver
-from langgraph.checkpoint.base import CheckpointTuple
+
+if TYPE_CHECKING:
+    from langchain_core.messages import BaseMessage
+    from langgraph.checkpoint.base import CheckpointTuple
 
 
 @dataclass

@@ -1,5 +1,7 @@
 """Replay handling for conversation history."""
 
+from __future__ import annotations
+
 import sys
 
 from langchain_core.runnables import RunnableConfig

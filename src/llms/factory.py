@@ -1,18 +1,17 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import httpx
 from botocore.config import Config
-from langchain_anthropic import ChatAnthropic
-from langchain_aws import ChatBedrock
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_deepseek import ChatDeepSeek
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_ollama import ChatOllama
-from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 
 from src.core.config import LLMConfig, LLMProvider
 from src.core.settings import LLMSettings
-from src.llms.wrappers.zhipuai import ChatZhipuAI
 from src.utils.rate_limiter import TokenBucketLimiter
+
+if TYPE_CHECKING:
+    from langchain_core.language_models.chat_models import BaseChatModel
 
 
 class LLMFactory:
@@ -100,6 +99,8 @@ class LLMFactory:
         llm: BaseChatModel
 
         if config.provider == LLMProvider.OPENAI:
+            from langchain_openai import ChatOpenAI
+
             kwargs = {
                 "api_key": self.llm_settings.openai_api_key,
                 "model": config.model,
@@ -117,6 +118,8 @@ class LLMFactory:
 
             llm = ChatOpenAI(**kwargs)
         elif config.provider == LLMProvider.ANTHROPIC:
+            from langchain_anthropic import ChatAnthropic
+
             kwargs = {
                 "api_key": self.llm_settings.anthropic_api_key,
                 "model_name": config.model,
@@ -133,6 +136,8 @@ class LLMFactory:
 
             llm = ChatAnthropic(**kwargs)
         elif config.provider == LLMProvider.GOOGLE:
+            from langchain_google_genai import ChatGoogleGenerativeAI
+
             kwargs = {
                 "api_key": self.llm_settings.google_api_key.get_secret_value(),
                 "model": config.model,
@@ -147,6 +152,8 @@ class LLMFactory:
 
             llm = ChatGoogleGenerativeAI(**kwargs)
         elif config.provider == LLMProvider.OLLAMA:
+            from langchain_ollama import ChatOllama
+
             llm = ChatOllama(
                 base_url=self.llm_settings.ollama_base_url,
                 model=config.model,
@@ -157,6 +164,8 @@ class LLMFactory:
                 **self._ollama_kwargs,
             )
         elif config.provider == LLMProvider.LMSTUDIO:
+            from langchain_openai import ChatOpenAI
+
             llm = ChatOpenAI(
                 base_url=self.llm_settings.lmstudio_base_url,
                 model=config.model,
@@ -169,6 +178,8 @@ class LLMFactory:
                 http_async_client=self.http_async_client,
             )
         elif config.provider == LLMProvider.BEDROCK:
+            from langchain_aws import ChatBedrock
+
             kwargs = {
                 "aws_access_key_id": self.llm_settings.aws_access_key_id,
                 "aws_secret_access_key": self.llm_settings.aws_secret_access_key,
@@ -186,6 +197,8 @@ class LLMFactory:
 
             llm = ChatBedrock(**kwargs)
         elif config.provider == LLMProvider.DEEPSEEK:
+            from langchain_deepseek import ChatDeepSeek
+
             llm = ChatDeepSeek(
                 api_key=self.llm_settings.deepseek_api_key,
                 model=config.model,
@@ -197,6 +210,8 @@ class LLMFactory:
                 http_async_client=self.http_async_client,
             )
         elif config.provider == LLMProvider.ZHIPUAI:
+            from src.llms.wrappers.zhipuai import ChatZhipuAI
+
             kwargs = {
                 "api_key": self.llm_settings.zhipuai_api_key.get_secret_value(),
                 "model": config.model,

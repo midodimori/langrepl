@@ -1,5 +1,7 @@
 """Tool handling for chat sessions."""
 
+from __future__ import annotations
+
 import shutil
 import sys
 from typing import Any

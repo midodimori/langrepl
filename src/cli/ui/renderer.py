@@ -1,12 +1,13 @@
 """Rich-based UI rendering and message formatting."""
 
+from __future__ import annotations
+
 import html
 import re
 from html.parser import HTMLParser
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, ToolMessage
-from langchain_core.runnables.graph import Graph
 from rich.cells import cell_len
 from rich.console import Console, ConsoleOptions, Group, NewLine, RenderableType
 from rich.markdown import CodeBlock, Markdown
@@ -22,6 +23,9 @@ from src.cli.theme import console
 from src.core.constants import UNKNOWN
 from src.core.settings import settings
 from src.utils.version import get_latest_features
+
+if TYPE_CHECKING:
+    from langchain_core.runnables.graph import Graph
 
 
 class _HTMLTagDetector(HTMLParser):

@@ -1,11 +1,15 @@
 """Context compression utilities for managing conversation history."""
 
+from __future__ import annotations
+
 from collections.abc import Sequence
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import tiktoken
-from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
+
+if TYPE_CHECKING:
+    from langchain_core.language_models import BaseChatModel
 
 
 def calculate_message_tokens(

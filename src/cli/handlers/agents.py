@@ -1,5 +1,7 @@
 """Agent handling for chat sessions."""
 
+from __future__ import annotations
+
 import sys
 
 from prompt_toolkit.application import Application

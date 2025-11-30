@@ -1,14 +1,19 @@
 """In-memory checkpointer implementation."""
 
-from collections.abc import Callable
+from __future__ import annotations
 
-from langchain_core.messages import BaseMessage
+from collections.abc import Callable
+from typing import TYPE_CHECKING
+
 from langchain_core.runnables import RunnableConfig
-from langgraph.checkpoint.base import CheckpointTuple
 from langgraph.checkpoint.memory import MemorySaver
 
 from src.checkpointer.base import BaseCheckpointer, HumanMessageEntry
 from src.core.logging import get_logger
+
+if TYPE_CHECKING:
+    from langchain_core.messages import BaseMessage
+    from langgraph.checkpoint.base import CheckpointTuple
 
 logger = get_logger(__name__)
 

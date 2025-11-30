@@ -1,19 +1,17 @@
+from __future__ import annotations
+
 import asyncio
-import platform
 import shutil
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
 from importlib.resources import files
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import BaseTool
-from langgraph.graph.state import CompiledStateGraph
 
 from src.agents.context import AgentContext
-from src.agents.factory import AgentFactory, GraphFactory
+from src.agents.factory import AgentFactory
 from src.agents.state import AgentState
 from src.checkpointer.base import BaseCheckpointer
 from src.checkpointer.factory import CheckpointerFactory
@@ -38,6 +36,7 @@ from src.core.constants import (
     CONFIG_DIR_NAME,
     CONFIG_LLMS_DIR,
     CONFIG_LLMS_FILE_NAME,
+    CONFIG_MCP_CACHE_DIR,
     CONFIG_MCP_FILE_NAME,
     CONFIG_MEMORY_FILE_NAME,
     CONFIG_SKILLS_DIR,
@@ -47,29 +46,30 @@ from src.core.constants import (
 from src.core.settings import settings
 from src.llms.factory import LLMFactory
 from src.mcp.factory import MCPFactory
-from src.skills.factory import Skill, SkillFactory
+from src.skills.factory import SkillFactory
 from src.tools.factory import ToolFactory
+
+if TYPE_CHECKING:
+    from langchain_core.tools import BaseTool
+    from langgraph.graph.state import CompiledStateGraph
+
+    from src.skills.factory import Skill
 
 
 class Initializer:
     """Centralized service"""
 
     def __init__(self):
-        # Core factories
-        self.agent_factory = AgentFactory()
         self.tool_factory = ToolFactory()
         self.skill_factory = SkillFactory()
         self.llm_factory = LLMFactory(settings.llm)
         self.mcp_factory = MCPFactory()
         self.checkpointer_factory = CheckpointerFactory()
-        self.graph_factory = GraphFactory(
-            agent_factory=self.agent_factory,
+        self.agent_factory = AgentFactory(
             tool_factory=self.tool_factory,
-            mcp_factory=self.mcp_factory,
             llm_factory=self.llm_factory,
             skill_factory=self.skill_factory,
         )
-        # Cached tools and skills
         self.cached_llm_tools: list[BaseTool] = []
         self.cached_tools_in_catalog: list[BaseTool] = []
         self.cached_agent_skills: list[Skill] = []
@@ -292,33 +292,26 @@ class Initializer:
                 )
                 llm_config = None
 
-        # Generate environment context for prompt template rendering
-        now = datetime.now(timezone.utc).astimezone()
-        user_memory = await self.load_user_memory(working_dir)
-        template_context = {
-            "working_dir": str(working_dir),
-            "platform": platform.system(),
-            "os_version": platform.version(),
-            "current_date_time_zoned": now.strftime("%Y-%m-%d %H:%M:%S %Z"),
-            "user_memory": user_memory,
-        }
-
         with timer("Create checkpointer"):
             checkpointer_ctx = self.checkpointer_factory.create(
                 cast(CheckpointerConfig, agent_config.checkpointer),
                 str(working_dir / CONFIG_CHECKPOINTS_URL_FILE_NAME),
             )
 
+        with timer("Create MCP client"):
+            mcp_client = await self.mcp_factory.create(
+                mcp_config, working_dir / CONFIG_MCP_CACHE_DIR
+            )
+
         async with checkpointer_ctx as checkpointer:
             with timer("Create and compile graph"):
-                compiled_graph = await self.graph_factory.create(
+                compiled_graph = await self.agent_factory.create(
                     config=agent_config,
                     state_schema=AgentState,
                     context_schema=AgentContext,
                     checkpointer=checkpointer,
-                    mcp_config=mcp_config,
+                    mcp_client=mcp_client,
                     llm_config=llm_config,
-                    template_context=template_context,
                     skills_dir=working_dir / CONFIG_SKILLS_DIR,
                 )
 

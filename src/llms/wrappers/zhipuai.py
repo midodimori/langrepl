@@ -8,9 +8,11 @@ When langchain_community adds native support, this wrapper can be removed and
 the import can be changed directly to langchain_community.chat_models.
 """
 
+from __future__ import annotations
+
 import json
 from collections.abc import AsyncIterator, Iterator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langchain_community.chat_models import ChatZhipuAI as _BaseChatZhipuAI
 from langchain_community.chat_models.zhipuai import (
@@ -21,12 +23,14 @@ from langchain_community.chat_models.zhipuai import (
     aconnect_sse,
     connect_sse,
 )
-from langchain_core.callbacks import (
-    AsyncCallbackManagerForLLMRun,
-    CallbackManagerForLLMRun,
-)
 from langchain_core.messages import AIMessage, AIMessageChunk, BaseMessage
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
+
+if TYPE_CHECKING:
+    from langchain_core.callbacks import (
+        AsyncCallbackManagerForLLMRun,
+        CallbackManagerForLLMRun,
+    )
 
 
 class ChatZhipuAI(_BaseChatZhipuAI):

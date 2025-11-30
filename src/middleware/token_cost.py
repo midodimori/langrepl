@@ -1,15 +1,19 @@
 """Middleware for tracking token usage and calculating costs."""
 
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 from langchain.agents.middleware import AgentMiddleware
 from langchain_core.messages import AIMessage
-from langgraph.runtime import Runtime
 
 from src.agents.context import AgentContext
 from src.agents.state import AgentState
 from src.core.logging import get_logger
 from src.utils.cost import calculate_cost
+
+if TYPE_CHECKING:
+    from langgraph.runtime import Runtime
 
 logger = get_logger(__name__)
 

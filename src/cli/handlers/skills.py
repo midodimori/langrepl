@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import shutil
 import sys
+from typing import TYPE_CHECKING
 
 from prompt_toolkit.application import Application
 from prompt_toolkit.formatted_text import FormattedText
@@ -12,7 +15,9 @@ from prompt_toolkit.layout.controls import FormattedTextControl
 from src.cli.theme import console, theme
 from src.core.logging import get_logger
 from src.core.settings import settings
-from src.skills.factory import Skill
+
+if TYPE_CHECKING:
+    from src.skills.factory import Skill
 
 logger = get_logger(__name__)
 

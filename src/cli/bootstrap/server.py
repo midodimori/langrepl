@@ -1,19 +1,24 @@
 """LangGraph Server CLI integration."""
 
+from __future__ import annotations
+
 import asyncio
 import json
 import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import httpx
-from langgraph.graph.state import CompiledStateGraph
 
 from src.cli.bootstrap.initializer import initializer
 from src.cli.theme import console
 from src.core.constants import CONFIG_LANGGRAPH_FILE_NAME
 from src.core.settings import settings
+
+if TYPE_CHECKING:
+    from langgraph.graph.state import CompiledStateGraph
 
 LANGREPL_ROOT = Path(__file__).parent.parent.parent.parent.resolve()
 

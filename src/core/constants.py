@@ -20,6 +20,8 @@ CONFIG_CHECKPOINTERS_DIR = Path(f"{CONFIG_DIR_NAME}/checkpointers")
 CONFIG_AGENTS_DIR = Path(f"{CONFIG_DIR_NAME}/agents")
 CONFIG_SUBAGENTS_DIR = Path(f"{CONFIG_DIR_NAME}/subagents")
 CONFIG_SKILLS_DIR = Path(f"{CONFIG_DIR_NAME}/skills")
+CONFIG_CACHE_DIR = Path(f"{CONFIG_DIR_NAME}/cache")
+CONFIG_MCP_CACHE_DIR = Path(f"{CONFIG_CACHE_DIR}/mcp")
 
 DEFAULT_CONFIG_DIR_NAME = "resources/configs/default"
 

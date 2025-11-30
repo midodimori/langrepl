@@ -1,5 +1,9 @@
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import TYPE_CHECKING
+
 from langchain.tools import ToolRuntime, tool
-from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AnyMessage, HumanMessage
 from langchain_core.tools import BaseTool, ToolException
 from langgraph.types import Command
@@ -13,11 +17,16 @@ from src.core.config import SubAgentConfig
 from src.skills.factory import Skill
 from src.utils.render import create_tool_message
 
+if TYPE_CHECKING:
+    from langchain_core.language_models import BaseChatModel
+    from langgraph.graph.state import CompiledStateGraph
+
+    from src.core.config import LLMConfig
+
 
 class SubAgent(BaseModel):
     config: SubAgentConfig
     prompt: str
-    llm: BaseChatModel
     tools: list[BaseTool]
     internal_tools: list[BaseTool]
     tools_in_catalog: list[BaseTool] = Field(default_factory=list)
@@ -36,18 +45,10 @@ class SubAgent(BaseModel):
 
 def create_task_tool(
     subagents: list[SubAgent],
+    model_provider: Callable[[LLMConfig], BaseChatModel],
     state_schema: StateSchemaType | None = None,
 ):
-    agents = {
-        subagent.name: create_react_agent(
-            name=subagent.name,
-            model=subagent.llm,
-            prompt=subagent.prompt,
-            tools=subagent.tools + subagent.internal_tools + [think],
-            state_schema=state_schema,
-        )
-        for subagent in subagents
-    }
+    agents: dict[str, CompiledStateGraph] = {}
 
     subagent_catalogs = {
         subagent.name: subagent.tools_in_catalog for subagent in subagents
@@ -70,11 +71,22 @@ def create_task_tool(
         subagent_type: str,
         runtime: ToolRuntime[AgentContext, AgentState],
     ):
-        if subagent_type not in agents:
-            allowed = [f"`{k}`" for k in agents]
+        valid_names = {sa.name for sa in subagents}
+        if subagent_type not in valid_names:
+            allowed = [f"`{k}`" for k in valid_names]
             raise ToolException(
                 f"Invoked agent of type {subagent_type}, "
                 f"the only allowed types are {allowed}"
+            )
+        if subagent_type not in agents:
+            subagent_obj = next(sa for sa in subagents if sa.name == subagent_type)
+            model = model_provider(subagent_obj.config.llm)
+            agents[subagent_type] = create_react_agent(
+                name=subagent_obj.name,
+                model=model,
+                prompt=subagent_obj.prompt,
+                tools=subagent_obj.tools + subagent_obj.internal_tools + [think],
+                state_schema=state_schema,
             )
         subagent = agents[subagent_type]
         subagent_obj = next(sa for sa in subagents if sa.name == subagent_type)
@@ -93,7 +105,7 @@ def create_task_tool(
                     subagent_obj.config.tools.output_max_tokens
                 )
 
-        result = await subagent.ainvoke(state, context=context)
+        result = await subagent.ainvoke(state, context=context)  # type: ignore
 
         last_message: AnyMessage = result["messages"][-1]
         final_message = create_tool_message(

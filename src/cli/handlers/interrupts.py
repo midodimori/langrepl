@@ -1,8 +1,10 @@
 """HIL interrupt management for LangGraph execution."""
 
-import sys
+from __future__ import annotations
 
-from langgraph.types import Interrupt
+import sys
+from typing import TYPE_CHECKING
+
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.shortcuts import CompleteStyle
@@ -12,6 +14,9 @@ from src.cli.theme import console, theme
 from src.core.logging import get_logger
 from src.core.settings import settings
 from src.middleware.approval import InterruptPayload
+
+if TYPE_CHECKING:
+    from langgraph.types import Interrupt
 
 logger = get_logger(__name__)
 

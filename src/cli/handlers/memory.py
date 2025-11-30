@@ -13,7 +13,7 @@ logger = get_logger(__name__)
 class MemoryHandler:
     """Handles user memory operations."""
 
-    def __init__(self, session):
+    def __init__(self, session) -> None:
         """Initialize with reference to CLI session."""
         self.session = session
 

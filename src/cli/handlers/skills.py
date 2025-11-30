@@ -23,7 +23,7 @@ logger = get_logger(__name__)
 
 
 class SkillsHandler:
-    def __init__(self, session):
+    def __init__(self, session) -> None:
         self.session = session
 
     async def handle(self, skills: list[Skill]) -> None:

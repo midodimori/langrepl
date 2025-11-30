@@ -39,7 +39,7 @@ logger = get_logger(__name__)
 class MessageDispatcher:
     """Dispatch user message processing and AI response streaming."""
 
-    def __init__(self, session):
+    def __init__(self, session) -> None:
         """Initialize with reference to CLI session."""
         self.session = session
         self.interrupt_handler = InterruptHandler(session=session)

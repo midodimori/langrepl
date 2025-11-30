@@ -23,7 +23,7 @@ from src.cli.theme import console
 class CommandDispatcher:
     """Dispatch slash commands."""
 
-    def __init__(self, session):
+    def __init__(self, session) -> None:
         """Initialize with reference to CLI session."""
         self.session = session
         self.commands = self._register_commands()

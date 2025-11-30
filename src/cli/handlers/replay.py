@@ -23,7 +23,7 @@ logger = get_logger(__name__)
 class ReplayHandler:
     """Handles replaying conversation from a previous human message."""
 
-    def __init__(self, session):
+    def __init__(self, session) -> None:
         """Initialize with reference to CLI session."""
         self.session = session
 

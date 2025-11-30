@@ -27,7 +27,7 @@ logger = get_logger(__name__)
 class ModelHandler:
     """Handles model operations like switching and selection."""
 
-    def __init__(self, session):
+    def __init__(self, session) -> None:
         """Initialize with reference to CLI session."""
         self.session = session
 

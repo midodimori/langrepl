@@ -170,24 +170,25 @@ class ModelHandler:
             full_screen=False,
         )
 
+        selected_agent: tuple[str, str, AgentConfig | SubAgentConfig] | None = None
+
         try:
             await app.run_async()
 
             if selected[0]:
-                if sys.stdout.isatty():
-                    num_lines = len(agents)
-                    for _i in range(num_lines):
-                        sys.stdout.write("\033[F")
-                        sys.stdout.write("\033[K")
-                    sys.stdout.flush()
-                return agents[current_index]
-
-            console.print("")
-            return None
+                selected_agent = agents[current_index]
 
         except (KeyboardInterrupt, EOFError):
-            console.print("")
-            return None
+            pass
+        finally:
+            if sys.stdout.isatty():
+                num_lines = len(agents)
+                for _i in range(num_lines):
+                    sys.stdout.write("\033[F")
+                    sys.stdout.write("\033[K")
+                sys.stdout.flush()
+
+        return selected_agent
 
     async def _get_model_selection(
         self, models: list[LLMConfig], current_model: str, default_model: str
@@ -247,25 +248,25 @@ class ModelHandler:
             full_screen=False,
         )
 
+        selected_model = ""
+
         try:
             await app.run_async()
 
             if selected[0]:
-                if sys.stdout.isatty():
-                    num_lines = len(models)
-                    for _i in range(num_lines):
-                        sys.stdout.write("\033[F")
-                        sys.stdout.write("\033[K")
-                    sys.stdout.flush()
-                model = models[current_index]
-                return model.alias
-
-            console.print("")
-            return ""
+                selected_model = models[current_index].alias
 
         except (KeyboardInterrupt, EOFError):
-            console.print("")
-            return ""
+            pass
+        finally:
+            if sys.stdout.isatty():
+                num_lines = len(models)
+                for _i in range(num_lines):
+                    sys.stdout.write("\033[F")
+                    sys.stdout.write("\033[K")
+                sys.stdout.flush()
+
+        return selected_model
 
     def _format_agent_list(
         self,

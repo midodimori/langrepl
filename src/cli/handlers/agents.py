@@ -124,25 +124,25 @@ class AgentHandler:
             full_screen=False,
         )
 
+        selected_agent_name = ""
+
         try:
             await app.run_async()
 
             if selected[0]:
-                # Clear the agent list from screen
+                selected_agent_name = agents[current_index].name
+
+        except (KeyboardInterrupt, EOFError):
+            pass
+        finally:
+            if sys.stdout.isatty():
                 num_lines = len(agents)
                 for _i in range(num_lines):
                     sys.stdout.write("\033[F")
                     sys.stdout.write("\033[K")
                 sys.stdout.flush()
-                agent = agents[current_index]
-                return agent.name
 
-            console.print("")
-            return ""
-
-        except (KeyboardInterrupt, EOFError):
-            console.print("")
-            return ""
+        return selected_agent_name
 
     @staticmethod
     def _format_agent_list(agents: list[AgentConfig], selected_index: int):

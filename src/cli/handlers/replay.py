@@ -191,24 +191,24 @@ class ReplayHandler:
             full_screen=False,
         )
 
+        selected_index_result: int | None = None
+
         try:
             await app.run_async()
 
             if selected[0]:
-                # Clear the selector from screen
-                num_lines = min(len(messages), window_size)
-                for _i in range(num_lines):
-                    sys.stdout.write("\033[F")
-                    sys.stdout.write("\033[K")
-                sys.stdout.flush()
-                return current_index
-
-            console.print("")
-            return None
+                selected_index_result = current_index
 
         except (KeyboardInterrupt, EOFError):
-            console.print("")
-            return None
+            pass
+        finally:
+            num_lines = min(len(messages), window_size)
+            for _i in range(num_lines):
+                sys.stdout.write("\033[F")
+                sys.stdout.write("\033[K")
+            sys.stdout.flush()
+
+        return selected_index_result
 
     @staticmethod
     def _format_message_list(

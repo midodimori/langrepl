@@ -134,26 +134,25 @@ class ResumeHandler:
             full_screen=False,
         )
 
+        selected_thread_id = ""
+
         try:
             await app.run_async()
 
-            # Clear the thread list from screen
             if selected[0]:
-                # Calculate number of lines to clear (visible threads)
-                num_lines = min(len(threads), window_size)
-                # Move cursor up and clear lines
-                for _i in range(num_lines):
-                    sys.stdout.write("\033[F")  # Move cursor up one line
-                    sys.stdout.write("\033[K")  # Clear line
-                sys.stdout.flush()
-                return threads[current_index].get("thread_id", "")
-
-            console.print("")
-            return ""
+                selected_thread_id = threads[current_index].get("thread_id", "")
 
         except (KeyboardInterrupt, EOFError):
-            console.print("")
-            return ""
+            pass
+        finally:
+            # Clear the thread list from screen
+            num_lines = min(len(threads), window_size)
+            for _i in range(num_lines):
+                sys.stdout.write("\033[F")  # Move cursor up one line
+                sys.stdout.write("\033[K")  # Clear line
+            sys.stdout.flush()
+
+        return selected_thread_id
 
     @staticmethod
     def _format_thread_list(

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel, create_model
 
 if TYPE_CHECKING:
     from langchain_core.tools import BaseTool
@@ -21,31 +21,14 @@ class ToolSchema(BaseModel):
         elif isinstance(args_schema, dict):
             parameters = args_schema
         else:
-            fields_to_include: dict[str, Any] = {}
-            for name, field in args_schema.model_fields.items():
-                if name == "runtime":
-                    continue
-
-                if field.default_factory:
-                    field_obj = Field(
-                        default_factory=field.default_factory,
-                        description=field.description,
-                        title=field.title,
-                    )
-                elif not field.is_required():
-                    field_obj = Field(
-                        default=field.default,
-                        description=field.description,
-                        title=field.title,
-                    )
-                else:
-                    field_obj = Field(
-                        description=field.description,
-                        title=field.title,
-                    )
-                fields_to_include[name] = (field.annotation, field_obj)
-
-            user_schema = create_model(f"{tool.name}Args", **fields_to_include)
+            filtered_fields: dict[str, Any] = {
+                name: (field.annotation, field)
+                for name, field in args_schema.model_fields.items()
+                if name != "runtime"
+            }
+            user_schema = create_model(
+                f"{tool.name}Args", **cast(dict[str, Any], filtered_fields)
+            )
             parameters = user_schema.model_json_schema()
 
         return cls(
@@ -53,3 +36,26 @@ class ToolSchema(BaseModel):
             description=tool.description,
             parameters=parameters,
         )
+
+
+def parameters_to_model(
+    name: str, parameters: dict[str, Any] | None
+) -> type[BaseModel] | None:
+    """Convert stored parameters JSON schema into a permissive pydantic model.
+
+    JSON Schema validation is handled separately; this model satisfies BaseTool.args_schema.
+    """
+    if not parameters:
+        return None
+
+    properties = parameters.get("properties")
+    if not isinstance(properties, dict):
+        return None
+
+    field_defs: dict[str, Any] = {
+        field_name: (Any, ...)
+        for field_name, schema in properties.items()
+        if isinstance(schema, dict)
+    }
+
+    return create_model(f"{name}Args", **cast(dict[str, Any], field_defs))

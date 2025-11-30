@@ -35,7 +35,7 @@ class MCPClient(MultiServerMCPClient):
         self._enable_approval = enable_approval
         self._cache_dir = cache_dir
         self._server_hashes = server_hashes or {}
-        self._tools_cache: list[BaseTool] = []
+        self._tools_cache: list[BaseTool] | None = None
         self._module_map: dict[str, str] = {}
         self._live_tools: dict[str, dict[str, BaseTool]] = {}
         self._init_lock = asyncio.Lock()
@@ -49,10 +49,10 @@ class MCPClient(MultiServerMCPClient):
             return any(self._is_mcp_error(e) for e in exc.exceptions)
         return False
 
-    def _filter_tools(self, tools: list[BaseTool], server_name: str) -> list[BaseTool]:
+    def _is_tool_allowed(self, tool_name: str, server_name: str) -> bool:
         filters = self._tool_filters.get(server_name)
         if not filters:
-            return tools
+            return True
 
         include, exclude = filters.get("include", []), filters.get("exclude", [])
         if include and exclude:
@@ -61,10 +61,13 @@ class MCPClient(MultiServerMCPClient):
             )
 
         if include:
-            return [t for t in tools if t.name in include]
+            return tool_name in include
         if exclude:
-            return [t for t in tools if t.name not in exclude]
-        return tools
+            return tool_name not in exclude
+        return True
+
+    def _filter_tools(self, tools: list[BaseTool], server_name: str) -> list[BaseTool]:
+        return [tool for tool in tools if self._is_tool_allowed(tool.name, server_name)]
 
     @staticmethod
     async def _run_repair_command(command: list[str]) -> None:
@@ -94,8 +97,13 @@ class MCPClient(MultiServerMCPClient):
                 return None
 
             return [ToolSchema.model_validate(item) for item in tools_data]
-        except Exception:
-            logger.warning("Failed to load cached schemas for %s", server_name)
+        except Exception as exc:
+            logger.warning(
+                "Failed to load cached schemas for %s: %s",
+                server_name,
+                exc,
+                exc_info=exc,
+            )
             return None
 
     def _save_cached_schemas(
@@ -112,8 +120,13 @@ class MCPClient(MultiServerMCPClient):
                 "tools": [ts.model_dump() for ts in tool_schemas],
             }
             path.write_text(json.dumps(data, ensure_ascii=True, indent=2))
-        except Exception:
-            logger.warning("Failed to save cached schemas for %s", server_name)
+        except Exception as exc:
+            logger.warning(
+                "Failed to save cached schemas for %s: %s",
+                server_name,
+                exc,
+                exc_info=exc,
+            )
 
     async def _get_server_tools(self, server_name: str) -> list[BaseTool]:
         try:
@@ -153,6 +166,18 @@ class MCPClient(MultiServerMCPClient):
         self._module_map.setdefault(tool_name, server_name)
         return True
 
+    def _prepare_server_tools(
+        self, server_name: str, tools: list[BaseTool]
+    ) -> list[BaseTool]:
+        prepared = []
+        for tool in tools:
+            self._apply_metadata(tool)
+            if self._register_tool(tool.name, server_name):
+                prepared.append(tool)
+
+        self._live_tools[server_name] = {tool.name: tool for tool in prepared}
+        return prepared
+
     async def _load_live_tool(
         self, server_name: str, tool_name: str
     ) -> BaseTool | None:
@@ -162,42 +187,31 @@ class MCPClient(MultiServerMCPClient):
         ):
             return self._live_tools[server_name][tool_name]
 
-        if server_name not in self._server_locks:
-            self._server_locks[server_name] = asyncio.Lock()
+        lock = self._server_locks.setdefault(server_name, asyncio.Lock())
 
-        async with self._server_locks[server_name]:
+        async with lock:
             if server_name in self._live_tools:
                 return self._live_tools[server_name].get(tool_name)
 
             tools = await self._get_server_tools(server_name)
-            prepared = []
-            for tool in tools:
-                self._apply_metadata(tool)
-                if self._register_tool(tool.name, server_name):
-                    prepared.append(tool)
-            self._live_tools[server_name] = {tool.name: tool for tool in prepared}
+            self._prepare_server_tools(server_name, tools)
             return self._live_tools[server_name].get(tool_name)
 
     async def _load_and_cache_server(self, server_name: str) -> list[BaseTool]:
         tools = await self._get_server_tools(server_name)
-        prepared = []
-        for tool in tools:
-            self._apply_metadata(tool)
-            if self._register_tool(tool.name, server_name):
-                prepared.append(tool)
+        prepared = self._prepare_server_tools(server_name, tools)
 
         if prepared:
-            self._live_tools[server_name] = {tool.name: tool for tool in prepared}
             tool_schemas = [ToolSchema.from_tool(t) for t in prepared]
             self._save_cached_schemas(server_name, tool_schemas)
         return prepared
 
     async def get_mcp_tools(self) -> list[BaseTool]:
-        if self._tools_cache:
+        if self._tools_cache is not None:
             return self._tools_cache
 
         async with self._init_lock:
-            if self._tools_cache:
+            if self._tools_cache is not None:
                 return self._tools_cache
 
             tools: list[BaseTool] = []
@@ -210,6 +224,8 @@ class MCPClient(MultiServerMCPClient):
                     continue
 
                 for tool_schema in cached:
+                    if not self._is_tool_allowed(tool_schema.name, server_name):
+                        continue
                     if not self._register_tool(tool_schema.name, server_name):
                         continue
                     lazy_tool = LazyMCPTool(
@@ -226,7 +242,9 @@ class MCPClient(MultiServerMCPClient):
                     return_exceptions=True,
                 )
 
-                for server_name, server_result in zip(pending_servers, results):
+                for server_name, server_result in zip(
+                    pending_servers, results, strict=True
+                ):
                     if isinstance(server_result, ValueError):
                         raise server_result
                     if isinstance(server_result, Exception):
@@ -234,7 +252,7 @@ class MCPClient(MultiServerMCPClient):
                             "Failed to load MCP server %s: %s",
                             server_name,
                             server_result,
-                            exc_info=True,
+                            exc_info=server_result,
                         )
                         continue
                     if isinstance(server_result, list):

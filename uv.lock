@@ -1463,6 +1463,7 @@ dependencies = [
     { name = "aiosqlite" },
     { name = "greenlet" },
     { name = "json-repair" },
+    { name = "jsonschema" },
     { name = "langchain" },
     { name = "langchain-anthropic" },
     { name = "langchain-aws" },
@@ -1488,6 +1489,7 @@ dependencies = [
     { name = "rich" },
     { name = "trafilatura" },
     { name = "types-aiofiles" },
+    { name = "types-jsonschema" },
     { name = "types-pyyaml" },
 ]
 
@@ -1510,6 +1512,7 @@ requires-dist = [
     { name = "aiosqlite", specifier = ">=0.21.0" },
     { name = "greenlet", specifier = ">=3.2.4" },
     { name = "json-repair", specifier = ">=0.54.2" },
+    { name = "jsonschema", specifier = ">=4.25.1" },
     { name = "langchain", specifier = ">=1.0.4" },
     { name = "langchain-anthropic", specifier = ">=1.0.1" },
     { name = "langchain-aws", specifier = ">=1.0.0" },
@@ -1535,6 +1538,7 @@ requires-dist = [
     { name = "rich", specifier = ">=14.2.0" },
     { name = "trafilatura", specifier = ">=2.0.0" },
     { name = "types-aiofiles", specifier = ">=25.1.0.20251011" },
+    { name = "types-jsonschema", specifier = ">=4.25.1.20251009" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20250915" },
 ]
 
@@ -3063,6 +3067,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f7/6f/d4f2adb086e8f5cd2ae83cf8dbb192057d8b5025120e5b372468292db67f/types_awscrt-0.28.4.tar.gz", hash = "sha256:15929da84802f27019ee8e4484fb1c102e1f6d4cf22eb48688c34a5a86d02eb6", size = 17692, upload-time = "2025-11-11T02:56:53.516Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5e/ae/9acc4adf1d5d7bb7d09b6f9ff5d4d04a72eb64700d104106dd517665cd57/types_awscrt-0.28.4-py3-none-any.whl", hash = "sha256:2d453f9e27583fcc333771b69a5255a5a4e2c52f86e70f65f3c5a6789d3443d0", size = 42307, upload-time = "2025-11-11T02:56:52.231Z" },
+]
+
+[[package]]
+name = "types-jsonschema"
+version = "4.25.1.20251009"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "referencing" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ef/da/5b901088da5f710690b422137e8ae74197fb1ca471e4aa84dd3ef0d6e295/types_jsonschema-4.25.1.20251009.tar.gz", hash = "sha256:75d0f5c5dd18dc23b664437a0c1a625743e8d2e665ceaf3aecb29841f3a5f97f", size = 15661, upload-time = "2025-10-09T02:54:36.963Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7f/6a/e5146754c0dfc272f176db9c245bc43cc19030262d891a5a85d472797e60/types_jsonschema-4.25.1.20251009-py3-none-any.whl", hash = "sha256:f30b329037b78e7a60146b1146feb0b6fb0b71628637584409bada83968dad3e", size = 15925, upload-time = "2025-10-09T02:54:35.847Z" },
 ]
 
 [[package]]

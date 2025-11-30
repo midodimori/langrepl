@@ -14,6 +14,10 @@ if TYPE_CHECKING:
 def create_dynamic_prompt_middleware(template: str):
     @dynamic_prompt
     def render_prompt(request: ModelRequest) -> str:
+        if not isinstance(request.runtime.context, AgentContext):
+            raise TypeError(
+                f"Expected AgentContext, got {type(request.runtime.context)}"
+            )
         ctx = cast(AgentContext, request.runtime.context)
         return str(render_templates(template, ctx.template_vars))
 

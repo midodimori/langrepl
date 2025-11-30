@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import platform
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -27,6 +26,7 @@ from src.cli.bootstrap.initializer import initializer
 from src.cli.builders import MessageContentBuilder
 from src.cli.handlers import CompressionHandler, InterruptHandler
 from src.cli.theme import console, theme
+from src.core.constants import OS_VERSION, PLATFORM
 from src.core.logging import get_logger
 from src.utils.compression import should_auto_compress
 
@@ -67,8 +67,8 @@ class MessageDispatcher:
             agent_context = AgentContext(
                 approval_mode=ctx.approval_mode,
                 working_dir=ctx.working_dir,
-                platform=platform.system(),
-                os_version=platform.version(),
+                platform=PLATFORM,
+                os_version=OS_VERSION,
                 current_date_time_zoned=now.strftime("%Y-%m-%d %H:%M:%S %Z"),
                 user_memory=user_memory,
                 tool_catalog=initializer.cached_tools_in_catalog,

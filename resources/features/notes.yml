@@ -1,5 +1,6 @@
 features_by_version:
   "1.8.x":
+    - "Reduce startup time with deferral and caching"
     - "Skill system for modular knowledge packages"
   "1.7.x":
     - "Tool catalog system for reducing token usage"

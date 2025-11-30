@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
@@ -169,20 +171,33 @@ class TestMCPClientGetTools:
         client._load_and_cache_server.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_cache_invalidated_on_hash_mismatch(self, create_mock_tool):
+    async def test_cache_invalidated_on_hash_mismatch(
+        self, create_mock_tool, tmp_path: Path
+    ):
         mock_tool = create_mock_tool("tool1")
 
         client = MCPClient(
             connections={"server1": Mock()},
             enable_approval=False,
             server_hashes={"server1": "new_hash"},
+            cache_dir=tmp_path,
         )
 
         async def load_and_cache_server(server_name: str):
             return [mock_tool]
 
         client._load_and_cache_server = AsyncMock(side_effect=load_and_cache_server)  # type: ignore[method-assign]
-        client._load_cached_schemas = MagicMock(return_value=None)  # type: ignore[method-assign]
+
+        cache_path = tmp_path / "server1.json"
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cached_schema = ToolSchema.from_tool(mock_tool)
+        cache_path.write_text(
+            json.dumps(
+                {"hash": "old_hash", "tools": [cached_schema.model_dump()]},
+                ensure_ascii=True,
+                indent=2,
+            )
+        )
 
         tools = await client.get_mcp_tools()
 

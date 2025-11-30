@@ -33,6 +33,7 @@ class MCPFactory:
             "env": tuple(sorted((server.env or {}).items())),
             "include": tuple(server.include or []),
             "exclude": tuple(server.exclude or []),
+            "repair_command": tuple(server.repair_command or []),
         }
         return hashlib.sha256(repr(signature).encode("utf-8")).hexdigest()
 

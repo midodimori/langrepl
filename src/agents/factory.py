@@ -121,6 +121,7 @@ class AgentFactory:
         tools_config: ToolsConfig | None,
         tool_resources: ToolResources,
         extra_llm_tools: list[BaseTool] | None = None,
+        *,
         impl_first: bool = False,
     ) -> ToolSelection:
         tool_patterns = tools_config.patterns if tools_config else None

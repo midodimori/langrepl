@@ -116,10 +116,9 @@ class TestAgentHandler:
         mock_app.run_async = AsyncMock()
         mock_app_cls.return_value = mock_app
 
-        with patch("src.cli.handlers.agents.sys.stdout"):
-            await handler._get_agent_selection(agents)
+        await handler._get_agent_selection(agents)
 
-            mock_app.run_async.assert_called_once()
+        mock_app.run_async.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_agent_selection_returns_empty_for_no_agents(self, mock_session):

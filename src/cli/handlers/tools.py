@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import shutil
-import sys
 from typing import Any
 
 from prompt_toolkit.application import Application
@@ -11,10 +10,11 @@ from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.layout import Layout
-from prompt_toolkit.layout.containers import Window
+from prompt_toolkit.layout.containers import HSplit, Window
 from prompt_toolkit.layout.controls import FormattedTextControl
 
 from src.cli.theme import console, theme
+from src.cli.ui.shared import create_bottom_toolbar, create_prompt_style
 from src.core.logging import get_logger
 from src.core.settings import settings
 
@@ -104,10 +104,27 @@ class ToolsHandler:
             event.app.exit()
 
         # Create application
+        context = self.session.context
         app: Application = Application(
-            layout=Layout(Window(content=text_control)),
+            layout=Layout(
+                HSplit(
+                    [
+                        Window(content=text_control),
+                        Window(
+                            height=1,
+                            content=FormattedTextControl(
+                                lambda: create_bottom_toolbar(
+                                    context, context.working_dir, context.bash_mode
+                                )
+                            ),
+                        ),
+                    ]
+                )
+            ),
             key_bindings=kb,
             full_screen=False,
+            style=create_prompt_style(context, context.bash_mode),
+            erase_when_done=True,
         )
 
         try:
@@ -119,24 +136,6 @@ class ToolsHandler:
 
         except (KeyboardInterrupt, EOFError):
             pass  # Exit gracefully
-        finally:
-            num_visible = min(len(tools), window_size)
-            num_lines = num_visible + 2
-            for idx in expanded_indices:
-                if scroll_offset <= idx < scroll_offset + window_size:
-                    desc = getattr(tools[idx], "description", "")
-                    terminal_width = shutil.get_terminal_size().columns
-                    wrap_width = max(1, terminal_width - 6)
-                    for desc_line in desc.split("\n"):
-                        num_lines += 1 + (
-                            len(desc_line) // wrap_width
-                            if len(desc_line) > wrap_width
-                            else 0
-                        )
-            for _i in range(num_lines):
-                sys.stdout.write("\033[F")
-                sys.stdout.write("\033[K")
-            sys.stdout.flush()
 
     @staticmethod
     def _format_tool_list(

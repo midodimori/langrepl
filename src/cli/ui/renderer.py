@@ -398,9 +398,9 @@ class Renderer:
         formatted_lines = []
         for i, line in enumerate(content.split("\n")):
             if i == 0:
-                formatted_lines.append(f" ㄴ{line}")
+                formatted_lines.append(f"  ㄴ{line}")
             else:
-                formatted_lines.append(f"   {line}")
+                formatted_lines.append(f"    {line}")
 
         formatted_content = "\n".join(formatted_lines)
 

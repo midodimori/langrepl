@@ -49,9 +49,8 @@ class TestToolsHandler:
         mock_app.run_async = AsyncMock()
         mock_app_cls.return_value = mock_app
 
-        with patch("src.cli.handlers.tools.sys.stdout"):
-            await handler._get_tool_selection(tools)
-            mock_app.run_async.assert_called_once()
+        await handler._get_tool_selection(tools)
+        mock_app.run_async.assert_called_once()
 
     @pytest.mark.asyncio
     @patch("src.cli.handlers.tools.Application")
@@ -66,8 +65,7 @@ class TestToolsHandler:
         mock_app.run_async = AsyncMock(side_effect=KeyboardInterrupt())
         mock_app_cls.return_value = mock_app
 
-        with patch("src.cli.handlers.tools.sys.stdout"):
-            await handler._get_tool_selection(tools)
+        await handler._get_tool_selection(tools)
 
     @pytest.mark.asyncio
     @patch("src.cli.handlers.tools.Application")
@@ -82,8 +80,7 @@ class TestToolsHandler:
         mock_app.run_async = AsyncMock(side_effect=EOFError())
         mock_app_cls.return_value = mock_app
 
-        with patch("src.cli.handlers.tools.sys.stdout"):
-            await handler._get_tool_selection(tools)
+        await handler._get_tool_selection(tools)
 
     def test_format_tool_list_formats_correctly(self, create_mock_tool):
         """Test that _format_tool_list formats tools correctly."""

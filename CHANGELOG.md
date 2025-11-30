@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.8.2 (2025-11-30)
+
+### Performance Improvements
+
+- Reduce startup time (#58) ([#58](https://github.com/midodimori/langrepl/pull/58),
+  [`67546c6`](https://github.com/midodimori/langrepl/commit/67546c62cb6b053c4990d3e645517282e0c8d35e))
+
+
 ## v1.8.1 (2025-11-29)
 
 ### Chores

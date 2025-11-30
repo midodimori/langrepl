@@ -8,9 +8,43 @@ multi-step operations.
 from langchain.tools import ToolRuntime, tool
 from langchain_core.messages import ToolMessage
 from langgraph.types import Command
+from rich.markup import escape
 
 from src.agents.context import AgentContext
 from src.agents.state import AgentState, Todo
+from src.cli.theme import theme
+
+
+def format_todos(todos: list[Todo], max_items: int = 5) -> str:
+    """Render todos as Rich markup with status indicators and summaries."""
+
+    if not todos:
+        return "[muted]No todos[/muted]"
+
+    status_meta: dict[str, tuple[str, str]] = {
+        "pending": ("⧖", theme.primary_text),
+        "in_progress": ("↻", theme.info_color),
+        "completed": ("✓", theme.success_color),
+    }
+
+    priority = {"completed": 0, "in_progress": 1, "pending": 2}
+    sorted_todos = sorted(
+        todos,
+        key=lambda todo: priority.get(todo.get("status", "pending"), 3),
+    )
+
+    lines: list[str] = []
+    for todo in sorted_todos[:max_items]:
+        status = todo.get("status", "pending")
+        icon, color = status_meta.get(status, ("•", theme.secondary_text))
+        content = escape(todo.get("content", "").strip())
+        lines.append(f"[{color}]{icon} {content}[/]")
+
+    remaining = len(todos) - max_items
+    if remaining > 0:
+        lines.append(f"[{theme.muted_text}]+{remaining} more[/]")
+
+    return "\n".join(lines)
 
 
 @tool()
@@ -40,6 +74,8 @@ def write_todos(
         todos: List of Todo items with content and status
 
     """
+    formatted_todos = format_todos(todos)
+
     return Command(
         update={
             "todos": todos,
@@ -48,6 +84,7 @@ def write_todos(
                     name=write_todos.name,
                     content=f"Updated todo list to {todos}",
                     tool_call_id=runtime.tool_call_id,
+                    short_content=formatted_todos,
                 )
             ],
         }
@@ -70,13 +107,7 @@ def read_todos(
     if not todos:
         return "No todos currently in the list."
 
-    result = "Current TODO List:\n"
-    for i, todo in enumerate(todos, 1):
-        status_emoji = {"pending": "⧖", "in_progress": "⏱", "completed": "✓"}
-        emoji = status_emoji.get(todo["status"], "?")
-        result += f"{i}. {emoji} {todo['content']} ({todo['status']})\n"
-
-    return result.strip()
+    return format_todos(todos, max_items=50)
 
 
 read_todos.metadata = {"approval_config": {"always_approve": True}}

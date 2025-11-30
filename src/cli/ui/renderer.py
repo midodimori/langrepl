@@ -292,9 +292,9 @@ class Renderer:
         result = Text()
         result.append("⚙ ", style="indicator")
         result.append(tool_name, style="bold")
+        result.append("\n")
 
         if tool_args:
-            result.append("\n")
             for k, v in tool_args.items():
                 # Format value with truncation if needed
                 value_str = str(v)

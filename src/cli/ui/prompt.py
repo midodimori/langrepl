@@ -59,7 +59,7 @@ class InteractivePrompt:
         kb = self._create_key_bindings()
 
         # Create style
-        style = create_prompt_style(self.context, self.context.bash_mode)
+        style = create_prompt_style(self.context, bash_mode=self.context.bash_mode)
 
         # Create completer router for slash commands and @ references
         self.completer = CompleterRouter(
@@ -248,7 +248,9 @@ class InteractivePrompt:
             return HTML("<muted> Ctrl+C again to quit</muted>")
 
         return create_bottom_toolbar(
-            self.context, str(self.context.working_dir), self.context.bash_mode
+            self.context,
+            str(self.context.working_dir),
+            bash_mode=self.context.bash_mode,
         )
 
     def _schedule_hide_message(self, app):
@@ -266,7 +268,7 @@ class InteractivePrompt:
         if self.prompt_session:
             # Update the session style
             self.prompt_session.style = create_prompt_style(
-                self.context, self.context.bash_mode
+                self.context, bash_mode=self.context.bash_mode
             )
 
     async def get_input(self) -> tuple[str, bool]:

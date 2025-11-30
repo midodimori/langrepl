@@ -109,7 +109,9 @@ class InterruptHandler:
             style=style,
             key_bindings=kb,
             bottom_toolbar=lambda: create_bottom_toolbar(
-                context, context.working_dir, bash_mode=False
+                context,
+                context.working_dir,
+                bash_mode=False,
             ),
         )
 

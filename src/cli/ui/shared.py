@@ -13,7 +13,7 @@ from src.core.config import ApprovalMode
 from src.utils.version import get_version
 
 
-def get_prompt_color(context, bash_mode: bool = False) -> str:
+def get_prompt_color(context, *, bash_mode: bool = False) -> str:
     """Get prompt color based on approval mode and bash mode."""
     if bash_mode:
         return theme.danger_color
@@ -25,9 +25,9 @@ def get_prompt_color(context, bash_mode: bool = False) -> str:
     return mode_colors[context.approval_mode]
 
 
-def create_prompt_style(context, bash_mode: bool = False) -> Style:
+def create_prompt_style(context, *, bash_mode: bool = False) -> Style:
     """Create prompt style based on theme and approval mode."""
-    prompt_color = get_prompt_color(context, bash_mode)
+    prompt_color = get_prompt_color(context, bash_mode=bash_mode)
 
     return Style.from_dict(
         {
@@ -72,7 +72,12 @@ def create_prompt_style(context, bash_mode: bool = False) -> Style:
     )
 
 
-def create_bottom_toolbar(context, working_dir: str, bash_mode: bool = False):
+def create_bottom_toolbar(
+    context,
+    working_dir: str,
+    *,
+    bash_mode: bool = False,
+):
     """Create bottom toolbar with version, directory, and mode info."""
     terminal_width = os.get_terminal_size().columns if os.isatty(1) else 80
     version = get_version()
@@ -101,7 +106,11 @@ def create_bottom_toolbar(context, working_dir: str, bash_mode: bool = False):
     return HTML(f"<muted>{left_content}{padding}</muted>{styled_right}<muted> </muted>")
 
 
-def create_instruction(message: str, spacer: bool = True) -> list[Window]:
+def create_instruction(
+    message: str,
+    *,
+    spacer: bool = True,
+) -> list[Window]:
     """Create instruction window with optional spacer for interactive lists."""
     windows = [
         Window(

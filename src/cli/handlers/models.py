@@ -174,7 +174,9 @@ class ModelHandler:
                             height=1,
                             content=FormattedTextControl(
                                 lambda: create_bottom_toolbar(
-                                    context, context.working_dir, context.bash_mode
+                                    context,
+                                    context.working_dir,
+                                    bash_mode=context.bash_mode,
                                 )
                             ),
                         ),
@@ -183,7 +185,7 @@ class ModelHandler:
             ),
             key_bindings=kb,
             full_screen=False,
-            style=create_prompt_style(context, context.bash_mode),
+            style=create_prompt_style(context, bash_mode=context.bash_mode),
             erase_when_done=True,
         )
 
@@ -262,7 +264,9 @@ class ModelHandler:
                             height=1,
                             content=FormattedTextControl(
                                 lambda: create_bottom_toolbar(
-                                    context, context.working_dir, context.bash_mode
+                                    context,
+                                    context.working_dir,
+                                    bash_mode=context.bash_mode,
                                 )
                             ),
                         ),
@@ -271,7 +275,7 @@ class ModelHandler:
             ),
             key_bindings=kb,
             full_screen=False,
-            style=create_prompt_style(context, context.bash_mode),
+            style=create_prompt_style(context, bash_mode=context.bash_mode),
             erase_when_done=True,
         )
 

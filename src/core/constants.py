@@ -1,3 +1,4 @@
+import platform
 from pathlib import Path
 
 UNKNOWN = "unknown"
@@ -20,6 +21,7 @@ CONFIG_CHECKPOINTERS_DIR = Path(f"{CONFIG_DIR_NAME}/checkpointers")
 CONFIG_AGENTS_DIR = Path(f"{CONFIG_DIR_NAME}/agents")
 CONFIG_SUBAGENTS_DIR = Path(f"{CONFIG_DIR_NAME}/subagents")
 CONFIG_SKILLS_DIR = Path(f"{CONFIG_DIR_NAME}/skills")
+CONFIG_MCP_CACHE_DIR = Path(f"{CONFIG_DIR_NAME}/cache/mcp")
 
 DEFAULT_CONFIG_DIR_NAME = "resources/configs/default"
 
@@ -30,3 +32,6 @@ TOOL_CATEGORY_INTERNAL = "internal"
 AGENT_CONFIG_VERSION = "2.1.0"
 LLM_CONFIG_VERSION = "1.0.0"
 CHECKPOINTER_CONFIG_VERSION = "1.0.0"
+
+PLATFORM = platform.system()
+OS_VERSION = platform.version()

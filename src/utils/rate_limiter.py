@@ -1,17 +1,21 @@
 """Rate limiter utilities for API providers with token-based limits."""
 
+from __future__ import annotations
+
 import threading
 import time
 from collections import deque
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from langchain_core.messages import BaseMessage
 from langchain_core.rate_limiters import BaseRateLimiter
-from langchain_core.runnables.config import RunnableConfig
 
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
+
+if TYPE_CHECKING:
+    from langchain_core.messages import BaseMessage
+    from langchain_core.runnables.config import RunnableConfig
 
 
 class TokenBucketLimiter(BaseRateLimiter):

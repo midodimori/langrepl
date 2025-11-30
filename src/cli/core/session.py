@@ -1,11 +1,11 @@
 """Interactive chat session management."""
 
-from contextlib import AbstractAsyncContextManager
+from __future__ import annotations
 
-from langgraph.graph.state import CompiledStateGraph
+from contextlib import AbstractAsyncContextManager
+from typing import TYPE_CHECKING
 
 from src.cli.bootstrap.initializer import initializer
-from src.cli.core.context import Context
 from src.cli.dispatchers import CommandDispatcher, MessageDispatcher
 from src.cli.handlers.bash import BashDispatcher
 from src.cli.theme import console, theme
@@ -13,6 +13,11 @@ from src.cli.ui.prompt import InteractivePrompt
 from src.cli.ui.renderer import Renderer
 from src.core.logging import get_logger
 from src.utils.version import check_for_updates
+
+if TYPE_CHECKING:
+    from langgraph.graph.state import CompiledStateGraph
+
+    from src.cli.core.context import Context
 
 logger = get_logger(__name__)
 

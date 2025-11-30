@@ -1,5 +1,7 @@
 """Thread resumption for chat sessions."""
 
+from __future__ import annotations
+
 import sys
 
 from langchain_core.runnables import RunnableConfig

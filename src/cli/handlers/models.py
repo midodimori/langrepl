@@ -1,6 +1,9 @@
 """Model handling for chat sessions."""
 
+from __future__ import annotations
+
 import sys
+from typing import TYPE_CHECKING
 
 from prompt_toolkit.application import Application
 from prompt_toolkit.formatted_text import FormattedText
@@ -12,9 +15,11 @@ from prompt_toolkit.layout.controls import FormattedTextControl
 
 from src.cli.bootstrap.initializer import initializer
 from src.cli.theme import console, theme
-from src.core.config import AgentConfig, LLMConfig, SubAgentConfig
 from src.core.logging import get_logger
 from src.core.settings import settings
+
+if TYPE_CHECKING:
+    from src.core.config import AgentConfig, LLMConfig, SubAgentConfig
 
 logger = get_logger(__name__)
 

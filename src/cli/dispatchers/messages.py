@@ -1,9 +1,12 @@
 """Message handling for chat sessions."""
 
+from __future__ import annotations
+
 import asyncio
 import hashlib
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langchain_core.messages import (
     AIMessage,
@@ -13,7 +16,7 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_core.runnables import RunnableConfig
-from langgraph.types import Command, Interrupt
+from langgraph.types import Command
 from rich.console import Group
 from rich.markup import render
 from rich.text import Text
@@ -23,8 +26,12 @@ from src.cli.bootstrap.initializer import initializer
 from src.cli.builders import MessageContentBuilder
 from src.cli.handlers import CompressionHandler, InterruptHandler
 from src.cli.theme import console, theme
+from src.core.constants import OS_VERSION, PLATFORM
 from src.core.logging import get_logger
 from src.utils.compression import should_auto_compress
+
+if TYPE_CHECKING:
+    from langgraph.types import Interrupt
 
 logger = get_logger(__name__)
 
@@ -55,9 +62,15 @@ class MessageDispatcher:
                 additional_kwargs={"reference_mapping": reference_mapping},
             )
             ctx = self.session.context
+            now = datetime.now(timezone.utc).astimezone()
+            user_memory = await initializer.load_user_memory(ctx.working_dir)
             agent_context = AgentContext(
                 approval_mode=ctx.approval_mode,
                 working_dir=ctx.working_dir,
+                platform=PLATFORM,
+                os_version=OS_VERSION,
+                current_date_time_zoned=now.strftime("%Y-%m-%d %H:%M:%S %Z"),
+                user_memory=user_memory,
                 tool_catalog=initializer.cached_tools_in_catalog,
                 skill_catalog=initializer.cached_agent_skills,
                 input_cost_per_mtok=ctx.input_cost_per_mtok,

@@ -1,15 +1,24 @@
 """Async SQLite checkpointer implementation with message indexing."""
 
+from __future__ import annotations
+
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 
-from langchain_core.messages import AnyMessage, BaseMessage
 from langchain_core.runnables import RunnableConfig
-from langgraph.checkpoint.base import Checkpoint, CheckpointMetadata, CheckpointTuple
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 from src.checkpointer.base import BaseCheckpointer, HumanMessageEntry
 from src.core.logging import get_logger
+
+if TYPE_CHECKING:
+    from langchain_core.messages import AnyMessage, BaseMessage
+    from langgraph.checkpoint.base import (
+        Checkpoint,
+        CheckpointMetadata,
+        CheckpointTuple,
+    )
 
 logger = get_logger(__name__)
 

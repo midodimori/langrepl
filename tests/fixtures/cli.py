@@ -44,6 +44,8 @@ def mock_session(mock_context, mock_renderer, mock_graph):
     session.command_dispatcher = MagicMock()
     session.command_dispatcher.resume_handler = MagicMock()
     session.command_dispatcher.resume_handler.handle = AsyncMock()
+    session.prompt = MagicMock()
+    session.prompt.mode_change_callback = MagicMock()
     return session
 
 

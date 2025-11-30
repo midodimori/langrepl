@@ -42,7 +42,7 @@ class MessageDispatcher:
     def __init__(self, session):
         """Initialize with reference to CLI session."""
         self.session = session
-        self.interrupt_handler = InterruptHandler()
+        self.interrupt_handler = InterruptHandler(session=session)
         self.message_builder = MessageContentBuilder(Path(session.context.working_dir))
         self._pending_compression = False
 

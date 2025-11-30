@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.8.4 (2025-11-30)
+
+### Features
+
+- Pretty format for todos list
+  ([`bb03ac7`](https://github.com/midodimori/langrepl/commit/bb03ac74015de18068ad29214498e31ed8df45ee))
+
+
 ## v1.8.3 (2025-11-30)
 
 

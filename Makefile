@@ -1,4 +1,4 @@
-.PHONY: install lint-fix test pre-commit clean
+.PHONY: install lint-fix test pre-commit clean sync-versions
 
 install:
 	uv sync --all-groups
@@ -23,3 +23,6 @@ clean:
 	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
+
+sync-versions:
+	uv run python scripts/sync_versions.py

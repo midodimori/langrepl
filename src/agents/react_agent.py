@@ -7,6 +7,7 @@ from langchain.agents import create_agent
 from src.middleware import (
     ApprovalMiddleware,
     CompressToolOutputMiddleware,
+    PendingToolResultMiddleware,
     ReturnDirectMiddleware,
     TokenCostMiddleware,
     create_dynamic_prompt_middleware,
@@ -60,14 +61,19 @@ def create_react_agent(
             CompressToolOutputMiddleware(model)  # Compress large tool outputs
         )
 
-    # Group 3: beforeModel - Before each model call
+    # Group 3: beforeAgent - Before each agent invocation
+    before_agent: list[AgentMiddleware[Any, Any]] = [
+        PendingToolResultMiddleware(),  # Repair missing tool results after interrupts
+    ]
+
+    # Group 4: beforeModel - Before each model call
     before_model: list[AgentMiddleware[Any, Any]] = [
         ReturnDirectMiddleware(),  # Check for return_direct and terminate if needed
     ]
 
     # Combine all middleware
     middleware: list[AgentMiddleware[Any, Any]] = (
-        dynamic_prompt + after_model + wrap_tool_call + before_model
+        dynamic_prompt + after_model + wrap_tool_call + before_agent + before_model
     )
 
     return create_agent(

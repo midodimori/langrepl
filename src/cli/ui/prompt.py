@@ -40,6 +40,11 @@ class InteractivePrompt:
         self.hotkeys: dict[str, str] = {}
         self._setup_session()
 
+    def _reset_ctrl_c_state(self) -> None:
+        """Clear Ctrl+C timing and banner state."""
+        self._last_ctrl_c_time = None
+        self._show_quit_message = False
+
     @staticmethod
     def _format_key_name(key) -> str:
         """Format key enum to human-readable string."""
@@ -101,25 +106,21 @@ class InteractivePrompt:
             # If there's text in the buffer, clear it
             if buffer.text.strip():
                 buffer.delete_before_cursor(len(buffer.text))
-                self._last_ctrl_c_time = None  # Reset timer after clearing
-                self._show_quit_message = False
+                self._reset_ctrl_c_state()  # Reset timer after clearing
                 return
 
             # If buffer is empty, check for double-press
             if self._last_ctrl_c_time is not None:
                 time_since_last = current_time - self._last_ctrl_c_time
-                if time_since_last < self._ctrl_c_timeout:
-                    # Double-press detected within timeout, quit
+                if time_since_last < self._ctrl_c_timeout or self._show_quit_message:
+                    # Second press (or stuck banner) - quit
+                    self._reset_ctrl_c_state()
                     raise KeyboardInterrupt()
-                # Double-press timeout expired, reset
-                self._last_ctrl_c_time = current_time
-                self._show_quit_message = True
-                self._schedule_hide_message(event.app)
-            else:
-                # First press on empty buffer
-                self._last_ctrl_c_time = current_time
-                self._show_quit_message = True
-                self._schedule_hide_message(event.app)
+
+            # First press on empty buffer or stale timer: arm quit and show banner
+            self._last_ctrl_c_time = current_time
+            self._show_quit_message = True
+            self._schedule_hide_message(event.app)
 
         @kb.add(Keys.ControlJ)
         def _(event):
@@ -257,11 +258,13 @@ class InteractivePrompt:
         """Schedule hiding the quit message after timeout."""
 
         def hide():
-            self._show_quit_message = False
-            self._last_ctrl_c_time = None
+            self._reset_ctrl_c_state()
             app.invalidate()
 
-        app.loop.call_later(self._ctrl_c_timeout, hide)
+        try:
+            app.loop.call_later(self._ctrl_c_timeout, hide)
+        except Exception:
+            self._reset_ctrl_c_state()
 
     def refresh_style(self) -> None:
         """Refresh the prompt style after approval mode change."""

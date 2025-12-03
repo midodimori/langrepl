@@ -67,10 +67,22 @@ def _render_diff_args(args: dict, config: dict) -> str:
                 return f"[{theme.error_color}]Cannot parse edits (malformed JSON)[/{theme.error_color}]"
 
     if edits and isinstance(edits, list):
-        all_diff_sections = []
-        for edit in edits:
+        sorted_edits = []
+        for idx, edit in enumerate(edits):
             old_content = _get_attr(edit, "old_content")
             new_content = _get_attr(edit, "new_content")
+            start_pos = float("inf")
+            if full_content:
+                found, start, _ = find_progressive_match(full_content, old_content)
+                if found:
+                    start_pos = start
+            sorted_edits.append((start_pos, idx, old_content, new_content))
+
+        # Keep original order for unmatched edits by using idx as secondary key
+        sorted_edits.sort(key=lambda item: (item[0], item[1]))
+
+        all_diff_sections = []
+        for _, _, old_content, new_content in sorted_edits:
             diff_lines = generate_diff(
                 old_content, new_content, context_lines=3, full_content=full_content
             )
@@ -253,7 +265,8 @@ async def edit_file(
         f.write(updated_content)
 
     all_diff_sections = []
-    for edit in edits:
+    for idx, _, _, _ in sorted_matches:
+        edit = edits[idx]
         diff_lines = generate_diff(
             edit.old_content,
             edit.new_content,

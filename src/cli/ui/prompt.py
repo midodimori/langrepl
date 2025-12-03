@@ -35,10 +35,19 @@ class InteractivePrompt:
         self.mode_change_callback = None
         self.bash_mode_toggle_callback = None
         self._last_ctrl_c_time: float | None = None
-        self._ctrl_c_timeout = 0.5  # 500ms window for double-press detection
+        self._ctrl_c_timeout = 0.30  # 300ms window for double-press detection
         self._show_quit_message = False
         self.hotkeys: dict[str, str] = {}
         self._setup_session()
+
+    def _reset_ctrl_c_state(self) -> None:
+        """Clear Ctrl+C timing and banner state."""
+        self._last_ctrl_c_time = None
+        self._show_quit_message = False
+
+    def reset_interrupt_state(self) -> None:
+        """Public wrapper to clear Ctrl+C timing/banner flags."""
+        self._reset_ctrl_c_state()
 
     @staticmethod
     def _format_key_name(key) -> str:
@@ -100,26 +109,25 @@ class InteractivePrompt:
 
             # If there's text in the buffer, clear it
             if buffer.text.strip():
-                buffer.delete_before_cursor(len(buffer.text))
-                self._last_ctrl_c_time = None  # Reset timer after clearing
-                self._show_quit_message = False
+                buffer.text = ""
+                self._reset_ctrl_c_state()  # Reset timer after clearing
                 return
 
             # If buffer is empty, check for double-press
             if self._last_ctrl_c_time is not None:
                 time_since_last = current_time - self._last_ctrl_c_time
-                if time_since_last < self._ctrl_c_timeout:
-                    # Double-press detected within timeout, quit
-                    raise KeyboardInterrupt()
-                # Double-press timeout expired, reset
-                self._last_ctrl_c_time = current_time
-                self._show_quit_message = True
-                self._schedule_hide_message(event.app)
-            else:
-                # First press on empty buffer
-                self._last_ctrl_c_time = current_time
-                self._show_quit_message = True
-                self._schedule_hide_message(event.app)
+                # If the quit banner is showing, we treat the next Ctrl+C as quit even
+                # if the nominal timeout has elapsed—_show_quit_message keeps the
+                # window open until the scheduled hide runs.
+                if time_since_last < self._ctrl_c_timeout or self._show_quit_message:
+                    self._reset_ctrl_c_state()
+                    event.app.exit(exception=EOFError())
+                    return
+
+            # First press on empty buffer or stale timer: arm quit and show banner
+            self._last_ctrl_c_time = current_time
+            self._show_quit_message = True
+            self._schedule_hide_message(event.app)
 
         @kb.add(Keys.ControlJ)
         def _(event):
@@ -257,11 +265,13 @@ class InteractivePrompt:
         """Schedule hiding the quit message after timeout."""
 
         def hide():
-            self._show_quit_message = False
-            self._last_ctrl_c_time = None
+            self._reset_ctrl_c_state()
             app.invalidate()
 
-        app.loop.call_later(self._ctrl_c_timeout, hide)
+        try:
+            app.loop.call_later(self._ctrl_c_timeout, hide)
+        except Exception:
+            self._reset_ctrl_c_state()
 
     def refresh_style(self) -> None:
         """Refresh the prompt style after approval mode change."""

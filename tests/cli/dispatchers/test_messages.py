@@ -1,5 +1,7 @@
 """Tests for message dispatcher."""
 
+import asyncio
+from contextlib import nullcontext
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -198,6 +200,43 @@ class TestMessageDispatcher:
 
         mock_session.renderer.render_message.assert_called_once_with(message)
         assert "msg1_tool" in rendered_messages
+
+    @pytest.mark.asyncio
+    async def test_stream_response_handles_cancel_and_cleans_up(
+        self, mock_session, mock_context
+    ):
+        """Cancelled streaming should finalize output, reset prompt, and clear task."""
+
+        dispatcher = MessageDispatcher(mock_session)
+        mock_session.context = mock_context
+
+        # Fake streaming generator that immediately raises CancelledError
+        async def cancelled_stream(*_args, **_kwargs):
+            raise asyncio.CancelledError()
+            yield  # pragma: no cover - satisfy generator requirements
+
+        mock_session.graph = MagicMock()
+        mock_session.graph.astream = MagicMock(return_value=cancelled_stream())
+
+        mock_session.prompt.reset_interrupt_state = MagicMock()
+
+        status_obj = MagicMock()
+        with (
+            patch(
+                "src.cli.dispatchers.messages.console.console.status",
+                return_value=nullcontext(status_obj),
+            ),
+            patch.object(dispatcher, "_finalize_streaming", MagicMock()) as finalize,
+        ):
+            await dispatcher._stream_response(
+                input_data={"messages": [HumanMessage(content="hi")]},
+                config={"configurable": {"thread_id": "t"}},
+                context=mock_context,
+            )
+
+        finalize.assert_called_once()
+        mock_session.prompt.reset_interrupt_state.assert_called_once()
+        assert mock_session.current_stream_task is None
 
     @pytest.mark.asyncio
     async def test_process_update_chunk_skips_other_message_types(self, mock_session):

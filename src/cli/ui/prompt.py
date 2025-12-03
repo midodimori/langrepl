@@ -35,7 +35,7 @@ class InteractivePrompt:
         self.mode_change_callback = None
         self.bash_mode_toggle_callback = None
         self._last_ctrl_c_time: float | None = None
-        self._ctrl_c_timeout = 0.5  # 500ms window for double-press detection
+        self._ctrl_c_timeout = 0.25  # 250ms window for double-press detection
         self._show_quit_message = False
         self.hotkeys: dict[str, str] = {}
         self._setup_session()
@@ -44,6 +44,10 @@ class InteractivePrompt:
         """Clear Ctrl+C timing and banner state."""
         self._last_ctrl_c_time = None
         self._show_quit_message = False
+
+    def reset_interrupt_state(self) -> None:
+        """Public wrapper to clear Ctrl+C timing/banner flags."""
+        self._reset_ctrl_c_state()
 
     @staticmethod
     def _format_key_name(key) -> str:
@@ -112,10 +116,13 @@ class InteractivePrompt:
             # If buffer is empty, check for double-press
             if self._last_ctrl_c_time is not None:
                 time_since_last = current_time - self._last_ctrl_c_time
+                # If the quit banner is showing, we treat the next Ctrl+C as quit even
+                # if the nominal timeout has elapsed—_show_quit_message keeps the
+                # window open until the scheduled hide runs.
                 if time_since_last < self._ctrl_c_timeout or self._show_quit_message:
-                    # Second press (or stuck banner) - quit
                     self._reset_ctrl_c_state()
-                    raise KeyboardInterrupt()
+                    event.app.exit(exception=EOFError())
+                    return
 
             # First press on empty buffer or stale timer: arm quit and show banner
             self._last_ctrl_c_time = current_time

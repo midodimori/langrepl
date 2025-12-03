@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
+import signal
+from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
-from typing import TYPE_CHECKING
+from types import FrameType
+from typing import TYPE_CHECKING, Any
 
 from src.cli.bootstrap.initializer import initializer
 from src.cli.dispatchers import CommandDispatcher, MessageDispatcher
@@ -18,6 +22,8 @@ if TYPE_CHECKING:
     from langgraph.graph.state import CompiledStateGraph
 
     from src.cli.core.context import Context
+
+SignalHandler = Callable[[int, FrameType | None], Any] | int | None
 
 logger = get_logger(__name__)
 
@@ -51,35 +57,44 @@ class Session:
         self.needs_reload = False
         self.prefilled_text: str | None = None
         self.prefilled_reference_mapping: dict[str, str] = {}
+        self.current_stream_task: asyncio.Task | None = None
+        self._sigint_registered = False
+        self._previous_sigint: SignalHandler = None
 
     async def start(self, show_welcome: bool = True) -> None:
         """Start the interactive session."""
-        self.graph_context = initializer.get_graph(
-            agent=self.context.agent,
-            model=self.context.model,
-            working_dir=self.context.working_dir,
-        )
-        with console.console.status(
-            f"[{theme.spinner_color}]Loading...[/{theme.spinner_color}]"
-        ) as status:
-            async with self.graph_context as graph:
-                self.graph = graph
-                status.stop()
-                if show_welcome:
-                    console.print("")
-                    self.renderer.show_welcome(self.context)
+        try:
+            self.graph_context = initializer.get_graph(
+                agent=self.context.agent,
+                model=self.context.model,
+                working_dir=self.context.working_dir,
+            )
 
-                    # Check for updates
-                    updates = check_for_updates()
-                    if updates:
-                        latest_version, upgrade_command = updates
-                        if latest_version and upgrade_command:
-                            console.print_warning(
-                                f"[muted]New version available ({latest_version}). Upgrade with: [muted.bold]uv tool install langrepl --upgrade[/muted.bold][/muted]"
-                            )
-                            console.print("")
+            self._register_sigint_handler()
 
-                await self._main_loop()
+            with console.console.status(
+                f"[{theme.spinner_color}]Loading...[/{theme.spinner_color}]"
+            ) as status:
+                async with self.graph_context as graph:
+                    self.graph = graph
+                    status.stop()
+                    if show_welcome:
+                        console.print("")
+                        self.renderer.show_welcome(self.context)
+
+                        # Check for updates
+                        updates = check_for_updates()
+                        if updates:
+                            latest_version, upgrade_command = updates
+                            if latest_version and upgrade_command:
+                                console.print_warning(
+                                    f"[muted]New version available ({latest_version}). Upgrade with: [muted.bold]uv tool install langrepl --upgrade[/muted.bold][/muted]"
+                                )
+                                console.print("")
+
+                    await self._main_loop()
+        finally:
+            self._restore_sigint()
 
     async def _main_loop(self) -> None:
         """Main interactive loop."""
@@ -118,6 +133,8 @@ class Session:
                 working_dir=self.context.working_dir,
             )
 
+            self._register_sigint_handler()
+
             async with self.graph_context as graph:
                 self.graph = graph
                 await self.message_dispatcher.dispatch(message)
@@ -130,6 +147,8 @@ class Session:
             console.print("")
             logger.exception("CLI message error")
             return 1
+        finally:
+            self._restore_sigint()
 
     def update_context(self, **kwargs) -> None:
         """Update context fields dynamically.
@@ -159,3 +178,51 @@ class Session:
         self.context.toggle_bash_mode()
         # Refresh the prompt style to reflect the new mode
         self.prompt.refresh_style()
+
+    def _register_sigint_handler(self) -> None:
+        """Install SIGINT handler that cancels the active stream before exit.
+
+        Contract: first Ctrl+C cancels any in-flight stream task; subsequent
+        Ctrl+C follows the previous handler (which, in interactive mode, is the
+        prompt's double-press-to-quit logic). One-shot and interactive paths
+        share this handler to keep behavior consistent.
+        """
+        if self._sigint_registered:
+            return
+
+        try:
+            self._previous_sigint = signal.getsignal(signal.SIGINT)
+
+            def _handle_sigint(signum, frame):
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = None
+
+                if (
+                    loop
+                    and self.current_stream_task
+                    and not self.current_stream_task.done()
+                ):
+                    loop.call_soon_threadsafe(self.current_stream_task.cancel)
+                    return
+
+                if callable(self._previous_sigint):
+                    self._previous_sigint(signum, frame)
+                    return
+
+                raise KeyboardInterrupt()
+
+            signal.signal(signal.SIGINT, _handle_sigint)
+            self._sigint_registered = True
+        except Exception as e:
+            logger.exception("Failed to register SIGINT handler", exc_info=e)
+
+    def _restore_sigint(self) -> None:
+        """Restore previous SIGINT handler if we overrode it."""
+        if self._sigint_registered and self._previous_sigint is not None:
+            try:
+                signal.signal(signal.SIGINT, self._previous_sigint)
+            except Exception:
+                pass
+            self._sigint_registered = False

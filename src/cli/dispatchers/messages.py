@@ -111,62 +111,73 @@ class MessageDispatcher:
             "chunks": [],
         }
 
-        while True:
-            interrupted = False
-            cancelled = False
+        self.session.current_stream_task = asyncio.current_task()
 
-            try:
-                with console.console.status(
-                    f"[{theme.spinner_color}]Randomizing...[/{theme.spinner_color}]"
-                ) as status:
-                    async for chunk in self.session.graph.astream(
-                        current_input,
-                        config,
-                        context=context,
-                        stream_mode=["messages", "updates"],
-                        subgraphs=True,
-                    ):
-                        interrupts = self._extract_interrupts(chunk)
-                        if interrupts:
-                            self._clear_preview(streaming_state)
-                            status.stop()
-                            resume_value = await self.interrupt_handler.handle(
-                                interrupts
-                            )
-                            if isinstance(resume_value, dict):
-                                current_input = Command(resume=resume_value)
-                            else:
-                                current_input = Command(
-                                    resume={interrupts[0].id: resume_value}
+        try:
+            while True:
+                interrupted = False
+                cancelled = False
+                status = None
+
+                try:
+                    with console.console.status(
+                        f"[{theme.spinner_color}]Randomizing...[/{theme.spinner_color}]"
+                    ) as status:
+                        async for chunk in self.session.graph.astream(
+                            current_input,
+                            config,
+                            context=context,
+                            stream_mode=["messages", "updates"],
+                            subgraphs=True,
+                        ):
+                            interrupts = self._extract_interrupts(chunk)
+                            if interrupts:
+                                self._clear_preview(streaming_state)
+                                status.stop()
+                                resume_value = await self.interrupt_handler.handle(
+                                    interrupts
                                 )
-                            interrupted = True
-                            break
+                                if isinstance(resume_value, dict):
+                                    current_input = Command(resume=resume_value)
+                                else:
+                                    current_input = Command(
+                                        resume={interrupts[0].id: resume_value}
+                                    )
+                                interrupted = True
+                                break
 
-                        _namespace, mode, data = chunk
-                        if mode == "messages":
-                            await self._process_message_chunk(
-                                data, streaming_state, status, rendered_messages
-                            )
-                        elif mode == "updates":
-                            self._finalize_streaming(
-                                streaming_state, None, rendered_messages
-                            )
-                            await self._process_update_chunk(data, rendered_messages)
+                            _namespace, mode, data = chunk
+                            if mode == "messages":
+                                await self._process_message_chunk(
+                                    data, streaming_state, status, rendered_messages
+                                )
+                            elif mode == "updates":
+                                self._finalize_streaming(
+                                    streaming_state, None, rendered_messages
+                                )
+                                await self._process_update_chunk(
+                                    data, rendered_messages
+                                )
 
-            except (asyncio.CancelledError, KeyboardInterrupt):
-                self._finalize_streaming(streaming_state, None, rendered_messages)
-                cancelled = True
+                except (asyncio.CancelledError, KeyboardInterrupt):
+                    if status:
+                        status.stop()
+                    self.session.prompt.reset_interrupt_state()
+                    self._finalize_streaming(streaming_state, None, rendered_messages)
+                    cancelled = True
 
-            if cancelled or not interrupted:
-                self._finalize_streaming(streaming_state, None, rendered_messages)
-                break
+                if cancelled or not interrupted:
+                    self._finalize_streaming(streaming_state, None, rendered_messages)
+                    break
 
-        if self._pending_compression and not cancelled:
-            self._pending_compression = False
-            try:
-                await self._execute_compression()
-            except (asyncio.CancelledError, KeyboardInterrupt):
-                pass
+            if self._pending_compression and not cancelled:
+                self._pending_compression = False
+                try:
+                    await self._execute_compression()
+                except (asyncio.CancelledError, KeyboardInterrupt):
+                    pass
+        finally:
+            self.session.current_stream_task = None
 
     @staticmethod
     def _extract_interrupts(chunk) -> list[Interrupt] | None:

@@ -77,6 +77,7 @@ def process_dependencies(
 
         if old_version is None and req.specifier:
             first_spec = list(req.specifier)[0]
+            operator = first_spec.operator or operator
             old_version = first_spec.version
 
         if old_version and parse(locked_version) != parse(old_version):

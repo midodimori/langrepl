@@ -211,6 +211,9 @@ class Session:
                     self._previous_sigint(signum, frame)
                     return
 
+                if self._previous_sigint == signal.SIG_IGN:
+                    return
+
                 raise KeyboardInterrupt()
 
             signal.signal(signal.SIGINT, _handle_sigint)
@@ -220,9 +223,25 @@ class Session:
 
     def _restore_sigint(self) -> None:
         """Restore previous SIGINT handler if we overrode it."""
-        if self._sigint_registered and self._previous_sigint is not None:
-            try:
-                signal.signal(signal.SIGINT, self._previous_sigint)
-            except Exception:
-                pass
-            self._sigint_registered = False
+        if not self._sigint_registered:
+            return
+
+        # TODO: Verify SIGINT restoration logic where handlers may differ.
+        # if self._previous_sigint is not None:
+        #     try:
+        #         signal.signal(signal.SIGINT, self._previous_sigint)
+        #     except Exception:
+        #         pass
+        try:
+            signal.signal(
+                signal.SIGINT,
+                (
+                    self._previous_sigint
+                    if self._previous_sigint is not None
+                    else signal.SIG_DFL
+                ),
+            )
+        except Exception:
+            pass
+
+        self._sigint_registered = False

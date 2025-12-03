@@ -153,7 +153,10 @@ class MessageDispatcher:
                                 )
                             elif mode == "updates":
                                 self._finalize_streaming(
-                                    streaming_state, None, rendered_messages
+                                    streaming_state,
+                                    status,
+                                    rendered_messages,
+                                    stop_status=False,
                                 )
                                 await self._process_update_chunk(
                                     data, rendered_messages
@@ -163,11 +166,24 @@ class MessageDispatcher:
                     if status:
                         status.stop()
                     self.session.prompt.reset_interrupt_state()
-                    self._finalize_streaming(streaming_state, None, rendered_messages)
+                    self._finalize_streaming(
+                        streaming_state,
+                        status,
+                        rendered_messages,
+                        stop_status=True,
+                    )
                     cancelled = True
 
-                if cancelled or not interrupted:
-                    self._finalize_streaming(streaming_state, None, rendered_messages)
+                if cancelled:
+                    break
+
+                if not interrupted:
+                    self._finalize_streaming(
+                        streaming_state,
+                        status,
+                        rendered_messages,
+                        stop_status=True,
+                    )
                     break
 
             if self._pending_compression and not cancelled:
@@ -300,11 +316,15 @@ class MessageDispatcher:
             streaming_state["chunks"] = []
 
     def _finalize_streaming(
-        self, streaming_state: dict, status, rendered_messages: set[str]
+        self,
+        streaming_state: dict,
+        status,
+        rendered_messages: set[str],
+        stop_status: bool = True,
     ) -> None:
         """Finalize active streaming message and render final version."""
         if streaming_state["active"]:
-            if status:
+            if stop_status and status:
                 status.stop()
 
             if streaming_state["chunks"]:

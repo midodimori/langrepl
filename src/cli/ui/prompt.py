@@ -35,7 +35,7 @@ class InteractivePrompt:
         self.mode_change_callback = None
         self.bash_mode_toggle_callback = None
         self._last_ctrl_c_time: float | None = None
-        self._ctrl_c_timeout = 0.25  # 250ms window for double-press detection
+        self._ctrl_c_timeout = 0.30  # 300ms window for double-press detection
         self._show_quit_message = False
         self.hotkeys: dict[str, str] = {}
         self._setup_session()
@@ -109,7 +109,7 @@ class InteractivePrompt:
 
             # If there's text in the buffer, clear it
             if buffer.text.strip():
-                buffer.delete_before_cursor(len(buffer.text))
+                buffer.text = ""
                 self._reset_ctrl_c_state()  # Reset timer after clearing
                 return
 

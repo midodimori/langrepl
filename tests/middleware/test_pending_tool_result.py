@@ -87,6 +87,15 @@ async def test_inject_interrupted_for_missing_tool_result(middleware, mock_runti
     messages = result["messages"]
     assert isinstance(messages[0], RemoveMessage)
     assert len(messages) == 4
+    assert isinstance(messages[1], HumanMessage)
+    assert messages[1].content == "hello"
+    assert isinstance(messages[2], AIMessage)
+    assert messages[2].content == "calling tool"
+    assert len(messages[2].tool_calls) == 1
+    tool_call = messages[2].tool_calls[0]
+    assert tool_call.get("id") == "call_1"
+    assert tool_call.get("name") == "test_tool"
+    assert tool_call.get("args") == {}
     assert isinstance(messages[3], ToolMessage)
     assert messages[3].tool_call_id == "call_1"
     assert messages[3].content == "Interrupted."
@@ -204,6 +213,8 @@ async def test_multiple_tool_results_correct_order(middleware, mock_runtime):
     assert isinstance(messages[1], AIMessage)
     assert isinstance(messages[2], ToolMessage)
     assert messages[2].tool_call_id == "call_1"
+    assert messages[2].content == "result_1"
     assert isinstance(messages[3], ToolMessage)
     assert messages[3].tool_call_id == "call_2"
+    assert messages[3].content == "result_2"
     assert isinstance(messages[4], HumanMessage)

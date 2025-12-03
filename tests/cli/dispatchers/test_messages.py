@@ -234,7 +234,7 @@ class TestMessageDispatcher:
                 context=mock_context,
             )
 
-        finalize.assert_called()
+        finalize.assert_called_once()
         mock_session.prompt.reset_interrupt_state.assert_called_once()
         assert mock_session.current_stream_task is None
 

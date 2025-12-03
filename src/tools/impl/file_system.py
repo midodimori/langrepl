@@ -265,8 +265,7 @@ async def edit_file(
         f.write(updated_content)
 
     all_diff_sections = []
-    sorted_for_preview = sorted(sorted_matches, key=lambda m: m[1])
-    for idx, _, _, _ in sorted_for_preview:
+    for idx, _, _, _ in sorted_matches:
         edit = edits[idx]
         diff_lines = generate_diff(
             edit.old_content,

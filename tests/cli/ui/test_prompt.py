@@ -27,7 +27,6 @@ class TestInteractivePromptCtrlCBehavior:
         kb = prompt._create_key_bindings()
         buffer = MagicMock(spec=Buffer)
         buffer.text = "some text to clear"
-        buffer.delete_before_cursor = MagicMock()
 
         event = MagicMock(spec=KeyPressEvent)
         event.current_buffer = buffer
@@ -39,7 +38,7 @@ class TestInteractivePromptCtrlCBehavior:
         handler = kb.get_bindings_for_keys((Keys.ControlC,))[0].handler
         handler(event)
 
-        buffer.delete_before_cursor.assert_called_once_with(len(buffer.text))
+        assert buffer.text == ""
         assert prompt._last_ctrl_c_time is None
         assert prompt._show_quit_message is False
 

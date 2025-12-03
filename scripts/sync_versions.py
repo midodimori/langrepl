@@ -1,37 +1,34 @@
 #!/usr/bin/env python3
 """Sync pyproject.toml dependency versions with uv.lock locked versions."""
 
+import argparse
 import re
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib  # Python < 3.11
+import tomlkit
+from packaging.version import parse
 
 
 def run_command(cmd: list[str]) -> None:
     """Run a command and exit on failure."""
     print(f"Running: {' '.join(cmd)}")
-    result = subprocess.run(cmd, capture_output=False)
-    if result.returncode != 0:
-        sys.exit(result.returncode)
+    subprocess.run(cmd, capture_output=False, check=True)
 
 
 def parse_uv_lock(lock_file: Path) -> dict[str, str]:
     """Parse uv.lock and extract package versions."""
-    versions = {}
-    with open(lock_file) as f:
-        content = f.read()
+    with open(lock_file, "rb") as f:
+        data = tomllib.load(f)
 
-    # Match package blocks: [[package]]
-    # Extract name and version from each block
-    pattern = r'\[\[package\]\]\s+name\s*=\s*"([^"]+)"\s+version\s*=\s*"([^"]+)"'
-    for match in re.finditer(pattern, content):
-        name, version = match.groups()
-        versions[name] = version
+    packages = data.get("package", []) if isinstance(data, dict) else []
+    versions = {
+        pkg.get("name"): pkg.get("version")
+        for pkg in packages
+        if isinstance(pkg, dict) and pkg.get("name") and pkg.get("version")
+    }
 
     return versions
 
@@ -66,8 +63,8 @@ def process_dependencies(
             continue
 
         # Update version if different
-        if locked_version != old_version:
-            new_dep = f"{pkg_name}{extra}>={locked_version}"
+        if parse(locked_version) != parse(old_version):
+            new_dep = f"{pkg_name}{extra}{operator}{locked_version}"
             updated.append(new_dep)
             updated_count += 1
             print(f"  ✓ {pkg_name}: {old_version} → {locked_version}")
@@ -79,109 +76,75 @@ def process_dependencies(
 
 
 def update_pyproject_versions(
-    pyproject_file: Path, locked_versions: dict[str, str]
+    pyproject_file: Path, locked_versions: dict[str, str], *, dry_run: bool = False
 ) -> None:
     """Update pyproject.toml dependency versions to match locked versions."""
-    with open(pyproject_file, "rb") as f:
-        data = tomllib.load(f)
+    doc = tomlkit.parse(pyproject_file.read_text())
 
-    # Get main dependencies
-    dependencies = data.get("project", {}).get("dependencies", [])
+    project_table = doc.get("project") or tomlkit.table()
+    dep_groups_table = doc.get("dependency-groups") or tomlkit.table()
 
-    # Get dev dependencies
-    dev_dependencies = data.get("dependency-groups", {}).get("dev", [])
-
-    if not dependencies and not dev_dependencies:
-        print("No dependencies found in pyproject.toml")
-        return
-
-    # Process main dependencies
-    updated = []
+    dependencies = list(project_table.get("dependencies", []))
     total_updated_count = 0
 
     if dependencies:
         updated, updated_count = process_dependencies(
-            dependencies, locked_versions, "dependencies"
+            [str(d) for d in dependencies], locked_versions, "dependencies"
         )
+        project_table["dependencies"] = tomlkit.array(updated, multiline=True)
         total_updated_count += updated_count
 
-    # Process dev dependencies
-    dev_updated = []
-    if dev_dependencies:
-        dev_updated, dev_updated_count = process_dependencies(
-            dev_dependencies, locked_versions, "dependency-groups.dev"
+    for group_name, deps in dep_groups_table.items():
+        dep_list = list(deps) if deps else []
+        updated, updated_count = process_dependencies(
+            [str(d) for d in dep_list],
+            locked_versions,
+            f"dependency-groups.{group_name}",
         )
-        total_updated_count += dev_updated_count
+        dep_groups_table[group_name] = tomlkit.array(updated, multiline=True)
+        total_updated_count += updated_count
 
-    # Read the original file and update dependencies line by line
-    with open(pyproject_file) as f:
-        lines = f.readlines()
+    if not dependencies and len(dep_groups_table) == 0:
+        print("No dependencies found in pyproject.toml")
+        return
 
-    # Create mappings of old deps to new deps for easy lookup
-    dep_map = {}
-    if dependencies:
-        for old_dep, new_dep in zip(dependencies, updated):
-            dep_map[old_dep] = new_dep
+    doc["project"] = project_table
+    doc["dependency-groups"] = dep_groups_table
 
-    if dev_dependencies:
-        for old_dep, new_dep in zip(dev_dependencies, dev_updated):
-            dep_map[old_dep] = new_dep
+    if dry_run:
+        print("\n🛈 Dry run: pyproject.toml not written")
+    else:
+        pyproject_file.write_text(tomlkit.dumps(doc))
+        print(f"\n✅ Updated {total_updated_count} package versions in pyproject.toml")
+        return
 
-    # Update lines
-    new_lines = []
-    in_section = None  # Track which section we're in: 'dependencies' or 'dev'
-
-    for line in lines:
-        # Check if we're entering main dependencies section
-        if re.match(r"^dependencies\s*=\s*\[", line):
-            in_section = "dependencies"
-            new_lines.append(line)
-            continue
-
-        # Check if we're entering dev dependencies section
-        if re.match(r"^dev\s*=\s*\[", line):
-            in_section = "dev"
-            new_lines.append(line)
-            continue
-
-        # Check if we're exiting any dependency section
-        if in_section and line.strip() == "]":
-            in_section = None
-            new_lines.append(line)
-            continue
-
-        # If we're in a dependency section, replace the line
-        if in_section:
-            # Extract the dependency string from the line
-            match = re.search(r'"([^"]+)"', line)
-            if match:
-                old_dep = match.group(1)
-                if old_dep in dep_map:
-                    # Get indentation from original line
-                    indent_match = re.match(r"^(\s+)", line)
-                    indent = indent_match.group(1) if indent_match else "    "
-                    # Check if there's a trailing comma
-                    has_comma = "," in line
-                    comma = "," if has_comma else ""
-                    # Reconstruct the line with new dependency
-                    new_line = f'{indent}"{dep_map[old_dep]}"{comma}\n'
-                    new_lines.append(new_line)
-                else:
-                    new_lines.append(line)
-            else:
-                new_lines.append(line)
-        else:
-            new_lines.append(line)
-
-    # Write back
-    with open(pyproject_file, "w") as f:
-        f.writelines(new_lines)
-
-    print(f"\n✅ Updated {total_updated_count} package versions in pyproject.toml")
+    print(
+        f"\n✅ (dry run) {total_updated_count} package versions would be updated in pyproject.toml"
+    )
 
 
-def main():
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Sync pyproject.toml dependency versions with uv.lock locked versions."
+    )
+    parser.add_argument(
+        "--no-upgrade",
+        action="store_true",
+        help="Skip running `uv lock --upgrade` before syncing versions.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview version changes without modifying files or syncing the environment.",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None):
     """Main entry point."""
+    args = parse_args(argv)
+
     project_root = Path(__file__).parent.parent
     pyproject_file = project_root / "pyproject.toml"
     lock_file = project_root / "uv.lock"
@@ -193,10 +156,26 @@ def main():
     print("=" * 60)
     print("Syncing dependency versions with locked versions")
     print("=" * 60)
+    if args.dry_run:
+        print("Dry run enabled: no files will be modified, no sync will run.")
 
     # Step 1: Upgrade lock file
     print("\n[1/4] Upgrading lock file...")
-    run_command(["uv", "lock", "--upgrade"])
+    if args.dry_run:
+        print("Skipping lock upgrade (dry run)")
+    elif args.no_upgrade:
+        print("Skipping lock upgrade (--no-upgrade provided)")
+    else:
+        run_command(["uv", "lock", "--upgrade"])
+
+    if not lock_file.exists():
+        if args.dry_run:
+            print("Warning: uv.lock not found; exiting dry run.")
+            return
+        print(
+            "Error: uv.lock not found. Run `uv lock` (or remove --no-upgrade) to generate it."
+        )
+        sys.exit(1)
 
     # Step 2: Parse locked versions
     print("\n[2/4] Parsing locked versions...")
@@ -205,11 +184,14 @@ def main():
 
     # Step 3: Update pyproject.toml
     print("\n[3/4] Updating pyproject.toml...")
-    update_pyproject_versions(pyproject_file, locked_versions)
+    update_pyproject_versions(pyproject_file, locked_versions, dry_run=args.dry_run)
 
     # Step 4: Sync environment
     print("\n[4/4] Syncing environment...")
-    run_command(["uv", "sync"])
+    if args.dry_run:
+        print("Skipping environment sync (dry run)")
+    else:
+        run_command(["uv", "sync"])
 
     print("\n" + "=" * 60)
     print("✅ Version sync complete!")

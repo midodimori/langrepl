@@ -2,13 +2,13 @@
 """Sync pyproject.toml dependency versions with uv.lock locked versions."""
 
 import argparse
-import re
 import subprocess
 import sys
 import tomllib
 from pathlib import Path
 
 import tomlkit
+from packaging.requirements import Requirement
 from packaging.version import parse
 
 
@@ -42,35 +42,51 @@ def process_dependencies(
 
     print(f"\n{section_name}:")
     for dep in dependencies:
-        # Parse dependency string: "package>=version" or "package[extra]>=version"
-        match = re.match(r"^([a-zA-Z0-9_-]+)(\[[^\]]+\])?(>=|==|~=|!=|<|>)(.+)$", dep)
-        if not match:
+        try:
+            req = Requirement(dep)
+        except Exception as e:
+            print(f"  ⚠️  Failed to parse '{dep}': {e}")
             updated.append(dep)
             continue
 
-        pkg_name = match.group(1)
-        extra = match.group(2) or ""
-        operator = match.group(3)
-        old_version = match.group(4)
+        pkg_name = req.name
+        extras = f"[{','.join(sorted(req.extras))}]" if req.extras else ""
 
-        # Get locked version
         locked_version = locked_versions.get(pkg_name)
         if not locked_version:
-            print(
-                f"  ⚠️  {pkg_name}: not found in lock file, keeping {operator}{old_version}"
-            )
+            specifier_str = str(req.specifier) if req.specifier else "(no specifier)"
+            print(f"  ⚠️  {pkg_name}: not found in lock file, keeping {specifier_str}")
             updated.append(dep)
             continue
 
-        # Update version if different
-        if parse(locked_version) != parse(old_version):
-            new_dep = f"{pkg_name}{extra}{operator}{locked_version}"
+        if not req.specifier:
+            updated.append(dep)
+            continue
+
+        operator = ">="
+        old_version = None
+
+        for spec in req.specifier:
+            if spec.operator in (">=", "==", "~="):
+                operator = spec.operator
+                old_version = spec.version
+                break
+            if spec.operator == ">":
+                operator = spec.operator
+                old_version = spec.version
+
+        if old_version is None and req.specifier:
+            first_spec = list(req.specifier)[0]
+            old_version = first_spec.version
+
+        if old_version and parse(locked_version) != parse(old_version):
+            new_dep = f"{pkg_name}{extras}{operator}{locked_version}"
             updated.append(new_dep)
             updated_count += 1
-            print(f"  ✓ {pkg_name}: {old_version} → {locked_version}")
+            print(f"  ✓ {pkg_name}: {req.specifier} → {operator}{locked_version}")
         else:
             updated.append(dep)
-            print(f"  = {pkg_name}: {old_version} (no change)")
+            print(f"  = {pkg_name}: {req.specifier} (no change)")
 
     return updated, updated_count
 
@@ -91,7 +107,9 @@ def update_pyproject_versions(
         updated, updated_count = process_dependencies(
             [str(d) for d in dependencies], locked_versions, "dependencies"
         )
-        project_table["dependencies"] = tomlkit.array(updated, multiline=True)
+        deps_array = tomlkit.array(updated)
+        deps_array.multiline(True)
+        project_table["dependencies"] = deps_array
         total_updated_count += updated_count
 
     for group_name, deps in dep_groups_table.items():
@@ -101,7 +119,9 @@ def update_pyproject_versions(
             locked_versions,
             f"dependency-groups.{group_name}",
         )
-        dep_groups_table[group_name] = tomlkit.array(updated, multiline=True)
+        group_array = tomlkit.array(updated)
+        group_array.multiline(True)
+        dep_groups_table[group_name] = group_array
         total_updated_count += updated_count
 
     if not dependencies and len(dep_groups_table) == 0:

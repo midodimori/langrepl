@@ -238,7 +238,9 @@ class MessageDispatcher:
                 not streaming_state["active"]
                 or streaming_state["message_id"] != message_id
             ):
-                self._finalize_streaming(streaming_state, None, rendered_messages)
+                self._finalize_streaming(
+                    streaming_state, None, rendered_messages, stop_status=True
+                )
                 streaming_state["active"] = True
                 streaming_state["message_id"] = message_id
                 streaming_state["preview_lines"] = [""]
@@ -320,6 +322,7 @@ class MessageDispatcher:
         streaming_state: dict,
         status,
         rendered_messages: set[str],
+        *,
         stop_status: bool = True,
     ) -> None:
         """Finalize active streaming message and render final version."""

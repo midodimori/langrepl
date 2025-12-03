@@ -239,7 +239,10 @@ class MessageDispatcher:
                 or streaming_state["message_id"] != message_id
             ):
                 self._finalize_streaming(
-                    streaming_state, None, rendered_messages, stop_status=True
+                    streaming_state,
+                    None,
+                    rendered_messages,
+                    stop_status=False,
                 )
                 streaming_state["active"] = True
                 streaming_state["message_id"] = message_id

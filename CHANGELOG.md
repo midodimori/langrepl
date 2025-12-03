@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.8.6 (2025-12-03)
+
+### Bug Fixes
+
+- Sort edit diffs by line position for correct display order + ctrl c for cancellation + pending
+  tool calls (#60) ([#60](https://github.com/midodimori/langrepl/pull/60),
+  [`b5f6991`](https://github.com/midodimori/langrepl/commit/b5f6991c15a6a7689d8714d49c9a6a06a57adbb9))
+
+
 ## v1.8.5 (2025-11-30)
 
 ### Bug Fixes

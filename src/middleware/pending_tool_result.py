@@ -62,8 +62,8 @@ class PendingToolResultMiddleware(AgentMiddleware[AgentState, AgentContext]):
 
         missing_call_ids = expected_tool_call_ids - existing_results.keys()
 
-        injected = [
-            create_tool_message(
+        injected_lookup = {
+            call["id"]: create_tool_message(
                 result="Interrupted.",
                 tool_name=call.get("name") or "unknown_tool",
                 tool_call_id=call["id"],
@@ -71,9 +71,9 @@ class PendingToolResultMiddleware(AgentMiddleware[AgentState, AgentContext]):
             )
             for call in tool_calls
             if call.get("id") in missing_call_ids
-        ]
+        }
 
-        if not injected and not existing_results:
+        if not injected_lookup and not existing_results:
             return None
 
         needs_repair = any(
@@ -84,7 +84,7 @@ class PendingToolResultMiddleware(AgentMiddleware[AgentState, AgentContext]):
             for idx, _ in existing_results.values()
         )
 
-        if not injected and not needs_repair:
+        if not injected_lookup and not needs_repair:
             return None
 
         repaired = list(messages[: last_ai_index + 1])
@@ -93,8 +93,8 @@ class PendingToolResultMiddleware(AgentMiddleware[AgentState, AgentContext]):
             call_id = call.get("id")
             if call_id in existing_results:
                 repaired.append(existing_results[call_id][1])
-
-        repaired.extend(injected)
+            elif call_id in injected_lookup:
+                repaired.append(injected_lookup[call_id])
 
         existing_result_indices = {idx for idx, _ in existing_results.values()}
         repaired.extend(
@@ -106,6 +106,6 @@ class PendingToolResultMiddleware(AgentMiddleware[AgentState, AgentContext]):
         logger.debug(
             "Repaired tool results: %d moved, %d interrupted",
             len(existing_results),
-            len(injected),
+            len(injected_lookup),
         )
         return {"messages": [RemoveMessage(id=REMOVE_ALL_MESSAGES), *repaired]}

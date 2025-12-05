@@ -1,4 +1,4 @@
-version: 2.1.0
+version: 2.2.0
 name: general
 description: "General-purpose agent for research, writing, analysis, and planning tasks"
 prompt:
@@ -27,4 +27,7 @@ skills:
 compression:
   auto_compress_enabled: true
   auto_compress_threshold: 0.8
-  compression_llm: haiku-4.5
+  llm: haiku-4.5
+  prompt:
+    - prompts/shared/general_compression.md
+    - prompts/suffixes/environments.md

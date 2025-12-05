@@ -134,3 +134,66 @@ class TestCompressMessages:
         assert len(system_messages) == 2
         assert system_messages[0].content == "System 1"
         assert system_messages[1].content == "System 2"
+
+    @pytest.mark.asyncio
+    async def test_keeps_tail_messages_without_summary_when_empty(self):
+        mock_llm = AsyncMock()
+
+        messages = cast(
+            list[AnyMessage],
+            [
+                SystemMessage(content="System"),
+                HumanMessage(content="Hello"),
+                AIMessage(content="Hi"),
+            ],
+        )
+
+        result = await compress_messages(messages, mock_llm, messages_to_keep=5)
+
+        assert len(result) == 3
+        assert isinstance(result[1], HumanMessage)
+        mock_llm.ainvoke.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_keeps_recent_messages_and_summarizes_rest(self):
+        mock_llm = AsyncMock()
+        mock_response = AIMessage(content="Summary")
+        mock_llm.ainvoke.return_value = mock_response
+
+        messages = cast(
+            list[AnyMessage],
+            [
+                SystemMessage(content="System"),
+                HumanMessage(content="Msg1"),
+                AIMessage(content="Msg2"),
+                HumanMessage(content="Msg3"),
+            ],
+        )
+
+        result = await compress_messages(messages, mock_llm, messages_to_keep=1)
+
+        assert [msg.type for msg in result] == ["system", "ai", "human"]
+        assert result[1].name == "compression_summary"
+        assert result[2].content == "Msg3"
+
+    @pytest.mark.asyncio
+    async def test_custom_prompt_renders_with_context_and_conversation(self):
+        mock_llm = AsyncMock()
+        mock_response = AIMessage(content="Summary")
+        mock_llm.ainvoke.return_value = mock_response
+
+        messages = cast(
+            list[AnyMessage],
+            [SystemMessage(content="System"), HumanMessage(content="Hi")],
+        )
+
+        await compress_messages(
+            messages,
+            mock_llm,
+            prompt="Env {working_dir}\n{conversation}",
+            prompt_vars={"working_dir": "/tmp/work"},
+        )
+
+        call_args = mock_llm.ainvoke.call_args[0][0][0].content
+        assert "Env /tmp/work" in call_args
+        assert "Human: Hi" in call_args

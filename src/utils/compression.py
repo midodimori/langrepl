@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import tiktoken
-from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, merge_content
+
+from src.utils.render import render_templates
 
 if TYPE_CHECKING:
     from langchain_core.language_models import BaseChatModel
@@ -72,6 +74,9 @@ def should_auto_compress(
 async def compress_messages(
     messages: Sequence[AnyMessage],
     compression_llm: BaseChatModel,
+    messages_to_keep: int = 0,
+    prompt: str | None = None,
+    prompt_vars: dict[str, Any] | None = None,
 ) -> list[AnyMessage]:
     """Compress message history into a single summary.
 
@@ -82,6 +87,9 @@ async def compress_messages(
     Args:
         messages: Full message history
         compression_llm: LLM to use for summarization
+        messages_to_keep: Number of recent messages to preserve verbatim (default: 0)
+        prompt: Custom prompt template for summarization
+        prompt_vars: Additional variables for prompt template rendering
 
     Returns:
         Compressed message list with system messages + summary
@@ -101,14 +109,25 @@ async def compress_messages(
     if not other_messages:
         return list(messages)
 
-    summary_content = await _summarize_messages(other_messages, compression_llm)
+    keep_count = max(messages_to_keep, 0)
+    preserved_tail: list[AnyMessage] = []
+    summarize_candidates = list(other_messages)
 
-    summary_message = AIMessage(
-        content=f"[Previous conversation summary]\n{summary_content}",
-        name="compression_summary",
+    if keep_count:
+        preserved_tail = summarize_candidates[-keep_count:]
+        summarize_candidates = summarize_candidates[:-keep_count]
+
+    if not summarize_candidates:
+        return system_messages + preserved_tail
+
+    summary_message = await _summarize_messages(
+        summarize_candidates,
+        compression_llm,
+        prompt=prompt,
+        prompt_vars=prompt_vars,
     )
 
-    compressed: list[AnyMessage] = system_messages + [summary_message]
+    compressed: list[AnyMessage] = [*system_messages, summary_message, *preserved_tail]
 
     return compressed
 
@@ -116,7 +135,9 @@ async def compress_messages(
 async def _summarize_messages(
     messages: Sequence[AnyMessage],
     compression_llm: BaseChatModel,
-) -> str:
+    prompt: str | None = None,
+    prompt_vars: dict[str, Any] | None = None,
+) -> AIMessage:
     """Summarize a list of messages using LLM.
 
     Args:
@@ -124,27 +145,25 @@ async def _summarize_messages(
         compression_llm: LLM to use for summarization
 
     Returns:
-        Summary text
+        Summary message
     """
     conversation_text = _format_messages_for_summary(messages)
+    prompt_template = prompt or "Summarize the conversation.\n\n{conversation}"
+    if "{conversation}" not in prompt_template:
+        prompt_template = (
+            f"{prompt_template}\n\nConversation:\n{{conversation}}\n\n"
+            "Provide a concise summary (2-4 paragraphs):"
+        )
+    render_context = {**(prompt_vars or {}), "conversation": conversation_text}
+    rendered_prompt = str(render_templates(prompt_template, render_context))
 
-    summarization_prompt = f"""Summarize the following conversation history concisely, preserving key information, decisions, and context that would be important for continuing the conversation. Focus on:
-- Main topics discussed
-- Important facts or data mentioned
-- Decisions made or conclusions reached
-- Technical details or specifications
-- User preferences or requirements
-
-Conversation:
-{conversation_text}
-
-Provide a concise summary (2-4 paragraphs):"""
-
-    response = await compression_llm.ainvoke(
-        [HumanMessage(content=summarization_prompt)]
-    )
+    response = await compression_llm.ainvoke([HumanMessage(content=rendered_prompt)])
     ai_response = cast(AIMessage, response)
-    return ai_response.text.strip()
+    ai_response.content = merge_content(
+        "# Previous conversation summary\n\n", ai_response.content
+    )
+    ai_response.name = "compression_summary"
+    return ai_response
 
 
 def _format_messages_for_summary(messages: Sequence[AnyMessage]) -> str:
@@ -160,9 +179,7 @@ def _format_messages_for_summary(messages: Sequence[AnyMessage]) -> str:
 
     for msg in messages:
         role = msg.type.capitalize()
-
-        content = msg.content if isinstance(msg.content, str) else str(msg.content)
-
+        content = str(msg.text)
         if hasattr(msg, "tool_calls") and msg.tool_calls:
             tool_calls_str = ", ".join(tc["name"] for tc in msg.tool_calls)
             content += f" [Tool calls: {tool_calls_str}]"

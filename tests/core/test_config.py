@@ -283,7 +283,40 @@ class TestVersionMigration:
         )
 
         content = yaml.safe_load(file_path.read_text())
-        assert content["agents"][0]["version"] == "2.1.0"
+        assert content["agents"][0]["version"] == "2.2.0"
+
+    @pytest.mark.asyncio
+    async def test_agent_compression_migration(self, temp_dir, mock_llm_config):
+        file_path = temp_dir / "config.agents.yml"
+        file_path.write_text(
+            yaml.dump(
+                {
+                    "agents": [
+                        {
+                            "version": "2.1.0",
+                            "name": "test-agent",
+                            "default": True,
+                            "llm": "test-model",
+                            "compression": {
+                                "auto_compress_enabled": True,
+                                "compression_llm": "test-model",
+                            },
+                        }
+                    ]
+                }
+            )
+        )
+
+        await BatchAgentConfig.from_yaml(
+            file_path=file_path, batch_llm_config=BatchLLMConfig(llms=[mock_llm_config])
+        )
+
+        content = yaml.safe_load(file_path.read_text())
+        compression = content["agents"][0]["compression"]
+        assert content["agents"][0]["version"] == "2.2.0"
+        assert "compression_llm" not in compression
+        assert compression["llm"] == "test-model"
+        assert compression["messages_to_keep"] == 0
 
     @pytest.mark.asyncio
     async def test_tool_output_max_tokens_migration(self, temp_dir, mock_llm_config):

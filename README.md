@@ -308,7 +308,7 @@ Configs are auto-generated in `.langrepl/` on first run.
 `.langrepl/agents/*.yml`:
 ```yaml
 # agents/my-agent.yml (filename must match agent name)
-version: 2.1.0
+version: 2.2.0
 name: my-agent
 prompt: prompts/my_agent.md  # Single file or array of files
 llm: haiku-4.5               # References llms/*.yml
@@ -329,7 +329,11 @@ subagents:
 compression:
   auto_compress_enabled: true
   auto_compress_threshold: 0.8
-  compression_llm: haiku-4.5
+  llm: haiku-4.5
+  prompt:
+    - prompts/shared/general_compression.md
+    - prompts/suffixes/environments.md
+  messages_to_keep: 0  # Keep N recent messages verbatim during compression
 ```
 
 <details>
@@ -337,7 +341,7 @@ compression:
 
 ```yaml
 agents:
-  - version: 2.1.0
+  - version: 2.2.0
     name: my-agent
     prompt: prompts/my_agent.md
     llm: haiku-4.5
@@ -358,7 +362,11 @@ agents:
     compression:
       auto_compress_enabled: true
       auto_compress_threshold: 0.8
-      compression_llm: haiku-4.5
+      llm: haiku-4.5
+      prompt:
+        - prompts/shared/general_compression.md
+        - prompts/suffixes/environments.md
+      messages_to_keep: 0  # Keep N recent messages verbatim during compression
 ```
 
 </details>

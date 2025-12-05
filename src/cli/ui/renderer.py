@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import html
 import re
-from html.parser import HTMLParser
 from typing import TYPE_CHECKING, Any, cast
 
+import mdformat
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, ToolMessage
 from rich.cells import cell_len
 from rich.console import Console, ConsoleOptions, Group, NewLine, RenderableType
@@ -20,6 +19,7 @@ from rich.text import Text
 
 from src.cli.core.context import Context
 from src.cli.theme import console
+from src.cli.ui.markdown import wrap_html_in_code_blocks
 from src.core.constants import UNKNOWN
 from src.core.settings import settings
 from src.utils.version import get_latest_features
@@ -28,28 +28,28 @@ if TYPE_CHECKING:
     from langchain_core.runnables.graph import Graph
 
 
-class _HTMLTagDetector(HTMLParser):
-    """HTML parser for detecting complete HTML tags on a single line."""
+def _fix_escaped_code_fences(content: str) -> str:
+    """Fix escaped code fence delimiters that should be proper markdown.
 
-    def __init__(self) -> None:
-        super().__init__()
-        self.tag_stack: list[str] = []
-        self.is_complete = False
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        """Track opening tags."""
-        self.tag_stack.append(tag)
-
-    def handle_endtag(self, tag: str) -> None:
-        """Track closing tags and detect when structure is complete."""
-        if self.tag_stack and self.tag_stack[-1] == tag:
-            self.tag_stack.pop()
-            if not self.tag_stack:
-                self.is_complete = True
-
-    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        """Handle self-closing tags like <br/> or <img/>."""
-        self.is_complete = True
+    Some LLMs escape closing backticks (``` -> \\`\\`\\`) which prevents
+    proper code block rendering. This must run before mdformat.
+    """
+    content = re.sub(
+        r"```\n(.*?)\n\\`\\`\\`", r"```\n\1\n```", content, flags=re.DOTALL
+    )
+    content = re.sub(
+        r"```([^\n]*)\n(.*?)\n\\`\\`\\`",
+        r"```\1\n\2\n```",
+        content,
+        flags=re.DOTALL,
+    )
+    content = re.sub(
+        r"\\`\\`\\`([^\n]*)\n(.*?)\n\\`\\`\\`",
+        r"```\1\n\2\n```",
+        content,
+        flags=re.DOTALL,
+    )
+    return content
 
 
 class TransparentSyntax(Syntax):
@@ -359,8 +359,14 @@ class Renderer:
             parts.append(NewLine())
 
         # Render main content
-        content = Renderer._fix_malformed_code_blocks(content)
-        content = Renderer._escape_html_outside_code_blocks(content)
+        if isinstance(content, str):
+            content = _fix_escaped_code_fences(content)
+            try:
+                content = mdformat.text(content)
+            except Exception:
+                pass
+
+            content = wrap_html_in_code_blocks(content)
         if content:
             parts.append(
                 PrefixedMarkdown(
@@ -492,235 +498,6 @@ class Renderer:
             return cleaned_content, thinking_content
 
         return content, None
-
-    @staticmethod
-    def _has_unescaped_html_chars(line: str) -> bool:
-        """Check if line contains unescaped HTML-like tags or special chars."""
-        # Remove all valid HTML entities temporarily to check for raw chars
-        temp_line = line
-        temp_line = re.sub(r"&lt;", "", temp_line)
-        temp_line = re.sub(r"&gt;", "", temp_line)
-        temp_line = re.sub(r"&amp;", "", temp_line)
-        temp_line = re.sub(r"&quot;", "", temp_line)
-        temp_line = re.sub(r"&#\d+;", "", temp_line)
-        temp_line = re.sub(r"&#x[0-9a-fA-F]+;", "", temp_line)
-
-        # Check if there are any raw special chars remaining
-        return bool(re.search(r"[<>&]", temp_line))
-
-    @staticmethod
-    def _is_complete_html_tag(line: str) -> bool:
-        """Check if line has complete HTML tags (both opening and closing)."""
-        detector = _HTMLTagDetector()
-        try:
-            detector.feed(line.strip())
-            return detector.is_complete
-        except Exception:
-            # If parsing fails, fall back to assuming it's not complete
-            return False
-
-    @staticmethod
-    def _is_multiline_html_start(
-        current_idx: int, lines: list[str], has_html_fn
-    ) -> bool:
-        """Check if current line starts a multi-line HTML block via look-ahead."""
-        # Look ahead up to 3 lines to detect multi-line HTML
-        for j in range(current_idx + 1, min(current_idx + 3, len(lines))):
-            next_line = lines[j].strip()
-            if next_line and has_html_fn(lines[j]):
-                return True
-        return False
-
-    @staticmethod
-    def _process_fenced_block_boundary(
-        line: str, state: dict[str, Any], output: list[str]
-    ) -> None:
-        """Process a line that marks a fenced code block boundary (```)."""
-        # Flush any open HTML block before entering/exiting fenced block
-        if state["in_html_block"]:
-            Renderer._flush_html_block(state, output)
-            state["in_html_block"] = False
-
-        # Toggle fenced block state
-        state["in_fenced_block"] = not state["in_fenced_block"]
-        output.append(line)
-
-    @staticmethod
-    def _flush_html_block(state: dict[str, Any], output: list[str]) -> None:
-        """Flush accumulated HTML lines as a code block."""
-        if state["html_block_lines"]:
-            output.append("```html")
-            output.extend(state["html_block_lines"])
-            output.append("```")
-            state["html_block_lines"] = []
-
-    @staticmethod
-    def _process_html_line(
-        line: str,
-        stripped: str,
-        current_idx: int,
-        lines: list[str],
-        state: dict[str, Any],
-        output: list[str],
-    ) -> None:
-        """Process a line containing HTML characters."""
-        is_complete = Renderer._is_complete_html_tag(line)
-        is_multiline_start = False
-
-        if not is_complete:
-            is_multiline_start = Renderer._is_multiline_html_start(
-                current_idx, lines, Renderer._has_unescaped_html_chars
-            )
-
-        # Determine how to handle this HTML line
-        if is_multiline_start or (
-            state["in_html_block"]
-            and (stripped or Renderer._has_unescaped_html_chars(line))
-        ):
-            # Part of multi-line HTML block - accumulate
-            if not state["in_html_block"]:
-                state["in_html_block"] = True
-            state["html_block_lines"].append(line)
-
-        elif is_complete:
-            # Complete single-line HTML - wrap in its own code block
-            if state["in_html_block"]:
-                Renderer._flush_html_block(state, output)
-                state["in_html_block"] = False
-            output.append("```html")
-            output.append(line)
-            output.append("```")
-
-        else:
-            # Simple tag-like text or special chars - escape it
-            if state["in_html_block"]:
-                Renderer._flush_html_block(state, output)
-                state["in_html_block"] = False
-            output.append(html.escape(line))
-
-    @staticmethod
-    def _process_non_html_line(
-        line: str, stripped: str, state: dict[str, Any], output: list[str]
-    ) -> None:
-        """Process a line without HTML characters."""
-        if state["in_html_block"]:
-            if stripped:
-                # Non-empty line without HTML tags ends the HTML block
-                Renderer._flush_html_block(state, output)
-                state["in_html_block"] = False
-                output.append(line)
-            else:
-                # Empty line might be part of HTML block
-                state["html_block_lines"].append(line)
-        else:
-            output.append(line)
-
-    @staticmethod
-    def _escape_html_outside_code_blocks(content: str) -> str:
-        """Escape HTML special characters outside code blocks."""
-        lines = content.split("\n")
-        output: list[str] = []
-        state = {
-            "in_fenced_block": False,
-            "in_html_block": False,
-            "html_block_lines": [],
-        }
-
-        for i, line in enumerate(lines):
-            stripped = line.strip()
-
-            # Process fenced code block boundaries
-            if stripped.startswith("```"):
-                Renderer._process_fenced_block_boundary(line, state, output)
-                continue
-
-            # Pass through lines inside fenced code blocks
-            if state["in_fenced_block"]:
-                output.append(line)
-                continue
-
-            # Process HTML vs non-HTML lines
-            if Renderer._has_unescaped_html_chars(line):
-                Renderer._process_html_line(line, stripped, i, lines, state, output)
-            else:
-                Renderer._process_non_html_line(line, stripped, state, output)
-
-        # Flush any remaining HTML block
-        if state["in_html_block"]:
-            Renderer._flush_html_block(state, output)
-
-        return "\n".join(output)
-
-    @staticmethod
-    def _fix_malformed_code_blocks(content: str) -> str:
-        """Fix malformed code blocks where closing ``` are escaped or malformed."""
-        # First, fix escaped backticks that should be proper markdown delimiters
-        # This handles cases where LLMs escape closing backticks: ``` -> \`\`\`
-        # Pattern 1: Fix escaped closing backticks in potential code blocks
-        # Look for patterns like:
-        # ```
-        # content
-        # \`\`\`
-        content = re.sub(
-            r"```\n(.*?)\n\\`\\`\\`", r"```\n\1\n```", content, flags=re.DOTALL
-        )
-
-        # Pattern 2: Fix mixed escaping where opening is fine but closing is escaped
-        content = re.sub(
-            r"```([^\n]*)\n(.*?)\n\\`\\`\\`",
-            r"```\1\n\2\n```",
-            content,
-            flags=re.DOTALL,
-        )
-
-        # Pattern 3: Handle cases where all backticks are escaped
-        content = re.sub(
-            r"\\`\\`\\`([^\n]*)\n(.*?)\n\\`\\`\\`",
-            r"```\1\n\2\n```",
-            content,
-            flags=re.DOTALL,
-        )
-
-        # Additional cleanup: handle stray ``` that appear after code content
-        lines = content.split("\n")
-        fixed_lines = []
-        in_code_block = False
-        i = 0
-
-        while i < len(lines):
-            line = lines[i]
-
-            # Check if line starts a code block
-            if line.strip().startswith("```") and not in_code_block:
-                in_code_block = True
-                fixed_lines.append(line)
-
-            # Check if we're in a code block and encounter a line that should end it
-            elif in_code_block:
-                # If we find a line that contains ``` (but might have other content),
-                # and it looks like it should be the end of a code block
-                if "```" in line.strip():
-                    # If the line is just ``` or starts with ``` preceded by whitespace, treat as end
-                    if line.strip() == "```" or line.strip().startswith("```"):
-                        fixed_lines.append("```")  # Clean closing marker
-                        in_code_block = False
-                    else:
-                        # Line has ``` mixed with content - split it
-                        before_backticks = line.split("```")[0].rstrip()
-                        if before_backticks:
-                            fixed_lines.append(before_backticks)
-                        fixed_lines.append("```")
-                        in_code_block = False
-                else:
-                    # Regular code line
-                    fixed_lines.append(line)
-            else:
-                # Not in code block, add line as-is
-                fixed_lines.append(line)
-
-            i += 1
-
-        return "\n".join(fixed_lines)
 
     @staticmethod
     def render_graph(drawable_graph: Graph) -> None:

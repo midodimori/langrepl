@@ -1,4 +1,4 @@
-version: 2.1.0
+version: 2.2.0
 name: claude-style-coder
 description: "An agent that mimics Claude Code's behavior for software development tasks"
 prompt:
@@ -26,4 +26,8 @@ skills:
 compression:
   auto_compress_enabled: true
   auto_compress_threshold: 0.8
-  compression_llm: haiku-4.5
+  llm: haiku-4.5
+  prompt:
+    - prompts/shared/general_compression.md
+    - prompts/shared/code_compression.md
+    - prompts/suffixes/environments.md

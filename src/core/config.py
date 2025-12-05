@@ -145,6 +145,41 @@ async def _load_single_file(
     return migrated_items
 
 
+async def load_prompt_content(
+    base_path: Path, prompt: str | list[str] | None
+) -> str | None:
+    """Load and concatenate prompt content from one or more files.
+
+    Args:
+        base_path: Base directory containing prompt files
+        prompt: Single file path, list of file paths, or already-loaded content
+
+    Returns:
+        Concatenated prompt content with double newline separators, or None
+    """
+    if not prompt:
+        return None
+
+    if isinstance(prompt, str):
+        prompt_path = base_path / prompt
+        if prompt_path.exists() and prompt_path.is_file():
+            return await asyncio.to_thread(prompt_path.read_text)
+        return prompt
+
+    if isinstance(prompt, list):
+        contents = []
+        for prompt_file in prompt:
+            prompt_path = base_path / prompt_file
+            if prompt_path.exists() and prompt_path.is_file():
+                content = await asyncio.to_thread(prompt_path.read_text)
+                contents.append(content)
+            else:
+                contents.append(prompt_file)
+        return "\n\n".join(contents)
+
+    return str(prompt)
+
+
 class VersionedConfig(BaseModel):
     """Base class for versioned configs with migration support."""
 
@@ -403,9 +438,24 @@ class CompressionConfig(BaseModel):
         default=0.8,
         description="Trigger compression at this context usage ratio (0.0-1.0)",
     )
-    compression_llm: LLMConfig | None = Field(
+    llm: LLMConfig | None = Field(
         default=None,
         description="LLM to use for summarization (defaults to agent's main llm)",
+    )
+    prompt: str | list[str] | None = Field(
+        default_factory=lambda: [
+            "prompts/shared/general_compression.md",
+            "prompts/suffixes/environments.md",
+        ],
+        description="Prompt template(s) to use when summarizing conversation history",
+    )
+    messages_to_keep: int = Field(
+        default=0,
+        description=(
+            "Number of most recent non-system messages to preserve verbatim when"
+            " compressing conversation history"
+        ),
+        ge=0,
     )
 
 
@@ -507,6 +557,23 @@ class BaseAgentConfig(VersionedConfig):
                     "use_catalog": False,
                 }
 
+        # Migrate 2.1.0 -> 2.2.0: rename compression_llm->llm and add prompt/messages_to_keep
+        if from_ver < pkg_version.parse("2.2.0") and (
+            compression := data.get("compression")
+        ):
+            if isinstance(compression, dict):
+                if "compression_llm" in compression and "llm" not in compression:
+                    compression["llm"] = compression.pop("compression_llm")
+
+                compression.setdefault("messages_to_keep", 0)
+                compression.setdefault(
+                    "prompt",
+                    [
+                        "prompts/shared/general_compression.md",
+                        "prompts/suffixes/environments.md",
+                    ],
+                )
+
         return data
 
 
@@ -534,34 +601,6 @@ class AgentConfig(BaseAgentConfig):
 
 class BaseBatchConfig(BaseModel):
     """Base class for batch configurations with shared functionality."""
-
-    @staticmethod
-    async def _load_prompt_content(base_path: Path, prompt: str | list[str]) -> str:
-        """Load and concatenate prompt content from one or more files.
-
-        Args:
-            base_path: Base directory containing prompt files
-            prompt: Single file path or list of file paths relative to base_path
-
-        Returns:
-            Concatenated prompt content with double newline separators
-        """
-        if isinstance(prompt, str):
-            prompt_path = base_path / prompt
-            if prompt_path.exists() and prompt_path.is_file():
-                return await asyncio.to_thread(prompt_path.read_text)
-            return prompt
-
-        contents = []
-        for prompt_file in prompt:
-            prompt_path = base_path / prompt_file
-            if prompt_path.exists() and prompt_path.is_file():
-                content = await asyncio.to_thread(prompt_path.read_text)
-                contents.append(content)
-            else:
-                contents.append(prompt_file)
-
-        return "\n\n".join(contents)
 
 
 class BatchSubAgentConfig(BaseBatchConfig):
@@ -613,7 +652,7 @@ class BatchSubAgentConfig(BaseBatchConfig):
         validated_subagents: list[SubAgentConfig] = []
         for subagent in subagents:
             if prompt_content := subagent.get("prompt", ""):
-                subagent["prompt"] = await cls._load_prompt_content(
+                subagent["prompt"] = await load_prompt_content(
                     prompt_base_path or Path(), prompt_content
                 )
 
@@ -766,7 +805,7 @@ class BatchAgentConfig(BaseBatchConfig):
         validated_agents: list[AgentConfig] = []
         for agent in agents:
             if prompt_content := agent.get("prompt", ""):
-                agent["prompt"] = await cls._load_prompt_content(
+                agent["prompt"] = await load_prompt_content(
                     prompt_base_path or Path(), prompt_content
                 )
 
@@ -806,9 +845,9 @@ class BatchAgentConfig(BaseBatchConfig):
 
             if agent.get("compression"):
                 compression = agent["compression"]
-                if isinstance(compression.get("compression_llm"), str):
-                    compression_llm_name = compression["compression_llm"]
-                    if batch_llm_config:
+                if isinstance(compression, dict):
+                    if batch_llm_config and isinstance(compression.get("llm"), str):
+                        compression_llm_name = compression["llm"]
                         resolved_compression_llm = batch_llm_config.get_llm_config(
                             compression_llm_name
                         )
@@ -816,9 +855,16 @@ class BatchAgentConfig(BaseBatchConfig):
                             raise ValueError(
                                 f"Compression LLM '{compression_llm_name}' not found. Available: {batch_llm_config.llm_names}"
                             )
-                        compression["compression_llm"] = resolved_compression_llm
-                elif compression.get("compression_llm") is None:
-                    compression["compression_llm"] = agent["llm"]
+                        compression["llm"] = resolved_compression_llm
+                    elif compression.get("llm") is None:
+                        compression["llm"] = agent["llm"]
+
+                    if prompt_content := compression.get("prompt"):
+                        compression["prompt"] = await load_prompt_content(
+                            prompt_base_path or Path(), prompt_content
+                        )
+                    else:
+                        compression["prompt"] = None
 
             validated_agents.append(AgentConfig.model_validate(agent))
 

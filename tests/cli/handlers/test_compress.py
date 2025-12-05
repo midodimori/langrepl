@@ -164,7 +164,7 @@ class TestCompressionHandler:
         compression_llm = mock_llm_config.model_copy(
             update={"alias": "compression-model", "model": "claude-3-haiku-20240307"}
         )
-        compression_config = CompressionConfig(compression_llm=compression_llm)
+        compression_config = CompressionConfig(llm=compression_llm, prompt="prompt")
         mock_agent_config.compression = compression_config
 
         mock_config_data = MagicMock()
@@ -190,6 +190,9 @@ class TestCompressionHandler:
         await handler.handle()
 
         mock_llm_factory.create.assert_called_once_with(compression_llm)
+        mock_compress.assert_called_once()
+        _, _, kwargs = mock_compress.mock_calls[0]
+        assert kwargs["prompt"] == "prompt"
 
     @pytest.mark.asyncio
     @patch("src.cli.handlers.compress.initializer.load_agents_config")

@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 
 from langchain_core.runnables import RunnableConfig
 
+from src.agents.context import AgentContext
 from src.cli.bootstrap.initializer import initializer
 from src.cli.theme import console, theme
-from src.core.config import CompressionConfig
+from src.core.config import CompressionConfig, load_prompt_content
+from src.core.constants import OS_VERSION, PLATFORM
 from src.core.logging import get_logger
 from src.utils.compression import calculate_message_tokens, compress_messages
 from src.utils.cost import format_tokens
@@ -36,6 +39,9 @@ class CompressionHandler:
                 return
 
             compression_config = agent_config.compression or CompressionConfig()
+            prompt_str = await load_prompt_content(
+                ctx.working_dir, compression_config.prompt
+            )
 
             async with initializer.get_checkpointer(
                 ctx.agent, ctx.working_dir
@@ -56,10 +62,21 @@ class CompressionHandler:
                     console.print("")
                     return
 
-                compression_llm_config = (
-                    compression_config.compression_llm or agent_config.llm
-                )
+                compression_llm_config = compression_config.llm or agent_config.llm
                 compression_llm = initializer.llm_factory.create(compression_llm_config)
+                now = datetime.now(timezone.utc).astimezone()
+                user_memory = await initializer.load_user_memory(ctx.working_dir)
+                agent_context = AgentContext(
+                    approval_mode=ctx.approval_mode,
+                    working_dir=ctx.working_dir,
+                    platform=PLATFORM,
+                    os_version=OS_VERSION,
+                    current_date_time_zoned=now.strftime("%Y-%m-%d %H:%M:%S %Z"),
+                    user_memory=user_memory,
+                    input_cost_per_mtok=ctx.input_cost_per_mtok,
+                    output_cost_per_mtok=ctx.output_cost_per_mtok,
+                    tool_output_max_tokens=ctx.tool_output_max_tokens,
+                )
 
                 original_count = len(messages)
                 original_tokens = calculate_message_tokens(messages, compression_llm)
@@ -70,6 +87,9 @@ class CompressionHandler:
                     compressed_messages = await compress_messages(
                         messages,
                         compression_llm,
+                        messages_to_keep=compression_config.messages_to_keep,
+                        prompt=prompt_str,
+                        prompt_vars=agent_context.template_vars,
                     )
 
                     compressed_tokens = calculate_message_tokens(

@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.9.1 (2025-12-05)
+
+### Bug Fixes
+
+- Default prompt path
+  ([`f9da498`](https://github.com/midodimori/langrepl/commit/f9da498fddfc26bc5d2555bb3a1de1530b671ef4))
+
+
 ## v1.9.0 (2025-12-05)
 
 ### Features

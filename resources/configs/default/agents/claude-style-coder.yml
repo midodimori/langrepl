@@ -28,6 +28,5 @@ compression:
   auto_compress_threshold: 0.8
   llm: haiku-4.5
   prompt:
-    - prompts/shared/general_compression.md
     - prompts/shared/code_compression.md
     - prompts/suffixes/environments.md

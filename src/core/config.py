@@ -511,6 +511,30 @@ class BaseAgentConfig(VersionedConfig):
     def get_latest_version(cls) -> str:
         return AGENT_CONFIG_VERSION
 
+    @staticmethod
+    def _copy_missing_prompts(prompt_paths: list[str]) -> None:
+        """Copy missing prompt files from defaults (sync, called during migration)."""
+        try:
+            import shutil
+            from importlib.resources import files
+
+            from src.core.constants import CONFIG_DIR_NAME
+
+            template_dir = Path(str(files("resources") / "configs" / "default"))
+
+            for prompt_path in prompt_paths:
+                template_file = template_dir / prompt_path
+                if not template_file.exists():
+                    continue
+
+                target_file = Path.cwd() / CONFIG_DIR_NAME / prompt_path
+                if not target_file.exists():
+                    target_file.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(template_file, target_file)
+                    logger.warning(f"Copying missing prompt file: {prompt_path}")
+        except Exception as e:
+            logger.debug(f"Failed to copy prompt files: {e}")
+
     @classmethod
     def migrate(cls, data: dict, from_version: str) -> dict:
         """Migrate config data from older version."""
@@ -566,13 +590,14 @@ class BaseAgentConfig(VersionedConfig):
                     compression["llm"] = compression.pop("compression_llm")
 
                 compression.setdefault("messages_to_keep", 0)
-                compression.setdefault(
-                    "prompt",
-                    [
-                        "prompts/shared/general_compression.md",
-                        "prompts/suffixes/environments.md",
-                    ],
-                )
+                default_prompts = [
+                    "prompts/shared/general_compression.md",
+                    "prompts/suffixes/environments.md",
+                ]
+                compression.setdefault("prompt", default_prompts)
+
+                # Copy missing prompt files
+                cls._copy_missing_prompts(default_prompts)
 
         return data
 

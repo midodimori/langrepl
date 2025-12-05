@@ -23,7 +23,7 @@ CONFIG_SUBAGENTS_DIR = Path(f"{CONFIG_DIR_NAME}/subagents")
 CONFIG_SKILLS_DIR = Path(f"{CONFIG_DIR_NAME}/skills")
 CONFIG_MCP_CACHE_DIR = Path(f"{CONFIG_DIR_NAME}/cache/mcp")
 
-DEFAULT_CONFIG_DIR_NAME = "resources/configs/default"
+DEFAULT_CONFIG_DIR_NAME = "resources.configs.default"
 
 TOOL_CATEGORY_IMPL = "impl"
 TOOL_CATEGORY_MCP = "mcp"

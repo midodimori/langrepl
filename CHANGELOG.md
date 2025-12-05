@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.9.0 (2025-12-05)
+
+### Features
+
+- Enhance compression with configurable prompts and markdown formatting (#61)
+  ([#61](https://github.com/midodimori/langrepl/pull/61),
+  [`e2b4fe2`](https://github.com/midodimori/langrepl/commit/e2b4fe254aeba2fffabbf3640d3b62750efd9215))
+
+
 ## v1.8.6 (2025-12-03)
 
 ### Bug Fixes

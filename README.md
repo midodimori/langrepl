@@ -29,6 +29,7 @@ https://github.com/user-attachments/assets/d95444c9-733f-481d-80c7-7d1cc28a732a
   - [Utilities](#utilities)
 - [Usage](#usage)
   - [Agents](#agents)
+  - [Custom Prompts](#custom-prompts)
   - [LLMs](#llms)
   - [Checkpointers](#checkpointers)
   - [Sub-Agents](#sub-agents)
@@ -268,9 +269,6 @@ View and toggle enabled/disabled MCP servers interactively.
 Opens `.langrepl/memory.md` for custom instructions and preferences. Content is automatically injected into agent
 prompts.
 
-**Advanced:** Use `{user_memory}` placeholder in custom agent prompts to control placement. If omitted, memory
-auto-appends to end.
-
 </details>
 
 <details>
@@ -377,6 +375,20 @@ agents:
 - `mcp:server:*` - All tools from MCP server
 
 **Tool catalog**: When `use_catalog: true`, impl/mcp tools are wrapped in a unified catalog interface to reduce token usage. The agent receives catalog tools instead of individual tool definitions.
+
+### Custom Prompts
+
+Place prompts in `.langrepl/prompts/`:
+```markdown
+# prompts/my_agent.md
+You are a helpful assistant...
+
+{user_memory}
+```
+
+**Placeholders:**
+- `{user_memory}` - Auto-appended if missing
+- `{conversation}` - Auto-wrapped if missing (compression prompts only)
 
 ### LLMs
 

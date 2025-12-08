@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.9.2 (2025-12-08)
+
+### Bug Fixes
+
+- Simplify prompt loading in compression handler (#62)
+  ([#62](https://github.com/midodimori/langrepl/pull/62),
+  [`5801b92`](https://github.com/midodimori/langrepl/commit/5801b9269b9c7badf907d503a7b9fc76fc68eabe))
+
+
 ## v1.9.1 (2025-12-05)
 
 ### Bug Fixes

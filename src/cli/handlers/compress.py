@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
+from typing import cast
 
 from langchain_core.runnables import RunnableConfig
 
 from src.agents.context import AgentContext
 from src.cli.bootstrap.initializer import initializer
 from src.cli.theme import console, theme
-from src.core.config import CompressionConfig, load_prompt_content
+from src.core.config import CompressionConfig
 from src.core.constants import OS_VERSION, PLATFORM
 from src.core.logging import get_logger
 from src.utils.compression import calculate_message_tokens, compress_messages
@@ -39,9 +40,7 @@ class CompressionHandler:
                 return
 
             compression_config = agent_config.compression or CompressionConfig()
-            prompt_str = await load_prompt_content(
-                ctx.working_dir, compression_config.prompt
-            )
+            prompt_str = compression_config.prompt
 
             async with initializer.get_checkpointer(
                 ctx.agent, ctx.working_dir
@@ -88,7 +87,7 @@ class CompressionHandler:
                         messages,
                         compression_llm,
                         messages_to_keep=compression_config.messages_to_keep,
-                        prompt=prompt_str,
+                        prompt=cast(str, prompt_str),
                         prompt_vars=agent_context.template_vars,
                     )
 

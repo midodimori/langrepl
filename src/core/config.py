@@ -14,7 +14,9 @@ from pydantic import BaseModel, Field, model_validator
 from src.core.constants import (
     AGENT_CONFIG_VERSION,
     CHECKPOINTER_CONFIG_VERSION,
+    DEFAULT_SANDBOX_TIMEOUT,
     LLM_CONFIG_VERSION,
+    SANDBOX_CONFIG_VERSION,
 )
 from src.utils.render import render_templates
 
@@ -218,6 +220,20 @@ class ApprovalMode(str, Enum):
     AGGRESSIVE = "aggressive"  # Bypass all approval rules
 
 
+class SandboxType(str, Enum):
+    """Sandbox backend types."""
+
+    BUBBLEWRAP = "bubblewrap"
+    SEATBELT = "seatbelt"
+
+
+class SandboxPermission(str, Enum):
+    """Permissions that can be granted to sandboxed tools."""
+
+    NETWORK = "network"
+    FILESYSTEM = "filesystem"
+
+
 class RateConfig(BaseModel):
     requests_per_second: float = Field(
         description="The maximum number of requests per second"
@@ -286,6 +302,78 @@ class CheckpointerConfig(VersionedConfig):
         return CHECKPOINTER_CONFIG_VERSION
 
 
+class SandboxConfig(VersionedConfig):
+    """Configuration for sandbox execution."""
+
+    version: str = Field(
+        default=SANDBOX_CONFIG_VERSION, description="Config schema version"
+    )
+    name: str = Field(description="Sandbox configuration name")
+    type: SandboxType = Field(description="Sandbox backend type")
+    permissions: list[SandboxPermission] = Field(
+        default_factory=list,
+        description="Permissions granted to sandboxed tools",
+    )
+    read_paths: list[str] = Field(
+        default_factory=list,
+        description="Paths to mount read-only in sandbox",
+    )
+    write_paths: list[str] = Field(
+        default_factory=list,
+        description="Paths to mount read-write in sandbox",
+    )
+    timeout: float = Field(
+        default=DEFAULT_SANDBOX_TIMEOUT,
+        ge=1.0,
+        le=3600.0,
+        description="Timeout in seconds for sandbox tool execution (1-3600)",
+    )
+
+    @classmethod
+    def get_latest_version(cls) -> str:
+        return SANDBOX_CONFIG_VERSION
+
+    def has_permission(self, permission: SandboxPermission) -> bool:
+        """Check if a permission is granted."""
+        return permission in self.permissions
+
+
+class BatchSandboxConfig(BaseModel):
+    """Batch container for sandbox configurations."""
+
+    sandboxes: list[SandboxConfig] = Field(
+        default_factory=list, description="The sandbox configurations"
+    )
+
+    @property
+    def sandbox_names(self) -> list[str]:
+        return [sb.name for sb in self.sandboxes]
+
+    def get_sandbox_config(self, sandbox_name: str) -> SandboxConfig | None:
+        return next((sb for sb in self.sandboxes if sb.name == sandbox_name), None)
+
+    @classmethod
+    async def from_yaml(
+        cls,
+        dir_path: Path | None = None,
+    ) -> "BatchSandboxConfig":
+        """Load sandbox configurations from YAML files in directory."""
+        sandboxes = []
+
+        if dir_path and dir_path.exists():
+            sandboxes.extend(
+                await _load_dir_items(
+                    dir_path,
+                    key="name",
+                    config_type="Sandbox",
+                    config_class=SandboxConfig,
+                )
+            )
+
+        _validate_no_duplicates(sandboxes, key="name", config_type="Sandbox")
+        return cls.model_validate({"sandboxes": sandboxes})
+
+
 class MCPServerConfig(VersionedConfig):
     command: str | None = Field(
         default=None, description="The command to execute the server"
@@ -307,6 +395,10 @@ class MCPServerConfig(VersionedConfig):
     repair_command: list[str] | None = Field(
         default=None,
         description="Command list to run if server initialization fails",
+    )
+    sandbox_permissions: list[SandboxPermission] = Field(
+        default_factory=list,
+        description="Permissions this MCP server requires (deny-by-default if empty)",
     )
 
 
@@ -334,7 +426,14 @@ class MCPConfig(BaseModel):
         async with aiofiles.open(path) as f:
             config_content = await f.read()
 
-        config: dict[str, Any] = json.loads(config_content)
+        try:
+            config: dict[str, Any] = json.loads(config_content)
+        except json.JSONDecodeError as e:
+            raise json.JSONDecodeError(
+                f"Failed to parse {path}: {e.msg}",
+                e.doc,
+                e.pos,
+            ) from e
         rendered_config: dict = cast(dict, render_templates(config, context))
         mcp_servers = rendered_config.get("mcpServers", {})
 
@@ -505,6 +604,10 @@ class BaseAgentConfig(VersionedConfig):
     )
     recursion_limit: int = Field(
         default=25, description="Maximum number of execution steps"
+    )
+    sandbox: SandboxConfig | None = Field(
+        default=None,
+        description="Sandbox configuration",
     )
 
     @classmethod
@@ -801,6 +904,7 @@ class BatchAgentConfig(BaseBatchConfig):
         dir_path: Path | None = None,
         batch_llm_config: BatchLLMConfig | None = None,
         batch_checkpointer_config: BatchCheckpointerConfig | None = None,
+        batch_sandbox_config: BatchSandboxConfig | None = None,
         batch_subagent_config: BatchSubAgentConfig | None = None,
     ) -> "BatchAgentConfig":
         """Load agent configurations from YAML files."""
@@ -853,6 +957,15 @@ class BatchAgentConfig(BaseBatchConfig):
                         f"Checkpointer '{checkpointer_name}' not found. Available: {batch_checkpointer_config.checkpointer_names}"
                     )
                 agent["checkpointer"] = resolved_checkpointer
+
+            if batch_sandbox_config and isinstance(agent.get("sandbox"), str):
+                sandbox_name = agent["sandbox"]
+                resolved_sandbox = batch_sandbox_config.get_sandbox_config(sandbox_name)
+                if not resolved_sandbox:
+                    raise ValueError(
+                        f"Sandbox '{sandbox_name}' not found. Available: {batch_sandbox_config.sandbox_names}"
+                    )
+                agent["sandbox"] = resolved_sandbox
 
             if batch_subagent_config and isinstance(agent.get("subagents"), list):
                 subagent_names = agent["subagents"]

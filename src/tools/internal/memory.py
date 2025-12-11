@@ -53,7 +53,10 @@ async def list_memory_files(
     )
 
 
-list_memory_files.metadata = {"approval_config": {"always_approve": True}}
+list_memory_files.metadata = {
+    "approval_config": {"always_approve": True},
+    "sandbox_bypass": True,
+}
 
 
 @tool()
@@ -108,7 +111,10 @@ async def read_memory_file(
     )
 
 
-read_memory_file.metadata = {"approval_config": {"always_approve": True}}
+read_memory_file.metadata = {
+    "approval_config": {"always_approve": True},
+    "sandbox_bypass": True,
+}
 
 
 @tool()
@@ -149,7 +155,10 @@ async def write_memory_file(
     )
 
 
-write_memory_file.metadata = {"approval_config": {"always_approve": True}}
+write_memory_file.metadata = {
+    "approval_config": {"always_approve": True},
+    "sandbox_bypass": True,
+}
 
 
 @json_safe_tool
@@ -221,7 +230,10 @@ async def edit_memory_file(
     )
 
 
-edit_memory_file.metadata = {"approval_config": {"always_approve": True}}
+edit_memory_file.metadata = {
+    "approval_config": {"always_approve": True},
+    "sandbox_bypass": True,
+}
 
 
 MEMORY_TOOLS = [

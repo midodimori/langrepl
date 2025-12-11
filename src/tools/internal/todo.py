@@ -91,7 +91,10 @@ def write_todos(
     )
 
 
-write_todos.metadata = {"approval_config": {"always_approve": True}}
+write_todos.metadata = {
+    "approval_config": {"always_approve": True},
+    "sandbox_bypass": True,
+}
 
 
 @tool()
@@ -110,7 +113,10 @@ def read_todos(
     return format_todos(todos, max_items=50)
 
 
-read_todos.metadata = {"approval_config": {"always_approve": True}}
+read_todos.metadata = {
+    "approval_config": {"always_approve": True},
+    "sandbox_bypass": True,
+}
 
 
 TODO_TOOLS = [write_todos, read_todos]

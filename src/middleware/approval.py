@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import traceback
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -250,11 +251,15 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
         except GraphInterrupt:
             raise
         except Exception as e:
+            error_msg = f"Failed to execute tool: {str(e)}"
+            # Display full traceback to user, send concise error to LLM
+            display_msg = f"{error_msg}\n\nTraceback:\n{traceback.format_exc()}"
             return create_tool_message(
-                result=f"Failed to execute tool: {str(e)}",
+                result=error_msg,
                 tool_name=request.tool_call["name"],
                 tool_call_id=str(request.tool_call["id"]),
                 is_error=True,
+                short_content=display_msg,
             )
 
 

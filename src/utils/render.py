@@ -101,6 +101,7 @@ def create_tool_message(
     tool_call_id: str,
     is_error: bool | None = None,
     return_direct: bool | None = None,
+    short_content: str | None = None,
 ) -> ToolMessage:
     """Create a ToolMessage from a tool execution result with proper formatting.
 
@@ -112,6 +113,7 @@ def create_tool_message(
         tool_call_id: ID of the tool call
         is_error: Override is_error flag (if None, extracted from result via getattr)
         return_direct: Override return_direct flag (if None, extracted from result via getattr)
+        short_content: Override short_content for display (if None, auto-generated)
 
     Returns:
         Properly formatted ToolMessage with content and short_content
@@ -129,23 +131,72 @@ def create_tool_message(
     # Handle AIMessage specially, let format_tool_response handle everything else
     if isinstance(result, AIMessage):
         content = str(result.text)
-        short_content = None
+        extracted_short = None
     else:
-        content, short_content = format_tool_response(result)
+        content, extracted_short = format_tool_response(result)
 
-    # Generate short_content if not available
-    if short_content is None:
+    # Use provided short_content, or extracted, or generate
+    final_short_content = short_content or extracted_short
+    if final_short_content is None:
         # For errors, use full content; otherwise truncate
-        short_content = content if final_is_error else truncate_text(content, 200)
+        final_short_content = content if final_is_error else truncate_text(content, 200)
 
     return ToolMessage(
         id=str(uuid.uuid4()),
         name=tool_name,
         content=content,
         tool_call_id=tool_call_id,
-        short_content=short_content,
+        short_content=final_short_content,
         is_error=final_is_error,
         return_direct=final_return_direct,
+        status="success" if not final_is_error else "error",
+    )
+
+
+def create_sandbox_tool_message(
+    result: dict[str, Any],
+    tool_name: str,
+    tool_call_id: str,
+) -> ToolMessage:
+    """Create a ToolMessage from sandbox execution result.
+
+    Handles both success and error cases from sandbox worker.
+
+    Args:
+        result: Sandbox result dict with keys: success, content, error, traceback
+        tool_name: Name of the tool
+        tool_call_id: ID of the tool call
+
+    Returns:
+        Properly formatted ToolMessage
+    """
+    if result.get("success"):
+        return create_tool_message(
+            result=result.get("content", ""),
+            tool_name=tool_name,
+            tool_call_id=tool_call_id,
+            is_error=result.get("is_error", False),
+            return_direct=result.get("return_direct", False),
+            short_content=result.get("short_content"),
+        )
+
+    error = result.get("error", "Unknown sandbox error")
+    traceback_str = result.get("traceback", "")
+    stderr_str = result.get("stderr", "")
+    error_content = f"Sandbox execution failed: {error}"
+    # Display full traceback/stderr to user, send concise error to LLM
+    display_msg = error_content
+    if traceback_str:
+        display_msg += f"\n\nTraceback:\n{traceback_str}"
+    if stderr_str:
+        display_msg += f"\n\nStderr:\n{stderr_str}"
+
+    return create_tool_message(
+        result=error_content,
+        tool_name=tool_name,
+        tool_call_id=tool_call_id,
+        is_error=True,
+        short_content=display_msg,
     )
 
 

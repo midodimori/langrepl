@@ -40,10 +40,13 @@ def test_create_deep_agent_passes_provider_to_task_tool(monkeypatch):
     provider = MagicMock(return_value=object())
     captured = {}
 
-    def fake_create_task_tool(subagents, model_provider, state_schema):
+    def fake_create_task_tool(
+        subagents, model_provider, state_schema, sandbox_executor=None
+    ):
         captured["subagents"] = subagents
         captured["model_provider"] = model_provider
         captured["state_schema"] = state_schema
+        captured["sandbox_executor"] = sandbox_executor
         return "task_tool"
 
     def fake_create_react_agent(model, tools, **kwargs):

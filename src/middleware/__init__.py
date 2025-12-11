@@ -8,6 +8,7 @@ from src.middleware.compress_tool_output import CompressToolOutputMiddleware
 from src.middleware.dynamic_prompt import create_dynamic_prompt_middleware
 from src.middleware.pending_tool_result import PendingToolResultMiddleware
 from src.middleware.return_direct import ReturnDirectMiddleware
+from src.middleware.sandbox import SandboxMiddleware
 from src.middleware.token_cost import TokenCostMiddleware
 
 __all__ = [
@@ -15,6 +16,7 @@ __all__ = [
     "CompressToolOutputMiddleware",
     "PendingToolResultMiddleware",
     "ReturnDirectMiddleware",
+    "SandboxMiddleware",
     "TokenCostMiddleware",
     "create_dynamic_prompt_middleware",
 ]

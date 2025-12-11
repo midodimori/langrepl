@@ -4,11 +4,16 @@ import hashlib
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from src.core.config import SandboxPermission
+from src.core.logging import get_logger
 from src.core.settings import settings
 from src.mcp.client import MCPClient
 
 if TYPE_CHECKING:
     from src.core.config import MCPConfig, MCPServerConfig
+    from src.sandboxes.base import Sandbox
+
+logger = get_logger(__name__)
 
 
 class MCPFactory:
@@ -34,6 +39,7 @@ class MCPFactory:
             "include": tuple(server.include or []),
             "exclude": tuple(server.exclude or []),
             "repair_command": tuple(server.repair_command or []),
+            "sandbox_permissions": tuple(server.sandbox_permissions or []),
         }
         return hashlib.sha256(repr(signature).encode("utf-8")).hexdigest()
 
@@ -51,6 +57,7 @@ class MCPFactory:
         self,
         config: MCPConfig,
         cache_dir: Path | None = None,
+        sandbox_executor: Sandbox | None = None,
     ) -> MCPClient:
         config_hash = self._get_config_hash(config, cache_dir)
         if self._client and self._config_hash == config_hash:
@@ -81,11 +88,20 @@ class MCPFactory:
             server_dict: dict[str, Any] = {
                 "transport": server.transport,
             }
-
             if server.transport == "stdio":
-                if server.command:
-                    server_dict["command"] = server.command
-                server_dict["args"] = server.args
+                command = server.command
+                args = list(server.args) if server.args else []
+
+                if sandbox_executor and command:
+                    command, args, success = await sandbox_executor.sandbox_mcp_command(
+                        name, command, args, server.sandbox_permissions
+                    )
+                    if not success:
+                        continue
+
+                if command:
+                    server_dict["command"] = command
+                server_dict["args"] = args
                 server_dict["env"] = env
             elif server.transport == "streamable_http":
                 if server.url:
@@ -106,6 +122,12 @@ class MCPFactory:
 
             server_hashes[name] = self._compute_server_hash(server)
 
+        # Collect sandbox permissions per server
+        server_permissions: dict[str, list[SandboxPermission]] = {}
+        for name, server in config.servers.items():
+            if server.enabled:
+                server_permissions[name] = server.sandbox_permissions
+
         self._client = MCPClient(
             server_config,
             tool_filters,
@@ -113,6 +135,7 @@ class MCPFactory:
             enable_approval=self.enable_approval,
             cache_dir=cache_dir,
             server_hashes=server_hashes,
+            server_permissions=server_permissions,
         )
         self._config_hash = config_hash
         return self._client

@@ -1,0 +1,43 @@
+version: 1.0.0
+name: bubblewrap
+type: bubblewrap
+permissions:
+  - network
+  - filesystem
+
+# Paths mounted read-only in the sandbox
+# Note: /proc, /dev, and /tmp are mounted automatically by bubblewrap
+# and are not managed by this configuration file.
+read_paths:
+  # System binaries and libraries
+  - /usr
+  - /lib
+  - /lib64
+  - /bin
+  - /sbin
+  # SSL certificates and DNS
+  - /etc/ssl
+  - /etc/ca-certificates
+  - /etc/resolv.conf
+  - /etc/hosts
+  # Runtime sockets (for D-Bus, systemd services)
+  - /run
+  - /var/run
+  # Home directory (read-only by default)
+  - "~"
+  # Add node version manager paths as needed:
+  # - "~/.nvm"
+  # - "~/.volta"
+  # - "~/.local/share/fnm"
+
+# Paths mounted read-write in the sandbox, in addition to the already mounted working directory
+write_paths:
+  - "~/.npm"
+  - "~/.cache/uv"
+  - "~/.local/share/uv"
+  # Docker sockets
+  - "~/.orbstack/run"      # OrbStack
+  - "~/.docker/run"        # Docker Desktop
+  - "~/.rd/docker.sock"    # Rancher Desktop
+  - /var/run/docker.sock   # Linux default
+timeout: 10

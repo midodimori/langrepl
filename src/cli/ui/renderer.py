@@ -176,6 +176,14 @@ class PrefixedMarkdown:
 class Renderer:
     """Handles rendering of UI elements using Rich."""
 
+    def __init__(self, context: Context | None = None):
+        self.context = context
+
+    @property
+    def sandbox_enabled(self) -> bool:
+        """Check if sandbox is enabled from context."""
+        return self.context.sandbox_enabled if self.context else False
+
     @staticmethod
     def show_welcome(context: Context) -> None:
         """Display ASCII logo with features in a responsive table."""
@@ -282,8 +290,7 @@ class Renderer:
 
         return texts, thinking_blocks
 
-    @staticmethod
-    def _format_tool_call(tool_call: dict[str, Any]) -> Text:
+    def _format_tool_call(self, tool_call: dict[str, Any]) -> Text:
         """Format a single tool call with improved readability."""
         tool_name = tool_call.get("name", UNKNOWN)
         tool_args = cast(dict[str, Any], tool_call.get("args", {}))
@@ -292,6 +299,8 @@ class Renderer:
         result = Text()
         result.append("⚙ ", style="indicator")
         result.append(tool_name, style="bold")
+        if self.sandbox_enabled:
+            result.append(" [sandbox]", style="dim bold")
         result.append("\n")
 
         if tool_args:
@@ -307,8 +316,7 @@ class Renderer:
 
         return result
 
-    @staticmethod
-    def render_assistant_message(message: AIMessage) -> None:
+    def render_assistant_message(self, message: AIMessage) -> None:
         """Render an assistant message with optional tool calls."""
         if not message.content and not message.tool_calls:
             return
@@ -321,7 +329,7 @@ class Renderer:
             # Only tool calls, no content
             if tool_calls:
                 for i, tool_call in enumerate(tool_calls):
-                    console.print(Renderer._format_tool_call(tool_call))
+                    console.print(self._format_tool_call(tool_call))
                     if i < len(tool_calls) - 1:
                         console.print("")
             return
@@ -383,7 +391,7 @@ class Renderer:
             if parts:
                 console.print(NewLine())
             for tool_call in tool_calls:
-                console.print(Renderer._format_tool_call(tool_call))
+                console.print(self._format_tool_call(tool_call))
         elif parts:
             console.print("")
 
@@ -531,14 +539,13 @@ class Renderer:
             console.print_error(f"Could not generate Mermaid diagram: {e}")
             console.print("")
 
-    @staticmethod
-    def render_message(message: AnyMessage) -> None:
+    def render_message(self, message: AnyMessage) -> None:
         """Render any message."""
         if isinstance(message, HumanMessage):
             Renderer.render_user_message(message)
 
         elif isinstance(message, AIMessage):
-            Renderer.render_assistant_message(message)
+            self.render_assistant_message(message)
 
         elif isinstance(message, ToolMessage):
             Renderer.render_tool_message(message)

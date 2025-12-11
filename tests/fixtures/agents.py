@@ -145,6 +145,11 @@ def create_mock_tool():
         mock.tool_call_schema = MockToolArgs
         mock.handle_tool_error = False
         mock.metadata = None
+        # Add func with __module__ for sandbox middleware compatibility
+        mock_func = MagicMock()
+        mock_func.__module__ = "tests.mock_tools"
+        mock.func = mock_func
+        mock.coroutine = None
         return cast(BaseTool, mock)
 
     return _create

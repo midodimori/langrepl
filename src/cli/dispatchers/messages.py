@@ -76,6 +76,7 @@ class MessageDispatcher:
                 input_cost_per_mtok=ctx.input_cost_per_mtok,
                 output_cost_per_mtok=ctx.output_cost_per_mtok,
                 tool_output_max_tokens=ctx.tool_output_max_tokens,
+                sandbox_executor=initializer.cached_sandbox_executor,
             )
 
             graph_config = RunnableConfig(

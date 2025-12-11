@@ -138,7 +138,10 @@ def create_task_tool(
             }
         )
 
-    task.metadata = {"approval_config": {"always_approve": True}}
+    task.metadata = {
+        "approval_config": {"always_approve": True},
+        "sandbox_bypass": True,  # Subagent tools handle their own sandboxing
+    }
 
     return task
 
@@ -172,4 +175,7 @@ def think(reflection: str) -> str:
     return f"Reflection recorded: {reflection}"
 
 
-think.metadata = {"approval_config": {"always_approve": True}}
+think.metadata = {
+    "approval_config": {"always_approve": True},
+    "sandbox_bypass": True,  # Pure function, no I/O
+}

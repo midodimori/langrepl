@@ -1,0 +1,47 @@
+version: 1.0.0
+name: seatbelt
+type: seatbelt
+permissions:
+  - network
+  - filesystem
+
+# Paths with read-only access in the sandbox
+# Note: /dev/null write and path resolution literals are allowed automatically
+# by the Seatbelt runtime and are not managed by this configuration file.
+read_paths:
+  # System paths
+  - /usr
+  - /bin
+  - /sbin
+  - /etc
+  - /private/etc
+  - /Library
+  - /System
+  - /private/var/db
+  - /private/var/select
+  - /dev
+  # Homebrew paths
+  - /opt/homebrew
+  - /usr/local
+  # Runtime directories
+  - /var/run
+  - /private/var/run
+  # Home directory (read-only by default)
+  - "~"
+  # Add node version manager paths as needed:
+  # - "~/.nvm"
+  # - "~/.volta"
+  # - "~/.local/share/fnm"
+
+# Paths mounted read-write in the sandbox, in addition to the already mounted working directory
+write_paths:
+  - /tmp
+  - /private/tmp
+  - "~/.npm"
+  - "~/.cache/uv"
+  - "~/.local/share/uv"
+  # Docker sockets
+  - "~/.orbstack/run"      # OrbStack
+  - "~/.docker/run"        # Docker Desktop
+  - "~/.rd/docker.sock"    # Rancher Desktop
+timeout: 10

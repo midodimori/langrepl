@@ -88,7 +88,10 @@ async def fetch_skills(
     return json.dumps(matches, indent=2)
 
 
-fetch_skills.metadata = {"approval_config": {"always_approve": True}}
+fetch_skills.metadata = {
+    "approval_config": {"always_approve": True},
+    "sandbox_bypass": True,
+}
 
 
 @tool
@@ -121,7 +124,10 @@ async def get_skill(
     return content
 
 
-get_skill.metadata = {"approval_config": {"always_approve": True}}
+get_skill.metadata = {
+    "approval_config": {"always_approve": True},
+    "sandbox_bypass": True,
+}
 
 
 SKILL_CATALOG_TOOLS = [fetch_skills, get_skill]

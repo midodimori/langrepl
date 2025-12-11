@@ -36,7 +36,7 @@ class Session:
         context: Context,
     ):
         self.context = context
-        self.renderer = Renderer()
+        self.renderer = Renderer(context)
         self.command_dispatcher = CommandDispatcher(self)
         self.message_dispatcher = MessageDispatcher(self)
         self.bash_dispatcher = BashDispatcher(self)

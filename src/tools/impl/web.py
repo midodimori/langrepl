@@ -8,6 +8,7 @@ from langchain_core.messages import ToolMessage
 
 from src.agents.context import AgentContext
 from src.cli.theme import theme
+from src.core.config import SandboxPermission
 from src.core.settings import settings
 from src.middleware.approval import create_field_transformer
 
@@ -67,7 +68,8 @@ fetch_web_content.metadata = {
     "approval_config": {
         "format_args_fn": create_field_transformer({"url": _extract_host_from_url}),
         "render_args_fn": _render_url_args,
-    }
+    },
+    "sandbox_permissions": [SandboxPermission.NETWORK],
 }
 
 

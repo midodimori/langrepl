@@ -21,6 +21,7 @@ from src.core.config import (
     BatchAgentConfig,
     BatchCheckpointerConfig,
     BatchLLMConfig,
+    BatchSandboxConfig,
     BatchSubAgentConfig,
     CheckpointerConfig,
     LLMConfig,
@@ -39,6 +40,7 @@ from src.core.constants import (
     CONFIG_MCP_CACHE_DIR,
     CONFIG_MCP_FILE_NAME,
     CONFIG_MEMORY_FILE_NAME,
+    CONFIG_SANDBOXES_DIR,
     CONFIG_SKILLS_DIR,
     CONFIG_SUBAGENTS_DIR,
     CONFIG_SUBAGENTS_FILE_NAME,
@@ -46,6 +48,7 @@ from src.core.constants import (
 from src.core.settings import settings
 from src.llms.factory import LLMFactory
 from src.mcp.factory import MCPFactory
+from src.sandboxes import Sandbox, SandboxFactory
 from src.skills.factory import SkillFactory
 from src.tools.factory import ToolFactory
 
@@ -65,6 +68,7 @@ class Initializer:
         self.llm_factory = LLMFactory(settings.llm)
         self.mcp_factory = MCPFactory()
         self.checkpointer_factory = CheckpointerFactory()
+        self.sandbox_factory = SandboxFactory()
         self.agent_factory = AgentFactory(
             tool_factory=self.tool_factory,
             llm_factory=self.llm_factory,
@@ -73,6 +77,7 @@ class Initializer:
         self.cached_llm_tools: list[BaseTool] = []
         self.cached_tools_in_catalog: list[BaseTool] = []
         self.cached_agent_skills: list[Skill] = []
+        self.cached_sandbox_executor: Sandbox | None = None
 
     @staticmethod
     async def _ensure_config_dir(working_dir: Path):
@@ -158,11 +163,13 @@ class Initializer:
         )
 
     async def load_agents_config(self, working_dir: Path) -> BatchAgentConfig:
-        """Load agents configuration with resolved subagent references."""
+        """Load agents configuration with resolved references."""
         await self._ensure_config_dir(working_dir)
 
         llm_config = None
         checkpointer_config = None
+        sandbox_config = None
+
         if (Path(working_dir) / CONFIG_LLMS_FILE_NAME).exists() or (
             Path(working_dir) / CONFIG_LLMS_DIR
         ).exists():
@@ -171,6 +178,8 @@ class Initializer:
             Path(working_dir) / CONFIG_CHECKPOINTERS_DIR
         ).exists():
             checkpointer_config = await self.load_checkpointers_config(working_dir)
+        if (Path(working_dir) / CONFIG_SANDBOXES_DIR).exists():
+            sandbox_config = await self.load_sandboxes_config(working_dir)
 
         subagents_config = None
         if (Path(working_dir) / CONFIG_SUBAGENTS_FILE_NAME).exists() or (
@@ -183,6 +192,7 @@ class Initializer:
             dir_path=Path(working_dir) / CONFIG_AGENTS_DIR,
             batch_llm_config=llm_config,
             batch_checkpointer_config=checkpointer_config,
+            batch_sandbox_config=sandbox_config,
             batch_subagent_config=subagents_config,
         )
 
@@ -202,6 +212,13 @@ class Initializer:
     async def load_mcp_config(working_dir: Path) -> MCPConfig:
         """Get MCP configuration."""
         return await MCPConfig.from_json(Path(working_dir) / CONFIG_MCP_FILE_NAME)
+
+    async def load_sandboxes_config(self, working_dir: Path) -> BatchSandboxConfig:
+        """Load sandbox configurations from directory."""
+        await self._ensure_config_dir(working_dir)
+        return await BatchSandboxConfig.from_yaml(
+            dir_path=Path(working_dir) / CONFIG_SANDBOXES_DIR,
+        )
 
     @staticmethod
     async def save_mcp_config(mcp_config: MCPConfig, working_dir: Path):
@@ -298,29 +315,43 @@ class Initializer:
                 str(working_dir / CONFIG_CHECKPOINTS_URL_FILE_NAME),
             )
 
-        with timer("Create MCP client"):
-            mcp_client = await self.mcp_factory.create(
-                mcp_config, working_dir / CONFIG_MCP_CACHE_DIR
+        with timer("Create sandbox executor"):
+            sandbox_executor = (
+                self.sandbox_factory.create(agent_config.sandbox, working_dir)
+                if agent_config.sandbox
+                else None
             )
 
-        async with checkpointer_ctx as checkpointer:
-            with timer("Create and compile graph"):
-                compiled_graph = await self.agent_factory.create(
-                    config=agent_config,
-                    state_schema=AgentState,
-                    context_schema=AgentContext,
-                    checkpointer=checkpointer,
-                    mcp_client=mcp_client,
-                    llm_config=llm_config,
-                    skills_dir=working_dir / CONFIG_SKILLS_DIR,
+        try:
+            with timer("Create MCP client"):
+                mcp_client = await self.mcp_factory.create(
+                    mcp_config,
+                    working_dir / CONFIG_MCP_CACHE_DIR,
+                    sandbox_executor=sandbox_executor,
                 )
 
-            self.cached_llm_tools = getattr(compiled_graph, "_llm_tools", [])
-            self.cached_tools_in_catalog = getattr(
-                compiled_graph, "_tools_in_catalog", []
-            )
-            self.cached_agent_skills = getattr(compiled_graph, "_agent_skills", [])
-            yield compiled_graph
+            async with checkpointer_ctx as checkpointer:
+                with timer("Create and compile graph"):
+                    compiled_graph = await self.agent_factory.create(
+                        config=agent_config,
+                        state_schema=AgentState,
+                        context_schema=AgentContext,
+                        checkpointer=checkpointer,
+                        mcp_client=mcp_client,
+                        llm_config=llm_config,
+                        skills_dir=working_dir / CONFIG_SKILLS_DIR,
+                    )
+
+                self.cached_llm_tools = getattr(compiled_graph, "_llm_tools", [])
+                self.cached_tools_in_catalog = getattr(
+                    compiled_graph, "_tools_in_catalog", []
+                )
+                self.cached_agent_skills = getattr(compiled_graph, "_agent_skills", [])
+                self.cached_sandbox_executor = sandbox_executor
+                yield compiled_graph
+        finally:
+            if sandbox_executor:
+                sandbox_executor.cleanup()
 
     async def get_threads(self, agent: str, working_dir: Path) -> list[dict]:
         """Get all conversation threads with metadata.

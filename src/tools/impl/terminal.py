@@ -7,6 +7,7 @@ from langchain_core.tools import ToolException
 
 from src.agents.context import AgentContext
 from src.cli.theme import theme
+from src.core.config import SandboxPermission
 from src.core.logging import get_logger
 from src.middleware.approval import create_field_transformer
 from src.utils.bash import execute_bash_command
@@ -71,7 +72,8 @@ run_command.metadata = {
             {"command": _transform_command_for_approval}
         ),
         "render_args_fn": _render_command_args,
-    }
+    },
+    "sandbox_permissions": [SandboxPermission.FILESYSTEM],
 }
 
 
@@ -116,7 +118,8 @@ get_directory_structure.metadata = {
     "approval_config": {
         "name_only": True,
         "always_approve": True,
-    }
+    },
+    "sandbox_permissions": [SandboxPermission.FILESYSTEM],
 }
 
 

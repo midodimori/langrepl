@@ -32,7 +32,8 @@ class ToolFactory:
             for tool in tool_group:
                 func = getattr(tool, "func", None) or getattr(tool, "coroutine", None)
                 if func:
-                    module_name = func.__module__.split(".")[-1]
+                    module_path = func.__module__
+                    module_name = module_path.split(".")[-1]
                     self._impl_module_map[tool.name] = module_name
             self.impl_tools.extend(tool_group)
 
@@ -40,7 +41,8 @@ class ToolFactory:
             for tool in tool_group:
                 func = getattr(tool, "func", None) or getattr(tool, "coroutine", None)
                 if func:
-                    module_name = func.__module__.split(".")[-1]
+                    module_path = func.__module__
+                    module_name = module_path.split(".")[-1]
                     self._internal_module_map[tool.name] = module_name
             self.internal_tools.extend(tool_group)
 

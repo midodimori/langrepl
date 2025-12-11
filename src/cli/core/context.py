@@ -19,6 +19,7 @@ class Context(BaseModel):
     working_dir: Path
     approval_mode: ApprovalMode = ApprovalMode.SEMI_ACTIVE
     bash_mode: bool = False
+    sandbox_enabled: bool = False
     current_input_tokens: int | None = None
     current_output_tokens: int | None = None
     total_cost: float | None = None
@@ -67,6 +68,7 @@ class Context(BaseModel):
             thread_id=thread_id,
             working_dir=working_dir,
             approval_mode=approval_mode or ApprovalMode.SEMI_ACTIVE,
+            sandbox_enabled=bool(agent_config.sandbox),
             context_window=llm_config.context_window,
             input_cost_per_mtok=llm_config.input_cost_per_mtok,
             output_cost_per_mtok=llm_config.output_cost_per_mtok,

@@ -12,7 +12,6 @@ from src.core.config import ApprovalMode
 from src.core.constants import APP_NAME
 from src.core.logging import configure_logging, get_logger
 
-configure_logging()
 logger = get_logger(__name__)
 
 
@@ -83,6 +82,12 @@ def create_parser() -> argparse.ArgumentParser:
         default=ApprovalMode.SEMI_ACTIVE.value,
         help=f"Tool approval mode ({', '.join(mode.value for mode in ApprovalMode)})",
     )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose logging output",
+    )
 
     return parser
 
@@ -91,6 +96,9 @@ async def main() -> int:
     """Main CLI entry point."""
     parser = create_parser()
     args = parser.parse_args()
+
+    # Configure logging based on verbose flag
+    configure_logging(show_logs=args.verbose)
 
     try:
         # Route to server mode if -s flag is present

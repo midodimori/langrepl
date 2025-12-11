@@ -7,7 +7,13 @@ from langchain_core.tools import ToolException
 from langgraph.types import Command
 
 from src.agents.context import AgentContext
+from src.core.config import SandboxPermission
+from src.core.logging import get_logger
+from src.mcp.tool import LazyMCPTool
 from src.tools.schema import ToolSchema
+from src.utils.render import create_sandbox_tool_message
+
+logger = get_logger(__name__)
 
 
 @tool
@@ -77,7 +83,10 @@ async def fetch_tools(
     return "\n".join(sorted(matches))
 
 
-fetch_tools.metadata = {"approval_config": {"always_approve": True}}
+fetch_tools.metadata = {
+    "approval_config": {"always_approve": True},
+    "sandbox_bypass": True,
+}
 
 
 @tool
@@ -105,7 +114,10 @@ async def get_tool(tool_name: str, runtime: ToolRuntime[AgentContext]) -> str:
     return json.dumps(schema, indent=2)
 
 
-get_tool.metadata = {"approval_config": {"always_approve": True}}
+get_tool.metadata = {
+    "approval_config": {"always_approve": True},
+    "sandbox_bypass": True,
+}
 
 
 @tool
@@ -134,6 +146,60 @@ async def run_tool(
     if not underlying_tool:
         raise ToolException(f"Tool '{tool_name}' not found")
 
+    executor = runtime.context.sandbox_executor
+    metadata = underlying_tool.metadata or {}
+
+    # Check if tool should bypass sandbox
+    if executor is not None and not metadata.get("sandbox_bypass"):
+        required_permissions: list[SandboxPermission] = metadata.get(
+            "sandbox_permissions", []
+        )
+
+        # Deny-by-default: if tool has no declared permissions, block it
+        if not required_permissions:
+            raise ToolException(
+                f"Tool '{tool_name}' has no declared sandbox_permissions and cannot "
+                "run in sandbox mode."
+            )
+
+        missing = [
+            p for p in required_permissions if not executor.config.has_permission(p)
+        ]
+        if missing:
+            missing_str = ", ".join(p.value for p in missing)
+            raise ToolException(
+                f"Tool '{tool_name}' requires permissions not granted by sandbox: {missing_str}"
+            )
+
+        # MCP tools are sandboxed at server startup level, not per-call
+        if isinstance(underlying_tool, LazyMCPTool):
+            pass  # Fall through to normal execution below
+        else:
+            # For non-MCP tools, execute in sandbox
+            func = getattr(underlying_tool, "func", None) or getattr(
+                underlying_tool, "coroutine", None
+            )
+            if not func:
+                raise ToolException(
+                    f"Tool '{tool_name}' cannot be sandboxed (no func/coroutine). "
+                    "Add sandbox_bypass=True to metadata if this tool is safe to run unsandboxed."
+                )
+
+            module_path = func.__module__
+            logger.debug(f"Executing {tool_name} in sandbox (module: {module_path})")
+
+            result = await executor.execute(
+                module_path=module_path,
+                tool_name=tool_name,
+                args=tool_args,
+                timeout=executor.config.timeout,
+                tool_permissions=required_permissions,
+            )
+
+            return create_sandbox_tool_message(
+                result, tool_name, runtime.tool_call_id or ""
+            )
+
     tool_expects_runtime = False
     if underlying_tool.args_schema is not None and hasattr(
         underlying_tool.args_schema, "model_fields"
@@ -154,7 +220,8 @@ run_tool.metadata = {
         "is_catalog_proxy": True,
         "underlying_tool_name_arg": "tool_name",
         "underlying_tool_args_arg": "tool_args",
-    }
+    },
+    "sandbox_bypass": True,
 }
 
 

@@ -153,7 +153,8 @@ class TestRendererAssistantMessage:
         )
 
         # Should not raise and should extract all thinking types
-        Renderer.render_assistant_message(message)
+        renderer = Renderer()
+        renderer.render_assistant_message(message)
 
     def test_render_assistant_message_only_tool_calls_no_content(self):
         """Test rendering message with only tool calls and no content."""
@@ -169,20 +170,23 @@ class TestRendererAssistantMessage:
             ],
         )
         # Should not raise
-        Renderer.render_assistant_message(message)
+        renderer = Renderer()
+        renderer.render_assistant_message(message)
 
     def test_render_assistant_message_empty_content_and_no_tools(self):
         """Test rendering message with no content and no tool calls returns early."""
         message = AIMessage(content="", tool_calls=[])
         # Should not raise and return early
-        Renderer.render_assistant_message(message)
+        renderer = Renderer()
+        renderer.render_assistant_message(message)
 
     def test_render_assistant_message_is_error_flag(self):
         """Test rendering error messages uses error styling."""
         message = AIMessage(content="Error occurred")
         message.is_error = True  # type: ignore[attr-defined]
         # Should not raise and render as error
-        Renderer.render_assistant_message(message)
+        renderer = Renderer()
+        renderer.render_assistant_message(message)
 
 
 class TestRendererToolCallFormatting:
@@ -194,9 +198,11 @@ class TestRendererToolCallFormatting:
             "name": "read_file",
             "args": {"path": "a" * 300},
         }
-        formatted = Renderer._format_tool_call(tool_call)
-        assert "..." in formatted
-        assert len(formatted) < 250
+        renderer = Renderer()
+        formatted = renderer._format_tool_call(tool_call)
+        formatted_str = str(formatted)
+        assert "..." in formatted_str
+        assert len(formatted_str) < 250
 
     def test_format_tool_call_with_no_arguments(self):
         """Test formatting tool call without arguments."""
@@ -204,7 +210,8 @@ class TestRendererToolCallFormatting:
             "name": "get_time",
             "args": {},
         }
-        formatted = Renderer._format_tool_call(tool_call)
+        renderer = Renderer()
+        formatted = renderer._format_tool_call(tool_call)
         formatted_str = str(formatted)
         assert "⚙ get_time" in formatted_str
 
@@ -214,7 +221,8 @@ class TestRendererToolCallFormatting:
             "name": "search",
             "args": {"query": "test", "limit": 10, "filter": "active"},
         }
-        formatted = Renderer._format_tool_call(tool_call)
+        renderer = Renderer()
+        formatted = renderer._format_tool_call(tool_call)
         formatted_str = str(formatted)
         assert "⚙ search" in formatted_str
         assert "query :" in formatted_str
@@ -226,7 +234,8 @@ class TestRendererToolCallFormatting:
         tool_call = {
             "args": {"key": "value"},
         }
-        formatted = Renderer._format_tool_call(tool_call)
+        renderer = Renderer()
+        formatted = renderer._format_tool_call(tool_call)
         formatted_str = str(formatted).lower()
         assert "unknown" in formatted_str or "(" in str(formatted)
 
@@ -235,7 +244,8 @@ class TestRendererToolCallFormatting:
         tool_call = {
             "name": "tool_name",
         }
-        formatted = Renderer._format_tool_call(tool_call)
+        renderer = Renderer()
+        formatted = renderer._format_tool_call(tool_call)
         formatted_str = str(formatted)
         assert "⚙ tool_name" in formatted_str
 

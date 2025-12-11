@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 from src.agents.context import AgentContext
 from src.cli.theme import theme
+from src.core.config import SandboxPermission
 from src.utils.matching import find_progressive_match, format_match_error
 from src.utils.path import resolve_path
 from src.utils.render import format_diff_rich, generate_diff
@@ -163,7 +164,8 @@ async def read_file(
 read_file.metadata = {
     "approval_config": {
         "name_only": True,
-    }
+    },
+    "sandbox_permissions": [SandboxPermission.FILESYSTEM],
 }
 
 
@@ -207,7 +209,8 @@ write_file.metadata = {
     "approval_config": {
         "name_only": True,
         "render_args_fn": _render_diff_args,
-    }
+    },
+    "sandbox_permissions": [SandboxPermission.FILESYSTEM],
 }
 
 
@@ -295,7 +298,8 @@ edit_file.metadata = {
     "approval_config": {
         "name_only": True,
         "render_args_fn": _render_diff_args,
-    }
+    },
+    "sandbox_permissions": [SandboxPermission.FILESYSTEM],
 }
 
 
@@ -321,7 +325,8 @@ async def create_dir(
 create_dir.metadata = {
     "approval_config": {
         "name_only": True,
-    }
+    },
+    "sandbox_permissions": [SandboxPermission.FILESYSTEM],
 }
 
 
@@ -351,7 +356,8 @@ async def move_file(
 move_file.metadata = {
     "approval_config": {
         "name_only": True,
-    }
+    },
+    "sandbox_permissions": [SandboxPermission.FILESYSTEM],
 }
 
 
@@ -378,7 +384,8 @@ async def move_multiple_files(
 move_multiple_files.metadata = {
     "approval_config": {
         "name_only": True,
-    }
+    },
+    "sandbox_permissions": [SandboxPermission.FILESYSTEM],
 }
 
 
@@ -404,7 +411,8 @@ async def delete_file(
 delete_file.metadata = {
     "approval_config": {
         "name_only": True,
-    }
+    },
+    "sandbox_permissions": [SandboxPermission.FILESYSTEM],
 }
 
 
@@ -474,7 +482,8 @@ insert_at_line.metadata = {
     "approval_config": {
         "name_only": True,
         "render_args_fn": _render_diff_args,
-    }
+    },
+    "sandbox_permissions": [SandboxPermission.FILESYSTEM],
 }
 
 
@@ -497,7 +506,10 @@ async def delete_dir(
     return f"Directory deleted: {path}"
 
 
-delete_dir.metadata = {"approval_config": {}}
+delete_dir.metadata = {
+    "approval_config": {},
+    "sandbox_permissions": [SandboxPermission.FILESYSTEM],
+}
 
 
 FILE_SYSTEM_TOOLS = [

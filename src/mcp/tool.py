@@ -24,7 +24,7 @@ class LazyMCPTool(BaseTool):
         self,
         server_name: str,
         tool_schema: ToolSchema,
-        loader: Callable[[str, str], Awaitable[BaseTool | None]],
+        loader: Callable[[str, str], Awaitable[BaseTool | Exception | None]],
     ):
         super().__init__(
             name=tool_schema.name,
@@ -42,12 +42,16 @@ class LazyMCPTool(BaseTool):
             return self._loaded
         async with self._load_lock:
             if not self._loaded:
-                tool = await self._loader(self._server_name, self.name)
-                if not tool:
+                result = await self._loader(self._server_name, self.name)
+                if isinstance(result, Exception):
+                    raise RuntimeError(
+                        f"Failed to load MCP tool {self.name} from {self._server_name}: {result}"
+                    ) from result
+                if result is None:
                     raise RuntimeError(
                         f"Failed to load MCP tool {self.name} from {self._server_name}"
                     )
-                self._loaded = tool
+                self._loaded = result
         return self._loaded
 
     def _validate_payload(self, payload: Any) -> None:
@@ -75,11 +79,12 @@ class LazyMCPTool(BaseTool):
         if payload:
             self._validate_payload(payload)
             return await tool.ainvoke(payload)
-        if args:
+        elif args:
             self._validate_payload(args[0])
             return await tool.ainvoke(args[0])
-        self._validate_payload({})
-        return await tool.ainvoke({})
+        else:
+            self._validate_payload({})
+            return await tool.ainvoke({})
 
     def _run(
         self,

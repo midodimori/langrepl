@@ -9,6 +9,7 @@ from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 
 from src.agents.context import AgentContext
+from src.core.config import SandboxPermission
 from src.core.logging import get_logger
 from src.core.settings import settings
 from src.utils.bash import execute_bash_command
@@ -129,7 +130,8 @@ async def grep_search(
 grep_search.metadata = {
     "approval_config": {
         "name_only": True,
-    }
+    },
+    "sandbox_permissions": [SandboxPermission.FILESYSTEM],
 }
 
 

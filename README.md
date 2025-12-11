@@ -37,6 +37,7 @@ https://github.com/user-attachments/assets/d95444c9-733f-481d-80c7-7d1cc28a732a
   - [Skills](#skills)
   - [MCP Servers](#mcp-servers-configmcpjson)
   - [Tool Approval](#tool-approval-configapprovaljson)
+  - [Sandbox Execution](#sandbox-execution)
 - [Development](#development)
 - [License](#license)
 
@@ -52,6 +53,7 @@ https://github.com/user-attachments/assets/d95444c9-733f-481d-80c7-7d1cc28a732a
 - **Persistent Conversations** - SQLite-backed thread storage with resume, replay, and compression
 - **User Memory** - Project-specific custom instructions and preferences that persist across conversations
 - **Human-in-the-Loop** - Configurable tool approval system with regex-based allow/deny rules
+- **Sandbox Execution** - OS-level tool isolation using Seatbelt (macOS) or Bubblewrap (Linux) with configurable permissions
 - **Cost Tracking (Beta)** - Token usage and cost calculation per conversation
 - **MCP Server Support** - Integrate external tool servers via the MCP protocol
 
@@ -65,11 +67,19 @@ https://github.com/user-attachments/assets/d95444c9-733f-481d-80c7-7d1cc28a732a
   - Ubuntu/Debian: `sudo apt install ripgrep`
   - Arch Linux: `sudo pacman -S ripgrep`
   - Windows: `choco install ripgrep` or download from [releases](https://github.com/BurntSushi/ripgrep/releases)
+- **[tree](https://github.com/Old-Man-Programmer/tree)** - Required for directory structure visualization (`get_directory_structure` tool):
+  - macOS: `brew install tree`
+  - Ubuntu/Debian: `sudo apt install tree`
+  - Arch Linux: `sudo pacman -S tree`
+  - Windows: `choco install tree`
 - **[fd](https://github.com/sharkdp/fd)** - Required for fast file/directory completion with `@` (fallback when not in a Git repository):
   - macOS: `brew install fd`
   - Ubuntu/Debian: `sudo apt install fd-find`
   - Arch Linux: `sudo pacman -S fd`
   - Windows: `choco install fd` or download from [releases](https://github.com/sharkdp/fd/releases)
+- **[bubblewrap (bwrap)](https://github.com/containers/bubblewrap)** (Linux only) - Required for sandbox execution:
+  - Ubuntu/Debian: `sudo apt install bubblewrap`
+  - Arch Linux: `sudo pacman -S bubblewrap`
 - **Node.js & npm** (optional) - Required only if using MCP servers that run via npx
 
 ## Installation
@@ -311,6 +321,7 @@ name: my-agent
 prompt: prompts/my_agent.md  # Single file or array of files
 llm: haiku-4.5               # References llms/*.yml
 checkpointer: sqlite         # References checkpointers/*.yml
+sandbox: seatbelt            # References sandboxes/*.yml (optional)
 recursion_limit: 40
 default: true
 tools:
@@ -344,6 +355,7 @@ agents:
     prompt: prompts/my_agent.md
     llm: haiku-4.5
     checkpointer: sqlite
+    sandbox: seatbelt            # References sandboxes/*.yml (optional)
     recursion_limit: 40
     default: true
     tools:
@@ -501,12 +513,27 @@ agents:
 1. Implement in `src/tools/impl/my_tool.py`:
    ```python
    from langchain.tools import tool
+   from src.core.config import SandboxPermission
 
-   @tool()
+   @tool
    def my_tool(query: str) -> str:
        """Tool description."""
        return result
+
+   my_tool.metadata = {
+       "approval_config": {"name_only": True},
+       "sandbox_permissions": [SandboxPermission.FILESYSTEM],
+   }
    ```
+
+   **Metadata fields**:
+   | Field | Description |
+   |-------|-------------|
+   | `approval_config.name_only` | Only match tool name for approval (ignore args) |
+   | `approval_config.format_args_fn` | Function to transform args for approval matching |
+   | `approval_config.render_args_fn` | Function to render args for display |
+   | `sandbox_permissions` | Required permissions: `FILESYSTEM`, `NETWORK`, or both |
+   | `sandbox_bypass` | Set `True` to skip sandbox entirely |
 
 2. Register in `src/tools/factory.py`:
    ```python
@@ -554,13 +581,21 @@ skills/
       "enabled": true,
       "include": ["tool1"],
       "exclude": [],
-      "repair_command": "rm -rf .some_cache"
+      "repair_command": "rm -rf .some_cache",
+      "sandbox_permissions": ["network", "filesystem"]
     }
   }
 }
 ```
 
 - `repair_command`: Runs if server fails, then run this command before retrying
+- `sandbox_permissions`: Permissions required by this MCP server when running in sandbox:
+  | Value | Behavior |
+  |-------|----------|
+  | Omitted | **Blocked** (deny-by-default) |
+  | `["network", "filesystem"]` | Full permissions |
+  | `["network"]` | Network only |
+  | `[]` (empty) | **Blocked** (deny-by-default) |
 - Suppress stderr: `"command": "sh", "args": ["-c", "npx pkg 2>/dev/null"]`
 - Reference: `mcp:my-server:tool1`
 - Examples: [useful-mcp-servers.json](examples/useful-mcp-servers.json)
@@ -589,6 +624,56 @@ skills/
 ```
 
 **Modes**: `SEMI_ACTIVE` (ask unless whitelisted), `ACTIVE` (auto-approve except denied), `AGGRESSIVE` (bypass all)
+
+### Sandbox Execution
+
+Sandbox execution provides OS-level isolation for tool execution, restricting file system access and network capabilities.
+
+**Backends**:
+- **Seatbelt** (macOS) - Uses `sandbox-exec` with custom profiles
+- **Bubblewrap** (Linux) - Uses `bwrap` for container-like isolation
+
+`.langrepl/sandboxes/*.yml`:
+```yaml
+# sandboxes/seatbelt.yml (filename must match sandbox name)
+version: 1.0.0
+name: seatbelt
+type: seatbelt  # or "bubblewrap" on Linux
+permissions:
+  - network      # Allow network access
+  - filesystem   # Allow filesystem access
+read_paths:
+  - /usr
+  - /bin
+  - /etc
+  - "~"          # Home directory (read-only)
+write_paths:
+  - /tmp
+  - "~/.npm"
+timeout: 10      # Seconds
+```
+
+**What permissions control**:
+| Permission | What it grants | When to use |
+|------------|----------------|-------------|
+| `filesystem` | Read/write access to the **working directory** only | Tools that create, modify, or delete project files |
+| `network` | TCP/UDP network access | Tools that make HTTP requests, API calls |
+
+> **Note**: `read_paths` and `write_paths` in your sandbox config are **always available** to all sandboxed tools, regardless of their declared permissions. The `filesystem` permission only adds access to the working directory. Unix domain sockets (Docker, OrbStack) are also always accessible.
+
+**Where to configure permissions**:
+
+| Component | Location | Default |
+|-----------|----------|---------|
+| **Sandbox** (ceiling) | `sandboxes/*.yml` → `permissions:` | - |
+| **Impl tools** | `tool.metadata["sandbox_permissions"]` | `[]` (blocked) |
+| **MCP servers** | `config.mcp.json` → `sandbox_permissions:` | `[]` (blocked) |
+
+**How it works**:
+- Sandbox config sets the **maximum** permissions allowed
+- Each tool/MCP declares **required** permissions
+- Effective permissions = intersection (tool gets what it needs, capped by sandbox)
+- Empty permissions = blocked (deny-by-default)
 
 ## Development
 

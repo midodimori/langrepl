@@ -9,6 +9,7 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.sessions import Connection
 
 from mcp.shared.exceptions import McpError
+from src.core.config import SandboxPermission
 from src.core.logging import get_logger
 from src.mcp.tool import LazyMCPTool
 from src.tools.schema import ToolSchema
@@ -29,12 +30,14 @@ class MCPClient(MultiServerMCPClient):
         enable_approval: bool = True,
         cache_dir: Path | None = None,
         server_hashes: dict[str, str] | None = None,
+        server_permissions: dict[str, list[SandboxPermission]] | None = None,
     ) -> None:
         self._tool_filters = tool_filters or {}
         self._repair_commands = repair_commands or {}
         self._enable_approval = enable_approval
         self._cache_dir = cache_dir
         self._server_hashes = server_hashes or {}
+        self._server_permissions = server_permissions or {}
         self._tools_cache: list[BaseTool] | None = None
         self._module_map: dict[str, str] = {}
         self._live_tools: dict[str, dict[str, BaseTool]] = {}
@@ -128,30 +131,41 @@ class MCPClient(MultiServerMCPClient):
                 exc_info=exc,
             )
 
-    async def _get_server_tools(self, server_name: str) -> list[BaseTool]:
+    async def _get_server_tools(
+        self, server_name: str
+    ) -> tuple[list[BaseTool], Exception | None]:
         try:
             tools = await self.get_tools(server_name=server_name)
-            return self._filter_tools(tools, server_name)
+            return self._filter_tools(tools, server_name), None
         except Exception as e:
             if self._is_mcp_error(e) and server_name in self._repair_commands:
                 await self._run_repair_command(self._repair_commands[server_name])
-                tools = await self.get_tools(server_name=server_name)
-                return self._filter_tools(tools, server_name)
+                try:
+                    tools = await self.get_tools(server_name=server_name)
+                    return self._filter_tools(tools, server_name), None
+                except Exception as retry_error:
+                    logger.warning(
+                        f"Error getting tools from server {server_name} after repair: {retry_error}",
+                        exc_info=True,
+                    )
+                    return [], retry_error
             else:
-                logger.error(
+                logger.warning(
                     f"Error getting tools from server {server_name}: {e}",
                     exc_info=True,
                 )
-                return []
+                return [], e
 
-    def _apply_metadata(self, tool: BaseTool) -> None:
-        if not self._enable_approval:
-            return
+    def _apply_metadata(self, tool: BaseTool, server_name: str) -> None:
         tool.metadata = tool.metadata or {}
-        tool.metadata["approval_config"] = {
-            "name_only": True,
-            "always_approve": False,
-        }
+        if self._enable_approval:
+            tool.metadata["approval_config"] = {
+                "name_only": True,
+                "always_approve": False,
+            }
+        # Add sandbox permissions from server config
+        if server_name in self._server_permissions:
+            tool.metadata["sandbox_permissions"] = self._server_permissions[server_name]
 
     def _register_tool(self, tool_name: str, server_name: str) -> bool:
         existing = self._module_map.get(tool_name)
@@ -171,7 +185,7 @@ class MCPClient(MultiServerMCPClient):
     ) -> list[BaseTool]:
         prepared = []
         for tool in tools:
-            self._apply_metadata(tool)
+            self._apply_metadata(tool, server_name)
             if self._register_tool(tool.name, server_name):
                 prepared.append(tool)
 
@@ -180,7 +194,7 @@ class MCPClient(MultiServerMCPClient):
 
     async def _load_live_tool(
         self, server_name: str, tool_name: str
-    ) -> BaseTool | None:
+    ) -> BaseTool | Exception | None:
         if (
             server_name in self._live_tools
             and tool_name in self._live_tools[server_name]
@@ -193,12 +207,15 @@ class MCPClient(MultiServerMCPClient):
             if server_name in self._live_tools:
                 return self._live_tools[server_name].get(tool_name)
 
-            tools = await self._get_server_tools(server_name)
+            tools, error = await self._get_server_tools(server_name)
             self._prepare_server_tools(server_name, tools)
-            return self._live_tools[server_name].get(tool_name)
+            tool = self._live_tools[server_name].get(tool_name)
+            if tool:
+                return tool
+            return error
 
     async def _load_and_cache_server(self, server_name: str) -> list[BaseTool]:
-        tools = await self._get_server_tools(server_name)
+        tools, _ = await self._get_server_tools(server_name)
         prepared = self._prepare_server_tools(server_name, tools)
 
         if prepared:
@@ -233,7 +250,7 @@ class MCPClient(MultiServerMCPClient):
                         tool_schema,
                         self._load_live_tool,
                     )
-                    self._apply_metadata(lazy_tool)
+                    self._apply_metadata(lazy_tool, server_name)
                     tools.append(lazy_tool)
 
             if pending_servers:
@@ -264,7 +281,7 @@ class MCPClient(MultiServerMCPClient):
                                 self._load_live_tool,
                             )
                             lazy_tool._loaded = tool
-                            self._apply_metadata(lazy_tool)
+                            self._apply_metadata(lazy_tool, server_name)
                             tools.append(lazy_tool)
 
             self._tools_cache = tools

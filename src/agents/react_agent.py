@@ -9,6 +9,7 @@ from src.middleware import (
     CompressToolOutputMiddleware,
     PendingToolResultMiddleware,
     ReturnDirectMiddleware,
+    SandboxMiddleware,
     TokenCostMiddleware,
     create_dynamic_prompt_middleware,
 )
@@ -55,6 +56,7 @@ def create_react_agent(
     # Group 2: wrapToolCall - Around each tool call
     wrap_tool_call: list[AgentMiddleware[Any, Any]] = [
         ApprovalMiddleware(),  # Check approval before executing tools
+        SandboxMiddleware(),  # Execute tools in sandbox if configured
     ]
     if has_read_memory:
         wrap_tool_call.append(

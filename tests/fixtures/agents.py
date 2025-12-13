@@ -142,6 +142,7 @@ def create_mock_tool():
         mock.name = name
         mock.description = f"Mock tool {name}"
         mock.args_schema = MockToolArgs
+        mock.tool_call_schema = MockToolArgs
         mock.handle_tool_error = False
         mock.metadata = None
         return cast(BaseTool, mock)

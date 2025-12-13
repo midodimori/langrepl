@@ -12,7 +12,7 @@ from langchain_core.callbacks import (
 from langchain_core.tools import BaseTool, ToolException
 
 from src.core.logging import get_logger
-from src.tools.schema import ToolSchema, parameters_to_model
+from src.tools.schema import ToolSchema
 
 logger = get_logger(__name__)
 
@@ -29,7 +29,7 @@ class LazyMCPTool(BaseTool):
         super().__init__(
             name=tool_schema.name,
             description=tool_schema.description,
-            args_schema=parameters_to_model(tool_schema.name, tool_schema.parameters),
+            args_schema=tool_schema.parameters,
         )
         self._server_name = server_name
         self._loader = loader

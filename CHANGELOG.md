@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.9.3 (2025-12-13)
+
+### Bug Fixes
+
+- Preserve MCP tool schema richness (enum, description) (#63)
+  ([#63](https://github.com/midodimori/langrepl/pull/63),
+  [`62a3e95`](https://github.com/midodimori/langrepl/commit/62a3e95f3841e6a2dbc960c0d851204ef65f2aed))
+
+
 ## v1.9.2 (2025-12-08)
 
 ### Bug Fixes

@@ -18,6 +18,7 @@ We skip:
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, TypedDict, cast
 
@@ -84,23 +85,28 @@ def serialize_state(state: AgentState | dict) -> SerializedState:
     Excludes messages for performance - most sandboxed tools don't need them.
     """
     if isinstance(state, dict):
+        todos_raw = state.get("todos")
+        todos_list = (
+            [dict(t) for t in todos_raw]
+            if todos_raw and isinstance(todos_raw, Iterable)
+            else None
+        )
         return SerializedState(
-            todos=[dict(t) for t in (state.get("todos") or [])],
+            todos=todos_list,
             files=state.get("files"),
             current_input_tokens=state.get("current_input_tokens"),
             current_output_tokens=state.get("current_output_tokens"),
             total_cost=state.get("total_cost"),
         )
     # Handle as typed dict / dataclass
+    todos_raw = getattr(state, "todos", None)
+    todos_list = (
+        [t.model_dump() if hasattr(t, "model_dump") else dict(t) for t in todos_raw]
+        if todos_raw and isinstance(todos_raw, Iterable)
+        else None
+    )
     return SerializedState(
-        todos=(
-            [
-                t.model_dump() if hasattr(t, "model_dump") else dict(t)
-                for t in (todos or [])
-            ]
-            if (todos := getattr(state, "todos", None))
-            else None
-        ),
+        todos=todos_list,
         files=getattr(state, "files", None),
         current_input_tokens=getattr(state, "current_input_tokens", None),
         current_output_tokens=getattr(state, "current_output_tokens", None),

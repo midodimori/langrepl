@@ -78,8 +78,10 @@ class TestBwrapArgs:
 
         # No network
         assert "--unshare-net" in args
-        # No working dir bind
-        assert "--bind" not in args or str(temp_dir) not in args
+        # No working dir bind for temp_dir
+        bind_indices = [i for i, arg in enumerate(args) if arg == "--bind"]
+        for idx in bind_indices:
+            assert str(temp_dir) not in args[idx + 1 : idx + 3]
 
 
 class TestBubblewrapSandboxExecution:

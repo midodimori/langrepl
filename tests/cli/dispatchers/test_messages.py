@@ -341,10 +341,10 @@ class TestMessageDispatcher:
         mock_session.renderer.render_message.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("src.cli.dispatchers.messages.initializer")
+    @patch("src.cli.dispatchers.messages.BatchAgentConfig.from_yaml")
     async def test_check_auto_compression_disabled(
         self,
-        mock_initializer,
+        mock_from_yaml,
         mock_session,
         mock_context,
     ):
@@ -353,27 +353,23 @@ class TestMessageDispatcher:
         mock_session.context = mock_context
         mock_agent_config = MagicMock()
         mock_agent_config.compression = None
-        mock_initializer.load_agents_config = AsyncMock(
-            return_value=MagicMock(
-                get_agent_config=MagicMock(return_value=mock_agent_config)
-            )
+        mock_from_yaml.return_value = MagicMock(
+            get_agent_config=MagicMock(return_value=mock_agent_config)
         )
 
         # Should return early without error
         await dispatcher._check_auto_compression()
 
     @pytest.mark.asyncio
-    @patch("src.cli.dispatchers.messages.initializer")
+    @patch("src.cli.dispatchers.messages.BatchAgentConfig.from_yaml")
     async def test_check_auto_compression_handles_exceptions(
         self,
-        mock_initializer,
+        mock_from_yaml,
         mock_session,
     ):
         """Test _check_auto_compression handles exceptions gracefully."""
         dispatcher = MessageDispatcher(mock_session)
-        mock_initializer.load_agents_config = AsyncMock(
-            side_effect=Exception("Test error")
-        )
+        mock_from_yaml.side_effect = Exception("Test error")
 
         # Should not raise, just log
         await dispatcher._check_auto_compression()

@@ -8,7 +8,7 @@ from langchain_core.messages import ToolMessage
 
 from src.agents.context import AgentContext
 from src.cli.theme import theme
-from src.core.config import SandboxPermission
+from src.configs import SandboxPermission
 from src.core.settings import settings
 from src.middleware.approval import create_field_transformer
 

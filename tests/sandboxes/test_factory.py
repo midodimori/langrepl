@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.core.config import SandboxConfig, SandboxPermission, SandboxType
+from src.configs import SandboxConfig, SandboxPermission, SandboxType
 from src.sandboxes.factory import SandboxFactory
 
 

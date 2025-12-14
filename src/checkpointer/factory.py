@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from src.checkpointer.base import BaseCheckpointer
 from src.checkpointer.impl.memory import MemoryCheckpointer
 from src.checkpointer.impl.sqlite import AsyncSqliteCheckpointer
-from src.core.config import CheckpointerConfig, CheckpointerProvider
+from src.configs import CheckpointerConfig, CheckpointerProvider
 
 
 class CheckpointerFactory:

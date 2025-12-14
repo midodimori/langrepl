@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from src.cli.bootstrap.initializer import initializer
 from src.cli.bootstrap.timer import timer
-from src.core.config import ApprovalMode
+from src.configs import ApprovalMode, ConfigRegistry
 
 
 class Context(BaseModel):
@@ -40,7 +40,8 @@ class Context(BaseModel):
     ) -> "Context":
         """Create context and populate from agent config."""
         with timer("Load agent config"):
-            agent_config = await initializer.load_agent_config(agent, working_dir)
+            registry = ConfigRegistry(working_dir)
+            agent_config = await registry.agent(agent)
 
         # Get thread_id: resume last thread or create new one
         if resume:
@@ -54,7 +55,7 @@ class Context(BaseModel):
 
         if model:
             with timer("Load LLM config"):
-                llm_config = await initializer.load_llm_config(model, working_dir)
+                llm_config = await registry.llm(model)
         else:
             llm_config = agent_config.llm
 

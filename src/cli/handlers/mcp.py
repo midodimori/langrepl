@@ -10,13 +10,13 @@ from prompt_toolkit.layout import Layout
 from prompt_toolkit.layout.containers import HSplit, Window
 from prompt_toolkit.layout.controls import FormattedTextControl
 
-from src.cli.bootstrap.initializer import initializer
 from src.cli.theme import console, theme
 from src.cli.ui.shared import (
     create_bottom_toolbar,
     create_instruction,
     create_prompt_style,
 )
+from src.configs import MCPConfig
 from src.core.logging import get_logger
 from src.core.settings import settings
 
@@ -34,9 +34,7 @@ class MCPHandler:
         """Show interactive MCP server selector and toggle enabled/disabled."""
         try:
             # Load current MCP config using existing method
-            mcp_config = await initializer.load_mcp_config(
-                self.session.context.working_dir
-            )
+            mcp_config = await MCPConfig.from_json(self.session.context.working_dir)
 
             if not mcp_config.servers:
                 console.print_error("No MCP servers configured")
@@ -48,9 +46,7 @@ class MCPHandler:
 
             if modified:
                 # Save changes back to file
-                await initializer.save_mcp_config(
-                    mcp_config, self.session.context.working_dir
-                )
+                mcp_config.to_json(self.session.context.working_dir)
                 # Trigger reload
                 self.session.needs_reload = True
                 self.session.running = False

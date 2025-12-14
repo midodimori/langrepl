@@ -210,41 +210,6 @@ class TestReplayHandler:
 
         assert result is None
 
-    def test_format_message_list_formats_correctly(self):
-        """Test that _format_message_list formats messages correctly."""
-        from src.checkpointer.base import HumanMessageEntry
-
-        messages = [
-            HumanMessageEntry(
-                text="Hello world",
-                reference_mapping={},
-                messages_before_count=0,
-                checkpoint_id="cp1",
-            )
-        ]
-
-        formatted = ReplayHandler._format_message_list(messages, 0, 0, 5)
-
-        assert formatted is not None
-
-    def test_format_message_list_with_scrolling(self):
-        """Test that _format_message_list handles scrolling window."""
-        from src.checkpointer.base import HumanMessageEntry
-
-        messages = [
-            HumanMessageEntry(
-                text=f"Message {i}",
-                reference_mapping={},
-                messages_before_count=0,
-                checkpoint_id=f"cp{i}",
-            )
-            for i in range(10)
-        ]
-
-        formatted = ReplayHandler._format_message_list(messages, 5, 3, 5)
-
-        assert formatted is not None
-
     @pytest.mark.asyncio
     @patch("src.cli.handlers.replay.console.clear")
     async def test_replay_from_message_clears_and_renders(

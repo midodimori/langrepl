@@ -513,7 +513,7 @@ agents:
 1. Implement in `src/tools/impl/my_tool.py`:
    ```python
    from langchain.tools import tool
-   from src.core.config import SandboxPermission
+   from src.configs import SandboxPermission
 
    @tool
    def my_tool(query: str) -> str:
@@ -642,12 +642,12 @@ type: seatbelt  # or "bubblewrap" on Linux
 permissions:
   - network      # Allow network access
   - filesystem   # Allow filesystem access
-read_paths:
+execution_paths:  # Always mounted read-only (needed for execution)
   - /usr
   - /bin
   - /etc
-  - "~"          # Home directory (read-only)
-write_paths:
+  - "~"
+filesystem_paths: # Requires FILESYSTEM permission
   - /tmp
   - "~/.npm"
 timeout: 10      # Seconds
@@ -659,7 +659,7 @@ timeout: 10      # Seconds
 | `filesystem` | Read/write access to the **working directory** only | Tools that create, modify, or delete project files |
 | `network` | TCP/UDP network access | Tools that make HTTP requests, API calls |
 
-> **Note**: `read_paths` and `write_paths` in your sandbox config are **always available** to all sandboxed tools, regardless of their declared permissions. The `filesystem` permission only adds access to the working directory. Unix domain sockets (Docker, OrbStack) are also always accessible.
+> **Note**: `execution_paths` are always mounted read-only (needed for system binaries/libraries). `filesystem_paths` are mounted read-write when `filesystem` permission is granted. The `filesystem` permission also adds access to the working directory. Unix domain sockets (Docker, OrbStack) are always accessible.
 
 **Where to configure permissions**:
 

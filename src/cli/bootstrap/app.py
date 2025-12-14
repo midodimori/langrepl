@@ -8,7 +8,7 @@ import sys
 from src.cli.bootstrap.chat import handle_chat_command
 from src.cli.bootstrap.server import handle_server_command
 from src.cli.theme import console
-from src.core.config import ApprovalMode
+from src.configs import ApprovalMode
 from src.core.constants import APP_NAME
 from src.core.logging import configure_logging, get_logger
 

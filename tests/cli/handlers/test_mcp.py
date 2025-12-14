@@ -1,60 +1,59 @@
 """Tests for MCP handler."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.cli.handlers.mcp import MCPHandler
-from src.core.config import MCPConfig
+from src.configs import MCPConfig
 
 
 class TestMCPHandler:
     """Tests for MCPHandler class."""
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.mcp.initializer.load_mcp_config")
+    @patch("src.cli.handlers.mcp.MCPConfig.from_json")
     async def test_handle_with_no_servers(
-        self, mock_load_mcp, mock_session, mock_mcp_config
+        self, mock_from_json, mock_session, mock_mcp_config
     ):
         """Test that handle shows error when no MCP servers configured."""
         handler = MCPHandler(mock_session)
-        mock_load_mcp.return_value = mock_mcp_config
+        mock_from_json.return_value = mock_mcp_config
 
         await handler.handle()
 
-        mock_load_mcp.assert_called_once_with(mock_session.context.working_dir)
+        mock_from_json.assert_called_once_with(mock_session.context.working_dir)
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.mcp.initializer.save_mcp_config")
-    @patch("src.cli.handlers.mcp.initializer.load_mcp_config")
+    @patch("src.cli.handlers.mcp.MCPConfig.from_json")
     async def test_handle_with_servers_and_modifications(
-        self, mock_load_mcp, mock_save_mcp, mock_session, mock_mcp_server_config
+        self, mock_from_json, mock_session, mock_mcp_server_config
     ):
         """Test that handle saves changes when modifications are made."""
         handler = MCPHandler(mock_session)
 
-        mcp_config = MCPConfig(servers={"server1": mock_mcp_server_config})
-        mock_load_mcp.return_value = mcp_config
+        # Use MagicMock for the entire config to allow patching to_json
+        mcp_config = MagicMock()
+        mcp_config.servers = {"server1": mock_mcp_server_config}
+        mock_from_json.return_value = mcp_config
 
         with patch.object(handler, "_get_mcp_selection", return_value=True):
             await handler.handle()
 
-            mock_save_mcp.assert_called_once_with(
-                mcp_config, mock_session.context.working_dir
-            )
+            mcp_config.to_json.assert_called_once_with(mock_session.context.working_dir)
             assert mock_session.needs_reload is True
             assert mock_session.running is False
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.mcp.initializer.load_mcp_config")
+    @patch("src.cli.handlers.mcp.MCPConfig.from_json")
     async def test_handle_with_no_modifications(
-        self, mock_load_mcp, mock_session, mock_mcp_server_config
+        self, mock_from_json, mock_session, mock_mcp_server_config
     ):
         """Test that handle does not save when no modifications made."""
         handler = MCPHandler(mock_session)
 
         mcp_config = MCPConfig(servers={"server1": mock_mcp_server_config})
-        mock_load_mcp.return_value = mcp_config
+        mock_from_json.return_value = mcp_config
 
         with patch.object(handler, "_get_mcp_selection", return_value=False):
             await handler.handle()
@@ -141,12 +140,12 @@ class TestMCPHandler:
         assert formatted is not None
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.mcp.initializer.load_mcp_config")
-    async def test_handle_with_exception(self, mock_load_mcp, mock_session):
+    @patch("src.cli.handlers.mcp.MCPConfig.from_json")
+    async def test_handle_with_exception(self, mock_from_json, mock_session):
         """Test that handle handles exceptions gracefully."""
         handler = MCPHandler(mock_session)
-        mock_load_mcp.side_effect = Exception("Test error")
+        mock_from_json.side_effect = Exception("Test error")
 
         await handler.handle()
 
-        mock_load_mcp.assert_called_once()
+        mock_from_json.assert_called_once()

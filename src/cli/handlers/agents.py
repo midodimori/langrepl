@@ -10,10 +10,9 @@ from prompt_toolkit.layout import Layout
 from prompt_toolkit.layout.containers import HSplit, Window
 from prompt_toolkit.layout.controls import FormattedTextControl
 
-from src.cli.bootstrap.initializer import initializer
 from src.cli.theme import console, theme
 from src.cli.ui.shared import create_bottom_toolbar, create_prompt_style
-from src.core.config import AgentConfig
+from src.configs import AgentConfig, BatchAgentConfig, ConfigRegistry
 from src.core.logging import get_logger
 from src.core.settings import settings
 
@@ -30,14 +29,13 @@ class AgentHandler:
     async def handle(self) -> None:
         """Show interactive agent selector and switch to selected agent."""
         try:
-            config_data = await initializer.load_agents_config(
-                self.session.context.working_dir
-            )
+            registry = ConfigRegistry(self.session.context.working_dir)
+            batch_agents = await registry.agents()
             # Filter out current agent from the list
             current_agent_name = self.session.context.agent
             available_agents = [
                 agent
-                for agent in config_data.agents
+                for agent in batch_agents.agents
                 if isinstance(agent, AgentConfig) and agent.name != current_agent_name
             ]
 
@@ -51,9 +49,11 @@ class AgentHandler:
 
             if selected_agent_name:
                 # Load the selected agent's config to get its model
-                selected_agent_config = await initializer.load_agent_config(
-                    selected_agent_name, self.session.context.working_dir
+                selected_agent_config = batch_agents.get_agent_config(
+                    selected_agent_name
                 )
+                if not selected_agent_config:
+                    raise ValueError(f"Agent '{selected_agent_name}' not found")
 
                 # Update context with both agent and its configured model
                 self.session.update_context(
@@ -62,8 +62,8 @@ class AgentHandler:
                 )
 
                 # Mark this agent as the new default
-                await initializer.update_default_agent(
-                    selected_agent_name, self.session.context.working_dir
+                await BatchAgentConfig.update_default_agent(
+                    self.session.context.working_dir, selected_agent_name
                 )
 
         except Exception as e:

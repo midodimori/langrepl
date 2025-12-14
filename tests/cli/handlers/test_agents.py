@@ -11,26 +11,24 @@ class TestAgentHandler:
     """Tests for AgentHandler class."""
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.agents.initializer.load_agents_config")
+    @patch("src.cli.handlers.agents.BatchAgentConfig.from_yaml")
     async def test_handle_with_no_other_agents(
-        self, mock_load_agents, mock_session, mock_agents_config
+        self, mock_from_yaml, mock_session, mock_agents_config
     ):
         """Test that handle shows error when no other agents available."""
         handler = AgentHandler(mock_session)
-        mock_load_agents.return_value = mock_agents_config
+        mock_from_yaml.return_value = mock_agents_config
 
         await handler.handle()
 
-        mock_load_agents.assert_called_once()
+        mock_from_yaml.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.agents.initializer.update_default_agent")
-    @patch("src.cli.handlers.agents.initializer.load_agent_config")
-    @patch("src.cli.handlers.agents.initializer.load_agents_config")
+    @patch("src.cli.handlers.agents.BatchAgentConfig.update_default_agent")
+    @patch("src.cli.handlers.agents.BatchAgentConfig.from_yaml")
     async def test_handle_updates_context_on_selection(
         self,
-        mock_load_agents,
-        mock_load_agent,
+        mock_from_yaml,
         mock_update_default,
         mock_session,
         mock_agent_config,
@@ -49,8 +47,8 @@ class TestAgentHandler:
         )
 
         mock_agents_config.agents = [mock_agent_config, agent2]
-        mock_load_agents.return_value = mock_agents_config
-        mock_load_agent.return_value = agent2
+        mock_agents_config.get_agent_config.return_value = agent2
+        mock_from_yaml.return_value = mock_agents_config
 
         with patch.object(
             handler, "_get_agent_selection", return_value="agent2"
@@ -62,14 +60,14 @@ class TestAgentHandler:
                 agent="agent2", model="model2"
             )
             mock_update_default.assert_called_once_with(
-                "agent2", mock_session.context.working_dir
+                mock_session.context.working_dir, "agent2"
             )
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.agents.initializer.load_agents_config")
+    @patch("src.cli.handlers.agents.BatchAgentConfig.from_yaml")
     async def test_handle_does_not_update_on_cancel(
         self,
-        mock_load_agents,
+        mock_from_yaml,
         mock_session,
         mock_agent_config,
         mock_llm_config,
@@ -87,7 +85,7 @@ class TestAgentHandler:
         )
 
         mock_agents_config.agents = [mock_agent_config, agent2]
-        mock_load_agents.return_value = mock_agents_config
+        mock_from_yaml.return_value = mock_agents_config
 
         with patch.object(handler, "_get_agent_selection", return_value=""):
             await handler.handle()
@@ -149,12 +147,12 @@ class TestAgentHandler:
         assert len(formatted) > 0
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.agents.initializer.load_agents_config")
-    async def test_handle_with_exception(self, mock_load_agents, mock_session):
+    @patch("src.cli.handlers.agents.BatchAgentConfig.from_yaml")
+    async def test_handle_with_exception(self, mock_from_yaml, mock_session):
         """Test that handle handles exceptions gracefully."""
         handler = AgentHandler(mock_session)
-        mock_load_agents.side_effect = Exception("Test error")
+        mock_from_yaml.side_effect = Exception("Test error")
 
         await handler.handle()
 
-        mock_load_agents.assert_called_once()
+        mock_from_yaml.assert_called_once()

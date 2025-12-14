@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.core.config import MCPConfig, MCPServerConfig
+from src.configs import MCPConfig, MCPServerConfig
 
 
 @pytest.fixture

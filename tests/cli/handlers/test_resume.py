@@ -194,28 +194,6 @@ class TestResumeHandler:
 
         await handler._load_thread("thread-1")
 
-    def test_format_thread_list_formats_correctly(self):
-        """Test that _format_thread_list formats threads correctly."""
-        threads = [
-            {"thread_id": "t1", "last_message": "Hello world", "timestamp": ""},
-            {"thread_id": "t2", "last_message": "Test message", "timestamp": ""},
-        ]
-
-        formatted = ResumeHandler._format_thread_list(threads, 0, 0, 5)
-
-        assert formatted is not None
-
-    def test_format_thread_list_with_scrolling(self):
-        """Test that _format_thread_list handles scrolling window."""
-        threads = [
-            {"thread_id": f"t{i}", "last_message": f"msg {i}", "timestamp": ""}
-            for i in range(10)
-        ]
-
-        formatted = ResumeHandler._format_thread_list(threads, 5, 3, 5)
-
-        assert formatted is not None
-
     @pytest.mark.asyncio
     @patch("src.cli.handlers.resume.initializer.get_threads")
     async def test_handle_with_exception(self, mock_get_threads, mock_session):

@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from src.agents.context import AgentContext
 from src.cli.theme import theme
-from src.core.config import SandboxPermission
+from src.configs import SandboxPermission
 from src.utils.matching import find_progressive_match, format_match_error
 from src.utils.path import resolve_path
 from src.utils.render import format_diff_rich, generate_diff

@@ -1,4 +1,4 @@
-from src.core.config import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
+from src.configs import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
 from src.middleware.approval import (
     ApprovalMiddleware,
     create_field_extractor,

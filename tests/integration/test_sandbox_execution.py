@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from src.core.config import SandboxConfig, SandboxPermission, SandboxType
+from src.configs import SandboxConfig, SandboxPermission, SandboxType
 from src.sandboxes.impl.bubblewrap import BubblewrapSandbox
 from src.sandboxes.impl.seatbelt import SeatbeltSandbox
 
@@ -49,7 +49,7 @@ class TestSeatbeltIntegration:
             type=SandboxType.SEATBELT,
             permissions=[SandboxPermission.NETWORK, SandboxPermission.FILESYSTEM],
             # Required paths for Python execution
-            read_paths=[
+            execution_paths=[
                 "/usr",
                 "/bin",
                 "/sbin",
@@ -102,7 +102,7 @@ class TestBubblewrapIntegration:
             name="test",
             type=SandboxType.BUBBLEWRAP,
             permissions=[SandboxPermission.NETWORK, SandboxPermission.FILESYSTEM],
-            read_paths=[
+            execution_paths=[
                 "/usr",
                 "/lib",
                 "/lib64",
@@ -156,7 +156,7 @@ class TestCrossPlatform:
                 name="test",
                 type=SandboxType.SEATBELT,
                 permissions=[SandboxPermission.NETWORK, SandboxPermission.FILESYSTEM],
-                read_paths=[
+                execution_paths=[
                     "/usr",
                     "/bin",
                     "/sbin",
@@ -176,7 +176,7 @@ class TestCrossPlatform:
                 name="test",
                 type=SandboxType.BUBBLEWRAP,
                 permissions=[SandboxPermission.NETWORK, SandboxPermission.FILESYSTEM],
-                read_paths=[
+                execution_paths=[
                     "/usr",
                     "/lib",
                     "/lib64",

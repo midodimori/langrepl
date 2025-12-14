@@ -4,13 +4,13 @@ import hashlib
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from src.core.config import SandboxPermission
+from src.configs import SandboxPermission
 from src.core.logging import get_logger
 from src.core.settings import settings
 from src.mcp.client import MCPClient
 
 if TYPE_CHECKING:
-    from src.core.config import MCPConfig, MCPServerConfig
+    from src.configs import MCPConfig, MCPServerConfig
     from src.sandboxes.base import Sandbox
 
 logger = get_logger(__name__)

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import SecretStr
 
-from src.core.config import LLMProvider, RateConfig
+from src.configs import LLMProvider, RateConfig
 from src.llms.factory import LLMFactory
 
 

@@ -12,7 +12,7 @@ from langgraph.types import Command
 
 from src.agents import AgentState
 from src.agents.context import AgentContext
-from src.core.config import SandboxPermission
+from src.configs import SandboxPermission
 from src.core.logging import get_logger
 from src.mcp.tool import LazyMCPTool
 from src.sandboxes.base import Sandbox

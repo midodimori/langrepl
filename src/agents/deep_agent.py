@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from langgraph.store.base import BaseStore
 
     from src.agents import StateSchemaType
-    from src.core.config import LLMConfig
+    from src.configs import LLMConfig
 
 
 def create_deep_agent(

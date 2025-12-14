@@ -7,7 +7,7 @@ from langchain_core.messages import AIMessage
 
 from src.agents.context import AgentContext
 from src.agents.state import AgentState
-from src.core.config import ApprovalMode
+from src.configs import ApprovalMode
 from src.middleware.token_cost import TokenCostMiddleware
 
 

@@ -7,7 +7,7 @@ from langchain_core.tools import ToolException
 
 from src.agents.context import AgentContext
 from src.cli.theme import theme
-from src.core.config import SandboxPermission
+from src.configs import SandboxPermission
 from src.core.logging import get_logger
 from src.middleware.approval import create_field_transformer
 from src.utils.bash import execute_bash_command

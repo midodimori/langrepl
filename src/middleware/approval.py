@@ -15,7 +15,7 @@ from pydantic import BaseModel
 
 from src.agents import AgentState
 from src.agents.context import AgentContext
-from src.core.config import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
+from src.configs import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
 from src.core.constants import CONFIG_APPROVAL_FILE_NAME
 from src.core.logging import get_logger
 from src.utils.render import create_tool_message

@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 
-from src.core.config import SandboxPermission
+from src.configs import SandboxPermission
 from src.sandboxes.base import Sandbox
 
 
@@ -26,7 +26,13 @@ class BubblewrapSandbox(Sandbox):
     def _build_bwrap_args(
         self, permissions: list[SandboxPermission] | None = None
     ) -> list[str]:
-        """Build common bwrap arguments from config."""
+        """Build common bwrap arguments from config.
+
+        Permission model:
+        - execution_paths: Always allowed (needed for execution - system libs, binaries)
+        - FILESYSTEM: Enables filesystem_paths + working_dir write access
+        - NETWORK: Enables network access (without it, --unshare-net is applied)
+        """
         effective_perms = (
             permissions if permissions is not None else self.config.permissions
         )
@@ -40,17 +46,19 @@ class BubblewrapSandbox(Sandbox):
             "/tmp",
         ]
 
-        for path in self.config.read_paths:
+        # Execution paths always allowed (needed for execution)
+        for path in self.config.execution_paths:
             expanded = os.path.expanduser(path)
             bwrap_args.extend(["--ro-bind-try", expanded, expanded])
 
-        for path in self.config.write_paths:
-            expanded = os.path.expanduser(path)
-            bwrap_args.extend(["--bind-try", expanded, expanded])
-
+        # FILESYSTEM permission: enables filesystem_paths + working_dir
         if SandboxPermission.FILESYSTEM in effective_perms:
+            for path in self.config.filesystem_paths:
+                expanded = os.path.expanduser(path)
+                bwrap_args.extend(["--bind-try", expanded, expanded])
             bwrap_args.extend(["--bind", str(self.working_dir), str(self.working_dir)])
 
+        # NETWORK permission: without it, isolate network namespace
         if SandboxPermission.NETWORK not in effective_perms:
             bwrap_args.append("--unshare-net")
 

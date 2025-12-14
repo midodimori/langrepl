@@ -52,7 +52,7 @@ def create_mock_runtime(tool_call_id: str = "sandbox-tool-call"):
 
     from src.agents.context import AgentContext
     from src.agents.state import AgentState
-    from src.core.config import ApprovalMode
+    from src.configs import ApprovalMode
 
     # Get working directory from environment variable (set by executor)
     working_dir_str = os.environ.get("LANGREPL_WORKING_DIR", "/tmp")

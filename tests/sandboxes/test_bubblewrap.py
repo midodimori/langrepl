@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.core.config import SandboxConfig, SandboxPermission, SandboxType
+from src.configs import SandboxConfig, SandboxPermission, SandboxType
 from src.sandboxes.impl.bubblewrap import BubblewrapSandbox
 
 
@@ -109,14 +109,16 @@ class TestBubblewrapSandboxExecution:
         mock_process.stdin.drain = AsyncMock()
         mock_process.stdin.close = MagicMock()
 
-        # Mock stdout.read()
+        # Mock stdout.read(chunk_size) - returns data then empty
+        stdout_iter = iter([stdout_data, b""])
         mock_process.stdout = MagicMock()
-        mock_process.stdout.read = AsyncMock(return_value=stdout_data)
+        mock_process.stdout.read = AsyncMock(side_effect=lambda _: next(stdout_iter))
 
-        # Mock stderr.readline() - returns lines then empty
-        stderr_iter = iter(stderr_lines + [b""])
+        # Mock stderr.read(chunk_size) - returns data then empty
+        stderr_data = b"".join(stderr_lines)
+        stderr_iter = iter([stderr_data, b""])
         mock_process.stderr = MagicMock()
-        mock_process.stderr.readline = AsyncMock(side_effect=lambda: next(stderr_iter))
+        mock_process.stderr.read = AsyncMock(side_effect=lambda _: next(stderr_iter))
 
         # Mock wait()
         mock_process.wait = AsyncMock()

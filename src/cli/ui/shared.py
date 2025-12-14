@@ -9,7 +9,7 @@ from prompt_toolkit.layout.controls import FormattedTextControl
 from prompt_toolkit.styles import Style
 
 from src.cli.theme import theme
-from src.core.config import ApprovalMode
+from src.configs import ApprovalMode
 from src.utils.version import get_version
 
 

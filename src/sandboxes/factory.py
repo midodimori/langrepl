@@ -5,11 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from src.core.config import SandboxType
+from src.configs import SandboxType
 from src.sandboxes.base import Sandbox
 
 if TYPE_CHECKING:
-    from src.core.config import SandboxConfig
+    from src.configs import SandboxConfig
 
 
 class SandboxFactory:

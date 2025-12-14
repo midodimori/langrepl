@@ -6,7 +6,7 @@ from typing import Any
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.core.config import ApprovalMode
+from src.configs import ApprovalMode
 from src.sandboxes.base import Sandbox
 from src.skills.factory import Skill
 

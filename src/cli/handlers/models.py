@@ -12,14 +12,15 @@ from prompt_toolkit.layout import Layout
 from prompt_toolkit.layout.containers import HSplit, Window
 from prompt_toolkit.layout.controls import FormattedTextControl
 
-from src.cli.bootstrap.initializer import initializer
 from src.cli.theme import console, theme
 from src.cli.ui.shared import create_bottom_toolbar, create_prompt_style
 from src.core.logging import get_logger
 from src.core.settings import settings
 
 if TYPE_CHECKING:
-    from src.core.config import AgentConfig, LLMConfig, SubAgentConfig
+    from src.configs import AgentConfig, LLMConfig, SubAgentConfig
+
+from src.configs import BatchAgentConfig, BatchSubAgentConfig, ConfigRegistry
 
 logger = get_logger(__name__)
 
@@ -34,9 +35,13 @@ class ModelHandler:
     async def handle(self) -> None:
         """Show interactive selector to switch model for agent or its subagents."""
         try:
-            current_agent_config = await initializer.load_agent_config(
-                self.session.context.agent, self.session.context.working_dir
+            registry = ConfigRegistry(self.session.context.working_dir)
+            batch_agents = await registry.agents()
+            current_agent_config = batch_agents.get_agent_config(
+                self.session.context.agent
             )
+            if not current_agent_config:
+                raise ValueError(f"Agent '{self.session.context.agent}' not found")
 
             agents_to_show: list[tuple[str, str, AgentConfig | SubAgentConfig]] = [
                 ("agent", self.session.context.agent, current_agent_config)
@@ -54,10 +59,8 @@ class ModelHandler:
 
             agent_type, agent_name, agent_config = selected_agent
 
-            config_data = await initializer.load_llms_config(
-                self.session.context.working_dir
-            )
-            models = config_data.llms
+            batch_llms = await registry.llms()
+            models = batch_llms.llms
 
             if agent_type == "agent":
                 current_model_name = self.session.context.model
@@ -77,10 +80,10 @@ class ModelHandler:
 
             if selected_model_name:
                 if agent_type == "agent":
-                    await initializer.update_agent_llm(
+                    await BatchAgentConfig.update_agent_llm(
+                        self.session.context.working_dir,
                         agent_name,
                         selected_model_name,
-                        self.session.context.working_dir,
                     )
 
                     new_llm_config = next(
@@ -104,10 +107,10 @@ class ModelHandler:
                         ),
                     )
                 else:
-                    await initializer.update_subagent_llm(
+                    await BatchSubAgentConfig.update_subagent_llm(
+                        self.session.context.working_dir,
                         agent_name,
                         selected_model_name,
-                        self.session.context.working_dir,
                     )
                     console.print_success(
                         f"Updated subagent '{agent_name}' to use model '{selected_model_name}'"

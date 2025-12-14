@@ -9,7 +9,7 @@ from langchain_core.messages import ToolMessage
 from langchain_core.tools import ToolException
 
 from src.agents.context import AgentContext
-from src.core.config import ApprovalMode, SandboxConfig, SandboxPermission, SandboxType
+from src.configs import ApprovalMode, SandboxConfig, SandboxPermission, SandboxType
 from src.mcp.tool import LazyMCPTool
 from src.middleware.sandbox import SandboxMiddleware
 

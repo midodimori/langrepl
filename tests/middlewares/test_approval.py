@@ -9,7 +9,7 @@ from langchain.tools.tool_node import ToolCallRequest
 from langchain_core.messages import ToolMessage
 
 from src.agents.context import AgentContext
-from src.core.config import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
+from src.configs import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
 from src.middleware.approval import (
     DENY,
     ApprovalMiddleware,

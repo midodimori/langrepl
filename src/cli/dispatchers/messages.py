@@ -26,6 +26,7 @@ from src.cli.bootstrap.initializer import initializer
 from src.cli.builders import MessageContentBuilder
 from src.cli.handlers import CompressionHandler, InterruptHandler
 from src.cli.theme import console, theme
+from src.configs import BatchAgentConfig
 from src.core.constants import OS_VERSION, PLATFORM
 from src.core.logging import get_logger
 from src.utils.compression import should_auto_compress
@@ -387,8 +388,8 @@ class MessageDispatcher:
         """Check if auto-compression should be triggered."""
         try:
             ctx = self.session.context
-            config_data = await initializer.load_agents_config(ctx.working_dir)
-            agent_config = config_data.get_agent_config(ctx.agent)
+            batch_agents = await BatchAgentConfig.from_yaml(ctx.working_dir)
+            agent_config = batch_agents.get_agent_config(ctx.agent)
 
             if (
                 agent_config

@@ -9,7 +9,7 @@ from langchain_core.messages import ToolMessage
 from langgraph.types import Command
 
 from src.agents.context import AgentContext
-from src.core.config import ApprovalMode
+from src.configs import ApprovalMode
 from src.middleware.compress_tool_output import CompressToolOutputMiddleware
 from src.tools.internal.memory import read_memory_file
 

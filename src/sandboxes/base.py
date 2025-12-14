@@ -5,22 +5,16 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import shlex
 import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from src.core.config import SandboxPermission
+from src.configs import SandboxPermission
 from src.core.logging import get_logger
-from src.utils.package_cache import (
-    cache_package,
-    check_package_cached,
-    detect_package_manager,
-)
 
 if TYPE_CHECKING:
-    from src.core.config import SandboxConfig
+    from src.configs import SandboxConfig
 
 
 logger = get_logger(__name__)
@@ -30,12 +24,38 @@ WORKER_MODULE = "src.sandboxes.worker"
 # Project root: src/sandboxes/base.py -> 2 parents up
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
+# Output size limits
+MAX_STDOUT = 10 * 1024 * 1024  # 10MB
+MAX_STDERR = 1024 * 1024  # 1MB
+
 
 class Sandbox(ABC):
     """Abstract base class for sandbox."""
 
     # Subclasses should override this for error messages
     sandbox_name: str = "sandbox"
+
+    @staticmethod
+    async def _collect_output(
+        stream: asyncio.StreamReader | None,
+        max_size: int,
+    ) -> tuple[bytes, bool]:
+        """Collect output with size limit, returns (data, truncated)."""
+        if stream is None:
+            return b"", False
+        chunks: list[bytes] = []
+        size = 0
+        truncated = False
+        while True:
+            chunk = await stream.read(65536)
+            if not chunk:
+                break
+            if size < max_size:
+                chunks.append(chunk)
+                size += len(chunk)
+            else:
+                truncated = True
+        return b"".join(chunks), truncated
 
     def __init__(self, config: SandboxConfig, working_dir: Path):
         self.config = config
@@ -71,38 +91,18 @@ class Sandbox(ABC):
             return list(self.config.permissions)
         return [p for p in tool_permissions if self.config.has_permission(p)]
 
-    @staticmethod
-    def _inject_offline_flag(command: str, args: list[str]) -> tuple[str, list[str]]:
-        """Inject --offline flag for npx/uvx using proper shell parsing.
-
-        Uses shlex to safely parse and reconstruct shell commands,
-        avoiding regex pitfalls with quoted strings.
-        """
-        # Handle sh -c "npx ..." or sh -c "uvx ..." patterns
-        if command == "sh" and len(args) >= 2 and args[0] == "-c":
-            try:
-                tokens = shlex.split(args[1])
-                if tokens and tokens[0] in ("npx", "uvx") and "--offline" not in tokens:
-                    tokens.insert(1, "--offline")
-                    return command, ["-c", shlex.join(tokens)] + args[2:]
-            except ValueError:
-                pass  # Malformed shell command, skip injection
-
-        # Handle direct npx/uvx commands
-        if command in ("npx", "uvx") and "--offline" not in args:
-            return command, ["--offline"] + args
-
-        return command, args
-
     async def sandbox_mcp_command(
         self,
         name: str,
         command: str,
         args: list[str],
-        permissions: list[SandboxPermission],
+        mcp_permissions: list[SandboxPermission],
     ) -> tuple[str, list[str], bool]:
-        """Sandbox MCP command: check permissions → cache packages → wrap."""
-        missing = [p for p in permissions if not self.config.has_permission(p)]
+        """Sandbox MCP command: check permissions → apply injectors → wrap."""
+        from src.sandboxes.injectors import INJECTORS
+
+        # Block if MCP needs permissions sandbox doesn't grant
+        missing = [p for p in mcp_permissions if not self.config.has_permission(p)]
         if missing:
             logger.warning(
                 f"Blocking MCP '{name}': needs {[p.value for p in missing]}, "
@@ -110,19 +110,17 @@ class Sandbox(ABC):
             )
             return command, args, False
 
-        # Only cache/offline if sandbox doesn't grant network
-        if SandboxPermission.NETWORK not in self.config.permissions:
-            pkg = detect_package_manager(command, args)
-            if pkg:
-                if not await check_package_cached(pkg):
-                    logger.info(f"Caching '{pkg.package}' for sandbox...")
-                    if not await cache_package(pkg):
-                        logger.warning(f"Blocking MCP '{name}': cache failed")
-                        return command, args, False
-                if pkg.manager in ("npx", "uvx"):
-                    command, args = self._inject_offline_flag(command, args)
+        # Apply injectors (network isolation, package caching, etc.)
+        for injector in INJECTORS:
+            if injector.should_apply(command, args, self.config):
+                command, args, ok = await injector.apply(
+                    name, command, args, self.config
+                )
+                if not ok:
+                    return command, args, False
+                break
 
-        return *self.wrap_mcp_command(command, args, permissions), True
+        return *self.wrap_mcp_command(command, args, mcp_permissions), True
 
     async def execute(
         self,
@@ -186,40 +184,29 @@ class Sandbox(ABC):
                 await process.stdin.drain()
                 process.stdin.close()
 
-            # Collect stderr in background with size limit (1MB)
-            stderr_lines: list[bytes] = []
-            stderr_size = [0]
-
-            async def collect_stderr() -> None:
-                if process.stderr is None:
-                    return
-                while True:
-                    line = await process.stderr.readline()
-                    if not line:
-                        break
-                    if stderr_size[0] < 1024 * 1024:
-                        stderr_lines.append(line)
-                        stderr_size[0] += len(line)
-
-            stderr_task = asyncio.create_task(collect_stderr())
+            stdout_task = asyncio.create_task(
+                self._collect_output(process.stdout, MAX_STDOUT)
+            )
+            stderr_task = asyncio.create_task(
+                self._collect_output(process.stderr, MAX_STDERR)
+            )
 
             try:
-                stdout = (
-                    await asyncio.wait_for(process.stdout.read(), timeout=timeout)
-                    if process.stdout
-                    else b""
+                stdout, stdout_truncated = await asyncio.wait_for(
+                    stdout_task, timeout=timeout
                 )
                 await process.wait()
                 try:
-                    await asyncio.wait_for(stderr_task, timeout=1.0)
+                    stderr, _ = await asyncio.wait_for(stderr_task, timeout=1.0)
                 except (TimeoutError, asyncio.CancelledError):
                     stderr_task.cancel()
-                stderr = b"".join(stderr_lines)
+                    stderr = b""
             except TimeoutError:
                 process.kill()
                 await process.wait()
+                stdout_task.cancel()
                 stderr_task.cancel()
-                stderr = b"".join(stderr_lines)
+                stderr = stderr_task.result()[0] if stderr_task.done() else b""
                 return {
                     "success": False,
                     "error": f"Sandbox execution timed out after {timeout} seconds",
@@ -230,8 +217,16 @@ class Sandbox(ABC):
             except asyncio.CancelledError:
                 process.kill()
                 await process.wait()
+                stdout_task.cancel()
                 stderr_task.cancel()
                 raise
+
+            if stdout_truncated:
+                return {
+                    "success": False,
+                    "error": f"Sandbox output exceeded {MAX_STDOUT // (1024 * 1024)}MB limit",
+                    "stdout": stdout.decode("utf-8", errors="replace")[:10000],
+                }
 
             if process.returncode != 0:
                 return {

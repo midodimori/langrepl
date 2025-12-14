@@ -13,7 +13,7 @@ from src.agents import StateSchemaType
 from src.agents.context import AgentContext
 from src.agents.react_agent import create_react_agent
 from src.agents.state import AgentState
-from src.core.config import SubAgentConfig
+from src.configs import SubAgentConfig
 from src.skills.factory import Skill
 from src.utils.render import create_tool_message
 
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from langchain_core.language_models import BaseChatModel
     from langgraph.graph.state import CompiledStateGraph
 
-    from src.core.config import LLMConfig
+    from src.configs import LLMConfig
 
 
 class SubAgent(BaseModel):

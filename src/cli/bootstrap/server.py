@@ -14,6 +14,7 @@ import httpx
 
 from src.cli.bootstrap.initializer import initializer
 from src.cli.theme import console
+from src.configs import ConfigRegistry
 from src.core.constants import CONFIG_LANGGRAPH_FILE_NAME
 from src.core.settings import settings
 
@@ -263,12 +264,12 @@ async def handle_server_command(args) -> int:
         working_dir = Path(args.working_dir)
 
         # Load agent config to get LLM costs
-        agent_config = await initializer.load_agent_config(args.agent, working_dir)
-        llm_config = (
-            agent_config.llm
-            if not args.model
-            else await initializer.load_llm_config(args.model, working_dir)
-        )
+        registry = ConfigRegistry(working_dir)
+        agent_config = await registry.agent(args.agent)
+
+        llm_config = agent_config.llm
+        if args.model:
+            llm_config = await registry.llm(args.model)
 
         # Generate langgraph.json
         generate_langgraph_json(working_dir)

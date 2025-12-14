@@ -7,7 +7,7 @@ from langchain_core.tools import ToolException
 from langgraph.types import Command
 
 from src.agents.context import AgentContext
-from src.core.config import SandboxPermission
+from src.configs import SandboxPermission
 from src.core.logging import get_logger
 from src.mcp.tool import LazyMCPTool
 from src.tools.schema import ToolSchema

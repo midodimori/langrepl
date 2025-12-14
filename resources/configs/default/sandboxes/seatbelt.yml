@@ -5,10 +5,10 @@ permissions:
   - network
   - filesystem
 
-# Paths with read-only access in the sandbox
+# Paths always mounted read-only (needed for execution)
 # Note: /dev/null write and path resolution literals are allowed automatically
 # by the Seatbelt runtime and are not managed by this configuration file.
-read_paths:
+execution_paths:
   # System paths
   - /usr
   - /bin
@@ -33,15 +33,11 @@ read_paths:
   # - "~/.volta"
   # - "~/.local/share/fnm"
 
-# Paths mounted read-write in the sandbox, in addition to the already mounted working directory
-write_paths:
+# Paths mounted read-write when FILESYSTEM permission is granted
+filesystem_paths:
   - /tmp
   - /private/tmp
   - "~/.npm"
   - "~/.cache/uv"
   - "~/.local/share/uv"
-  # Docker sockets
-  - "~/.orbstack/run"      # OrbStack
-  - "~/.docker/run"        # Docker Desktop
-  - "~/.rd/docker.sock"    # Rancher Desktop
 timeout: 10

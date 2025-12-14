@@ -11,7 +11,7 @@ from langchain_core.runnables import RunnableConfig
 from src.agents.context import AgentContext
 from src.cli.bootstrap.initializer import initializer
 from src.cli.theme import console, theme
-from src.core.config import CompressionConfig
+from src.configs import CompressionConfig, ConfigRegistry
 from src.core.constants import OS_VERSION, PLATFORM
 from src.core.logging import get_logger
 from src.utils.compression import calculate_message_tokens, compress_messages
@@ -31,8 +31,8 @@ class CompressionHandler:
         """Compress current conversation history and create new thread."""
         try:
             ctx = self.session.context
-            config_data = await initializer.load_agents_config(ctx.working_dir)
-            agent_config = config_data.get_agent_config(ctx.agent)
+            registry = ConfigRegistry(ctx.working_dir)
+            agent_config = await registry.agent(ctx.agent)
 
             if not agent_config:
                 console.print_error(f"Agent '{ctx.agent}' not found")

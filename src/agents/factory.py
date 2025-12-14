@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from src.agents.deep_agent import create_deep_agent
-from src.core.config import LLMConfig
+from src.configs import LLMConfig
 from src.core.constants import (
     TOOL_CATEGORY_IMPL,
     TOOL_CATEGORY_INTERNAL,
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from langgraph.graph.state import CompiledStateGraph
 
     from src.agents import ContextSchemaType, StateSchemaType
-    from src.core.config import (
+    from src.configs import (
         AgentConfig,
         SkillsConfig,
         SubAgentConfig,

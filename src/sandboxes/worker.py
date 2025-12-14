@@ -38,7 +38,7 @@ def serialize_result(result: Any) -> dict:
             "short_content": getattr(result, "short_content", None),
             "is_error": getattr(result, "is_error", False),
             "return_direct": getattr(result, "return_direct", False),
-            "artifact": result.artifact,
+            # "artifact": result.artifact,
         }
     return {"success": True, "content": str(result)}
 

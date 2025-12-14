@@ -46,6 +46,10 @@ class TestPermissionBlocking:
             approval_mode=ApprovalMode.SEMI_ACTIVE,
             working_dir=Path("/tmp"),
         )
+        # Add serializable state and config for sandbox execution tests
+        request.runtime.state = {"messages": [], "todos": [], "files": None}
+        request.runtime.config = {"tags": [], "metadata": {}, "configurable": {}}
+        request.runtime.tool_call_id = "call_1"
         return request
 
     @pytest.fixture
@@ -67,6 +71,10 @@ class TestPermissionBlocking:
             approval_mode=ApprovalMode.SEMI_ACTIVE,
             working_dir=Path("/tmp"),
         )
+        # Add serializable state and config for sandbox execution tests
+        request.runtime.state = {"messages": [], "todos": [], "files": None}
+        request.runtime.config = {"tags": [], "metadata": {}, "configurable": {}}
+        request.runtime.tool_call_id = "call_2"
         return request
 
     @pytest.mark.asyncio
@@ -74,15 +82,15 @@ class TestPermissionBlocking:
         self, middleware, mock_handler, mock_request_requiring_filesystem
     ):
         """Filesystem tool blocked when only NETWORK granted."""
-        from src.sandboxes.impl.seatbelt import SeatbeltSandbox
-
-        config = SandboxConfig(
+        mock_executor = AsyncMock()
+        mock_executor.config = SandboxConfig(
             name="network-only",
             type=SandboxType.SEATBELT,
             permissions=[SandboxPermission.NETWORK],
         )
-        sandbox = SeatbeltSandbox(config, Path("/tmp"))
-        mock_request_requiring_filesystem.runtime.context.sandbox_executor = sandbox
+        mock_request_requiring_filesystem.runtime.context.sandbox_executor = (
+            mock_executor
+        )
 
         with pytest.raises(ToolException) as exc_info:
             await middleware.awrap_tool_call(
@@ -98,15 +106,13 @@ class TestPermissionBlocking:
         self, middleware, mock_handler, mock_request_requiring_network
     ):
         """Network tool blocked when only FILESYSTEM granted."""
-        from src.sandboxes.impl.seatbelt import SeatbeltSandbox
-
-        config = SandboxConfig(
+        mock_executor = AsyncMock()
+        mock_executor.config = SandboxConfig(
             name="fs-only",
             type=SandboxType.SEATBELT,
             permissions=[SandboxPermission.FILESYSTEM],
         )
-        sandbox = SeatbeltSandbox(config, Path("/tmp"))
-        mock_request_requiring_network.runtime.context.sandbox_executor = sandbox
+        mock_request_requiring_network.runtime.context.sandbox_executor = mock_executor
 
         with pytest.raises(ToolException) as exc_info:
             await middleware.awrap_tool_call(
@@ -122,15 +128,15 @@ class TestPermissionBlocking:
         self, middleware, mock_handler, mock_request_requiring_filesystem
     ):
         """Tool blocked when sandbox has empty permissions."""
-        from src.sandboxes.impl.seatbelt import SeatbeltSandbox
-
-        config = SandboxConfig(
+        mock_executor = AsyncMock()
+        mock_executor.config = SandboxConfig(
             name="locked",
             type=SandboxType.SEATBELT,
             permissions=[],
         )
-        sandbox = SeatbeltSandbox(config, Path("/tmp"))
-        mock_request_requiring_filesystem.runtime.context.sandbox_executor = sandbox
+        mock_request_requiring_filesystem.runtime.context.sandbox_executor = (
+            mock_executor
+        )
 
         with pytest.raises(ToolException) as exc_info:
             await middleware.awrap_tool_call(
@@ -227,14 +233,13 @@ class TestMcpToolsBypass:
             working_dir=Path("/tmp"),
         )
 
-        from src.sandboxes.impl.seatbelt import SeatbeltSandbox
-
-        config = SandboxConfig(
+        mock_executor = AsyncMock()
+        mock_executor.config = SandboxConfig(
             name="locked",
             type=SandboxType.SEATBELT,
             permissions=[],
         )
-        request.runtime.context.sandbox_executor = SeatbeltSandbox(config, Path("/tmp"))
+        request.runtime.context.sandbox_executor = mock_executor
 
         with pytest.raises(ToolException) as exc_info:
             await middleware.awrap_tool_call(request, mock_handler)
@@ -258,15 +263,14 @@ class TestMcpToolsBypass:
             working_dir=Path("/tmp"),
         )
 
-        from src.sandboxes.impl.seatbelt import SeatbeltSandbox
-
         # Sandbox only has FILESYSTEM, not NETWORK
-        config = SandboxConfig(
+        mock_executor = AsyncMock()
+        mock_executor.config = SandboxConfig(
             name="fs-only",
             type=SandboxType.SEATBELT,
             permissions=[SandboxPermission.FILESYSTEM],
         )
-        request.runtime.context.sandbox_executor = SeatbeltSandbox(config, Path("/tmp"))
+        request.runtime.context.sandbox_executor = mock_executor
 
         with pytest.raises(ToolException) as exc_info:
             await middleware.awrap_tool_call(request, mock_handler)
@@ -290,14 +294,13 @@ class TestMcpToolsBypass:
             working_dir=Path("/tmp"),
         )
 
-        from src.sandboxes.impl.seatbelt import SeatbeltSandbox
-
-        config = SandboxConfig(
+        mock_executor = AsyncMock()
+        mock_executor.config = SandboxConfig(
             name="full",
             type=SandboxType.SEATBELT,
             permissions=[SandboxPermission.NETWORK, SandboxPermission.FILESYSTEM],
         )
-        request.runtime.context.sandbox_executor = SeatbeltSandbox(config, Path("/tmp"))
+        request.runtime.context.sandbox_executor = mock_executor
 
         result = await middleware.awrap_tool_call(request, mock_handler)
 
@@ -407,6 +410,10 @@ class TestErrorHandling:
             approval_mode=ApprovalMode.SEMI_ACTIVE,
             working_dir=Path("/tmp"),
         )
+        # Add serializable state and config for sandbox execution
+        request.runtime.state = {"messages": [], "todos": [], "files": None}
+        request.runtime.config = {"tags": [], "metadata": {}, "configurable": {}}
+        request.runtime.tool_call_id = "call_1"
 
         mock_executor = AsyncMock()
         mock_executor.config = SandboxConfig(
@@ -445,6 +452,10 @@ class TestErrorHandling:
             approval_mode=ApprovalMode.SEMI_ACTIVE,
             working_dir=Path("/tmp"),
         )
+        # Add serializable state and config for sandbox execution
+        request.runtime.state = {"messages": [], "todos": [], "files": None}
+        request.runtime.config = {"tags": [], "metadata": {}, "configurable": {}}
+        request.runtime.tool_call_id = "call_1"
 
         mock_executor = AsyncMock()
         mock_executor.config = SandboxConfig(

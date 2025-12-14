@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import signal
 import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -202,7 +203,10 @@ class Sandbox(ABC):
                     stderr_task.cancel()
                     stderr = b""
             except TimeoutError:
-                process.kill()
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    process.kill()
                 await process.wait()
                 stdout_task.cancel()
                 stderr_task.cancel()
@@ -215,7 +219,10 @@ class Sandbox(ABC):
                     ),
                 }
             except asyncio.CancelledError:
-                process.kill()
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    process.kill()
                 await process.wait()
                 stdout_task.cancel()
                 stderr_task.cancel()

@@ -46,7 +46,8 @@ def generate_seatbelt_profile(
     """Generate a Seatbelt profile string based on config.
 
     Permission model:
-    - execution_paths: Always allowed (needed for execution - system libs, binaries)
+    - execution_ro_paths: Always read-only (system libs, binaries)
+    - execution_rw_paths: Always read-write (npm cache, uv cache)
     - unix sockets: Always allowed (needed for Docker daemon communication)
     - FILESYSTEM: Enables filesystem_paths + working_dir write access
     - NETWORK: Enables TCP/IP (Docker containers isolated via --network none injection)
@@ -76,10 +77,16 @@ def generate_seatbelt_profile(
         escaped = _escape_seatbelt_path(path)
         rules.append(f'(allow file-read* (literal "{escaped}"))')
 
-    # Execution paths from config (always allowed - needed for execution)
-    for path in config.execution_paths:
+    # Read-only execution paths (always allowed - needed for execution)
+    for path in config.execution_ro_paths:
         escaped = _escape_seatbelt_path(os.path.expanduser(path))
         rules.append(f'(allow file-read* (subpath "{escaped}"))')
+
+    # Read-write execution paths (always allowed - npm cache, uv cache, etc.)
+    for path in config.execution_rw_paths:
+        escaped = _escape_seatbelt_path(os.path.expanduser(path))
+        rules.append(f'(allow file-read* (subpath "{escaped}"))')
+        rules.append(f'(allow file-write* (subpath "{escaped}"))')
 
     # Use provided permissions or fall back to config
     effective_perms = permissions if permissions is not None else config.permissions

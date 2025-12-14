@@ -8,7 +8,7 @@ permissions:
 # Paths always mounted read-only (needed for execution)
 # Note: /dev/null write and path resolution literals are allowed automatically
 # by the Seatbelt runtime and are not managed by this configuration file.
-execution_paths:
+execution_ro_paths:
   # System paths
   - /usr
   - /bin
@@ -33,12 +33,15 @@ execution_paths:
   # - "~/.volta"
   # - "~/.local/share/fnm"
 
-# Paths mounted read-write when FILESYSTEM permission is granted
+# Paths always mounted read-write (needed for package managers)
+execution_rw_paths:
+  - "~/.npm"
+  - "~/.cache/uv"
+  - "~/.local/share/uv"
+
+# Additional paths mounted read-write when FILESYSTEM permission is granted
 # Note: /tmp is automatically mounted as a 64MB tmpfs when FILESYSTEM
 filesystem_paths:
   - /tmp
   - /private/tmp
-  - "~/.npm"
-  - "~/.cache/uv"
-  - "~/.local/share/uv"
 timeout: 10

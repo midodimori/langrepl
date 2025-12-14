@@ -642,15 +642,17 @@ type: seatbelt  # or "bubblewrap" on Linux
 permissions:
   - network      # Allow network access
   - filesystem   # Allow filesystem access
-execution_paths:  # Always mounted read-only (needed for execution)
+execution_ro_paths:  # Always mounted read-only (system libs, binaries)
   - /usr
   - /bin
   - /etc
   - "~"
-filesystem_paths: # Requires FILESYSTEM permission
-  - /tmp
+execution_rw_paths:  # Always mounted read-write (package managers)
   - "~/.npm"
-timeout: 10      # Seconds
+  - "~/.cache/uv"
+filesystem_paths:    # Additional read-write when FILESYSTEM permission granted
+  - /tmp
+timeout: 10          # Seconds
 ```
 
 **What permissions control**:
@@ -659,7 +661,8 @@ timeout: 10      # Seconds
 | `filesystem` | Read/write access to the **working directory** only | Tools that create, modify, or delete project files |
 | `network` | TCP/UDP network access | Tools that make HTTP requests, API calls |
 
-> **Note**: `execution_paths` are always mounted read-only (needed for system binaries/libraries). `filesystem_paths` are mounted read-write when `filesystem` permission is granted. The `filesystem` permission also adds access to the working directory. Unix domain sockets (Docker, OrbStack) are always accessible.
+> **Note**: `execution_ro_paths` are always read-only (system binaries/libraries). `execution_rw_paths` are always read-write (npm/uv cache for package managers). `filesystem_paths` are additional read-write paths when `filesystem` permission is granted, which also adds access to the working directory. Unix domain sockets (Docker, OrbStack) are always accessible.
+
 
 **Where to configure permissions**:
 

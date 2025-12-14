@@ -29,7 +29,8 @@ class BubblewrapSandbox(Sandbox):
         """Build common bwrap arguments from config.
 
         Permission model:
-        - execution_paths: Always allowed (needed for execution - system libs, binaries)
+        - execution_ro_paths: Always read-only (system libs, binaries)
+        - execution_rw_paths: Always read-write (npm cache, uv cache)
         - FILESYSTEM: Enables filesystem_paths + working_dir write access
         - NETWORK: Enables network access (without it, --unshare-net is applied)
         """
@@ -44,10 +45,15 @@ class BubblewrapSandbox(Sandbox):
             "/dev",
         ]
 
-        # Execution paths always allowed (needed for execution)
-        for path in self.config.execution_paths:
+        # Read-only execution paths (always allowed - needed for execution)
+        for path in self.config.execution_ro_paths:
             expanded = os.path.expanduser(path)
             bwrap_args.extend(["--ro-bind-try", expanded, expanded])
+
+        # Read-write execution paths (always allowed - npm cache, uv cache, etc.)
+        for path in self.config.execution_rw_paths:
+            expanded = os.path.expanduser(path)
+            bwrap_args.extend(["--bind-try", expanded, expanded])
 
         # FILESYSTEM permission: enables filesystem_paths + working_dir
         if SandboxPermission.FILESYSTEM in effective_perms:

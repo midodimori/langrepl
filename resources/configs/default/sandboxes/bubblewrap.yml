@@ -8,7 +8,7 @@ permissions:
 # Paths always mounted read-only (needed for execution)
 # Note: /proc, /dev, and /tmp are mounted automatically by bubblewrap
 # and are not managed by this configuration file.
-execution_paths:
+execution_ro_paths:
   # System binaries and libraries
   - /usr
   - /lib
@@ -30,11 +30,14 @@ execution_paths:
   # - "~/.volta"
   # - "~/.local/share/fnm"
 
-# Paths mounted read-write when FILESYSTEM permission is granted
-# Note: /tmp is mounted as a 64MB tmpfs (in-memory, size-limited)
-filesystem_paths:
-  - /tmp
+# Paths always mounted read-write (needed for package managers)
+execution_rw_paths:
   - "~/.npm"
   - "~/.cache/uv"
   - "~/.local/share/uv"
+
+# Additional paths mounted read-write when FILESYSTEM permission is granted
+# Note: /tmp is mounted as a 64MB tmpfs (in-memory, size-limited)
+filesystem_paths:
+  - /tmp
 timeout: 10

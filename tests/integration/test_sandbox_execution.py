@@ -88,7 +88,7 @@ class TestSeatbeltIntegration:
             type=SandboxType.SEATBELT,
             permissions=[SandboxPermission.NETWORK, SandboxPermission.FILESYSTEM],
             # Required paths for Python execution
-            execution_paths=[
+            execution_ro_paths=[
                 "/usr",
                 "/bin",
                 "/sbin",
@@ -144,7 +144,7 @@ class TestBubblewrapIntegration:
             name="test",
             type=SandboxType.BUBBLEWRAP,
             permissions=[SandboxPermission.NETWORK, SandboxPermission.FILESYSTEM],
-            execution_paths=[
+            execution_ro_paths=[
                 "/usr",
                 "/lib",
                 "/lib64",
@@ -193,7 +193,7 @@ class TestCrossPlatform:
                 name="test",
                 type=SandboxType.SEATBELT,
                 permissions=[SandboxPermission.NETWORK, SandboxPermission.FILESYSTEM],
-                execution_paths=[
+                execution_ro_paths=[
                     "/usr",
                     "/bin",
                     "/sbin",
@@ -214,7 +214,7 @@ class TestCrossPlatform:
                 name="test",
                 type=SandboxType.BUBBLEWRAP,
                 permissions=[SandboxPermission.NETWORK, SandboxPermission.FILESYSTEM],
-                execution_paths=[
+                execution_ro_paths=[
                     "/usr",
                     "/lib",
                     "/lib64",

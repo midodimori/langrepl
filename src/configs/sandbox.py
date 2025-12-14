@@ -34,14 +34,19 @@ class SandboxConfig(VersionedConfig):
         default_factory=list,
         description="Permissions granted to sandboxed tools",
     )
-    execution_paths: list[str] = Field(
+    execution_ro_paths: list[str] = Field(
         default_factory=list,
-        description="Paths always mounted read-only (needed for execution)",
+        description="Paths always mounted read-only (system libs, binaries)",
+    )
+    execution_rw_paths: list[str] = Field(
+        default_factory=list,
+        description="Paths always mounted read-write (npm cache, uv cache)",
     )
     filesystem_paths: list[str] = Field(
         default_factory=list,
-        description="Paths mounted read-write when FILESYSTEM permission granted",
+        description="Additional paths for read-write when FILESYSTEM permission granted",
     )
+
     timeout: float = Field(
         default=DEFAULT_SANDBOX_TIMEOUT,
         ge=1.0,

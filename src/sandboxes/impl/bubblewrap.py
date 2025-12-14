@@ -60,8 +60,9 @@ class BubblewrapSandbox(Sandbox):
             for path in self.config.filesystem_paths:
                 expanded = os.path.expanduser(path)
                 # /tmp gets special handling: use tmpfs with size limit
+                # --size must precede --tmpfs and be in bytes (64M = 67108864)
                 if expanded == "/tmp":
-                    bwrap_args.extend(["--tmpfs", "/tmp:size=64M"])
+                    bwrap_args.extend(["--size", "67108864", "--tmpfs", "/tmp"])
                 else:
                     bwrap_args.extend(["--bind-try", expanded, expanded])
             bwrap_args.extend(["--bind", str(self.working_dir), str(self.working_dir)])

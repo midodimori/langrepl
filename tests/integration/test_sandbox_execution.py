@@ -9,6 +9,8 @@ dependencies on tool signatures and runtime injection which add complexity.
 
 import platform
 import shutil
+import sys
+from pathlib import Path
 
 import pytest
 
@@ -16,6 +18,10 @@ from src.core.config import SandboxConfig, SandboxPermission, SandboxType
 from src.sandboxes.impl.bubblewrap import BubblewrapSandbox
 from src.sandboxes.impl.seatbelt import SeatbeltSandbox
 
+# Project root for mounting in sandboxes
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# Directory containing Python executable (venv)
+PYTHON_DIR = Path(sys.executable).resolve().parent.parent
 # Skip conditions
 IS_MACOS = platform.system() == "Darwin"
 IS_LINUX = platform.system() == "Linux"
@@ -96,6 +102,17 @@ class TestBubblewrapIntegration:
             name="test",
             type=SandboxType.BUBBLEWRAP,
             permissions=[SandboxPermission.NETWORK, SandboxPermission.FILESYSTEM],
+            read_paths=[
+                "/usr",
+                "/lib",
+                "/lib64",
+                "/bin",
+                "/sbin",
+                "/etc",
+                "~",
+                str(PROJECT_ROOT),
+                str(PYTHON_DIR),
+            ],
         )
         return BubblewrapSandbox(config, temp_dir)
 
@@ -109,7 +126,7 @@ class TestBubblewrapIntegration:
             timeout=15.0,
         )
 
-        assert result["success"] is True
+        assert result["success"] is True, f"Sandbox execution failed: {result}"
         assert result["content"] == "file.txt"
 
     @pytest.mark.asyncio
@@ -122,7 +139,7 @@ class TestBubblewrapIntegration:
             timeout=15.0,
         )
 
-        assert result["success"] is True
+        assert result["success"] is True, f"Sandbox execution failed: {result}"
         # In isolated namespace, PID should be low (often 1 or 2)
         pid = int(result["content"])
         assert pid < 100
@@ -159,6 +176,17 @@ class TestCrossPlatform:
                 name="test",
                 type=SandboxType.BUBBLEWRAP,
                 permissions=[SandboxPermission.NETWORK, SandboxPermission.FILESYSTEM],
+                read_paths=[
+                    "/usr",
+                    "/lib",
+                    "/lib64",
+                    "/bin",
+                    "/sbin",
+                    "/etc",
+                    "~",
+                    str(PROJECT_ROOT),
+                    str(PYTHON_DIR),
+                ],
             )
             return BubblewrapSandbox(config, temp_dir)
         else:
@@ -174,7 +202,7 @@ class TestCrossPlatform:
             timeout=15.0,
         )
 
-        assert result["success"] is True
+        assert result["success"] is True, f"Sandbox execution failed: {result}"
         assert result["content"] == "file.txt"
 
     @pytest.mark.asyncio

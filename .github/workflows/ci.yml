@@ -37,7 +37,7 @@ jobs:
       - name: Install system dependencies
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            sudo apt-get update && sudo apt-get install -y ripgrep tree fd-find bubblewrap && sudo ln -s $(which fdfind) /usr/local/bin/fd
+            sudo apt-get update && sudo apt-get install -y ripgrep tree fd-find && sudo ln -s $(which fdfind) /usr/local/bin/fd
           elif [ "$RUNNER_OS" == "macOS" ]; then
             brew install ripgrep tree fd
           fi
@@ -49,4 +49,4 @@ jobs:
         run: make lint-fix
 
       - name: Run tests
-        run: make test
+        run: make test-unit

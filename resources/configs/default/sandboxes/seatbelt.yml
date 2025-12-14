@@ -5,11 +5,8 @@ permissions:
   - network
   - filesystem
 
-# Paths always mounted read-only (needed for execution)
-# Note: /dev/null write and path resolution literals are allowed automatically
-# by the Seatbelt runtime and are not managed by this configuration file.
+# Paths always mounted read-only (system libs, binaries)
 execution_ro_paths:
-  # System paths
   - /usr
   - /bin
   - /sbin
@@ -20,28 +17,31 @@ execution_ro_paths:
   - /private/var/db
   - /private/var/select
   - /dev
-  # Homebrew paths
   - /opt/homebrew
   - /usr/local
-  # Runtime directories
   - /var/run
   - /private/var/run
-  # Home directory (read-only by default)
   - "~"
-  # Add node version manager paths as needed:
-  # - "~/.nvm"
-  # - "~/.volta"
-  # - "~/.local/share/fnm"
 
-# Paths always mounted read-write (needed for package managers)
+# Paths always mounted read-write (package managers)
 execution_rw_paths:
   - "~/.npm"
   - "~/.cache/uv"
   - "~/.local/share/uv"
 
-# Additional paths mounted read-write when FILESYSTEM permission is granted
-# Note: /tmp is automatically mounted as a 64MB tmpfs when FILESYSTEM
+# Additional read-write when FILESYSTEM permission granted
 filesystem_paths:
   - /tmp
   - /private/tmp
+
+# Unix sockets (rootless sockets enabled by default)
+# ⚠️ Root-owned sockets (/var/run/docker.sock) are commented out for security
+# See OWASP Rule #1: https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html
+socket_paths:
+  - ~/.docker/run/docker.sock      # Docker (rootless)
+  - ~/.orbstack/run/docker.sock    # OrbStack
+  - ~/.rd/docker.sock              # Rancher Desktop
+  - ~/.colima/default/docker.sock  # Colima
+  # - /var/run/docker.sock         # Docker (root) - UNSAFE
+
 timeout: 10

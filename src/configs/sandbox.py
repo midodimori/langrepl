@@ -46,6 +46,10 @@ class SandboxConfig(VersionedConfig):
         default_factory=list,
         description="Additional paths for read-write when FILESYSTEM permission granted",
     )
+    socket_paths: list[str] = Field(
+        default_factory=list,
+        description="Unix socket paths to allow (e.g., Docker, OrbStack, Rancher)",
+    )
 
     timeout: float = Field(
         default=DEFAULT_SANDBOX_TIMEOUT,

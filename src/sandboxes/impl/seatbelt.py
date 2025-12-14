@@ -102,9 +102,14 @@ def generate_seatbelt_profile(
             rules.append(f'(allow file-read* (subpath "{escaped}"))')
             rules.append(f'(allow file-write* (subpath "{escaped}"))')
 
-    # Always allow unix sockets (needed for Docker daemon communication)
-    # Network isolation for Docker containers is handled by injecting --network none
-    rules.append("(allow network* (local unix-socket))")
+    # Unix socket access (opt-in via socket_paths for Docker, OrbStack, etc.)
+    # See OWASP Rule #1: socket access = root access, so disabled by default
+    for socket_path in config.socket_paths:
+        expanded = os.path.expanduser(socket_path)
+        escaped = _escape_seatbelt_path(expanded)
+        rules.append(
+            f'(allow network-outbound (remote unix-socket) (path-literal "{escaped}"))'
+        )
 
     # NETWORK permission: enables TCP/IP
     if SandboxPermission.NETWORK in effective_perms:

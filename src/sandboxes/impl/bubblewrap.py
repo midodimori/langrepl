@@ -70,6 +70,11 @@ class BubblewrapSandbox(Sandbox):
         if SandboxPermission.NETWORK not in effective_perms:
             bwrap_args.append("--unshare-net")
 
+        # Unix socket access (opt-in via socket_paths for Docker, etc.)
+        for socket_path in self.config.socket_paths:
+            expanded = os.path.expanduser(socket_path)
+            bwrap_args.extend(["--bind-try", expanded, expanded])
+
         return bwrap_args
 
     def _build_sandbox_command(

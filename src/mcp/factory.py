@@ -44,14 +44,35 @@ class MCPFactory:
         return hashlib.sha256(repr(signature).encode("utf-8")).hexdigest()
 
     @classmethod
-    def _get_config_hash(cls, config: MCPConfig, cache_dir: Path | None) -> int:
+    def _get_config_hash(
+        cls,
+        config: MCPConfig,
+        cache_dir: Path | None,
+        sandbox_executor: Sandbox | None = None,
+    ) -> int:
         server_hashes = tuple(
             sorted(
                 (name, cls._compute_server_hash(server))
                 for name, server in config.servers.items()
             )
         )
-        return hash((server_hashes, str(cache_dir) if cache_dir else None))
+        # Include sandbox config hash to invalidate cache when sandbox changes
+        sandbox_hash = None
+        if sandbox_executor:
+            sandbox_config = sandbox_executor.config
+            sandbox_hash = hash(
+                (
+                    sandbox_config.name,
+                    tuple(sandbox_config.execution_ro_paths),
+                    tuple(sandbox_config.execution_rw_paths),
+                    tuple(sandbox_config.filesystem_paths),
+                    tuple(sandbox_config.socket_paths),
+                    tuple(sandbox_config.permissions),
+                )
+            )
+        return hash(
+            (server_hashes, str(cache_dir) if cache_dir else None, sandbox_hash)
+        )
 
     async def create(
         self,
@@ -59,7 +80,7 @@ class MCPFactory:
         cache_dir: Path | None = None,
         sandbox_executor: Sandbox | None = None,
     ) -> MCPClient:
-        config_hash = self._get_config_hash(config, cache_dir)
+        config_hash = self._get_config_hash(config, cache_dir, sandbox_executor)
         if self._client and self._config_hash == config_hash:
             return self._client
 

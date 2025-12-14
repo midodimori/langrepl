@@ -642,26 +642,31 @@ type: seatbelt  # or "bubblewrap" on Linux
 permissions:
   - network      # Allow network access
   - filesystem   # Allow filesystem access
-execution_ro_paths:  # Always mounted read-only (system libs, binaries)
+execution_ro_paths:  # Always read-only (system libs, binaries)
   - /usr
   - /bin
-  - /etc
   - "~"
-execution_rw_paths:  # Always mounted read-write (package managers)
+execution_rw_paths:  # Always read-write (package managers)
   - "~/.npm"
   - "~/.cache/uv"
-filesystem_paths:    # Additional read-write when FILESYSTEM permission granted
+filesystem_paths:    # Additional read-write when FILESYSTEM granted
   - /tmp
-timeout: 10          # Seconds
+socket_paths: []     # Unix sockets (disabled by default)
+  # - /var/run/docker.sock        # Docker
+  # - ~/.orbstack/run/docker.sock # OrbStack
+  # - ~/.rd/docker.sock           # Rancher
+timeout: 10
 ```
 
 **What permissions control**:
 | Permission | What it grants | When to use |
 |------------|----------------|-------------|
-| `filesystem` | Read/write access to the **working directory** only | Tools that create, modify, or delete project files |
+| `filesystem` | Read/write access to the **working directory** | Tools that create, modify, or delete project files |
 | `network` | TCP/UDP network access | Tools that make HTTP requests, API calls |
 
-> **Note**: `execution_ro_paths` are always read-only (system binaries/libraries). `execution_rw_paths` are always read-write (npm/uv cache for package managers). `filesystem_paths` are additional read-write paths when `filesystem` permission is granted, which also adds access to the working directory. Unix domain sockets (Docker, OrbStack) are always accessible.
+> [!CAUTION]
+> **Unix socket security**: Socket access (Docker, OrbStack) is equivalent to root access on host ([OWASP Rule #1](https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-1-do-not-expose-the-docker-daemon-socket-even-to-the-containers)). Sockets are **disabled by default**. Enable only if you trust your tools and understand the risk. Consider running Docker in [rootless mode](https://docs.docker.com/engine/security/rootless/).
+
 
 
 **Where to configure permissions**:

@@ -55,7 +55,11 @@ def create_mock_runtime(tool_call_id: str = "sandbox-tool-call"):
     from src.configs import ApprovalMode
 
     # Get working directory from environment variable (set by executor)
-    working_dir_str = os.environ.get("LANGREPL_WORKING_DIR", "/tmp")
+    # Use sentinel path when not set - tools will fail deterministically
+    # if they try to use working_dir without FILESYSTEM permission
+    working_dir_str = os.environ.get(
+        "LANGREPL_WORKING_DIR", "/dev/null/no-filesystem-permission"
+    )
     working_dir = Path(working_dir_str)
 
     # Create a minimal AgentContext

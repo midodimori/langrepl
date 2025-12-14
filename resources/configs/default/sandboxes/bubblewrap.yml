@@ -31,7 +31,9 @@ execution_paths:
   # - "~/.local/share/fnm"
 
 # Paths mounted read-write when FILESYSTEM permission is granted
+# Note: /tmp is mounted as a 64MB tmpfs (in-memory, size-limited)
 filesystem_paths:
+  - /tmp
   - "~/.npm"
   - "~/.cache/uv"
   - "~/.local/share/uv"

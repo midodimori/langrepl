@@ -42,8 +42,6 @@ class BubblewrapSandbox(Sandbox):
             "/proc",
             "--dev",
             "/dev",
-            "--tmpfs",
-            "/tmp",
         ]
 
         # Execution paths always allowed (needed for execution)
@@ -55,7 +53,11 @@ class BubblewrapSandbox(Sandbox):
         if SandboxPermission.FILESYSTEM in effective_perms:
             for path in self.config.filesystem_paths:
                 expanded = os.path.expanduser(path)
-                bwrap_args.extend(["--bind-try", expanded, expanded])
+                # /tmp gets special handling: use tmpfs with size limit
+                if expanded == "/tmp":
+                    bwrap_args.extend(["--tmpfs", "/tmp:size=64M"])
+                else:
+                    bwrap_args.extend(["--bind-try", expanded, expanded])
             bwrap_args.extend(["--bind", str(self.working_dir), str(self.working_dir)])
 
         # NETWORK permission: without it, isolate network namespace

@@ -34,6 +34,7 @@ execution_paths:
   # - "~/.local/share/fnm"
 
 # Paths mounted read-write when FILESYSTEM permission is granted
+# Note: /tmp is automatically mounted as a 64MB tmpfs when FILESYSTEM
 filesystem_paths:
   - /tmp
   - /private/tmp

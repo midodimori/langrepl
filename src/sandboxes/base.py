@@ -130,6 +130,7 @@ class Sandbox(ABC):
         args: dict[str, Any],
         timeout: float,
         tool_permissions: list[SandboxPermission] | None = None,
+        runtime_context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Execute a tool in the sandbox.
 
@@ -137,6 +138,7 @@ class Sandbox(ABC):
             tool_permissions: Tool's declared permissions. If provided, the sandbox
                 profile will use the intersection of these and the sandbox config
                 permissions (tool gets only what it needs, capped by sandbox policy).
+            runtime_context: Serialized ToolRuntime context for the worker.
         """
         try:
             request = json.dumps(
@@ -144,6 +146,7 @@ class Sandbox(ABC):
                     "module": module_path,
                     "tool_name": tool_name,
                     "args": args,
+                    "runtime_context": runtime_context,
                 },
                 default=str,  # Convert non-serializable objects to string
             )

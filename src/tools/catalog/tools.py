@@ -10,6 +10,7 @@ from src.agents.context import AgentContext
 from src.configs import SandboxPermission
 from src.core.logging import get_logger
 from src.mcp.tool import LazyMCPTool
+from src.sandboxes.serialization import serialize_runtime
 from src.tools.schema import ToolSchema
 from src.utils.render import create_sandbox_tool_message
 
@@ -194,6 +195,7 @@ async def run_tool(
                 args=tool_args,
                 timeout=executor.config.timeout,
                 tool_permissions=required_permissions,
+                runtime_context=serialize_runtime(runtime),  # type: ignore[arg-type]
             )
 
             return create_sandbox_tool_message(

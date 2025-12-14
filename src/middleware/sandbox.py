@@ -16,6 +16,7 @@ from src.configs import SandboxPermission
 from src.core.logging import get_logger
 from src.mcp.tool import LazyMCPTool
 from src.sandboxes.base import Sandbox
+from src.sandboxes.serialization import serialize_runtime
 from src.utils.render import create_sandbox_tool_message
 
 logger = get_logger(__name__)
@@ -118,6 +119,7 @@ class SandboxMiddleware(AgentMiddleware[AgentState, AgentContext]):
             args=request.tool_call["args"],
             timeout=executor.config.timeout,
             tool_permissions=required_permissions,
+            runtime_context=serialize_runtime(request.runtime),
         )
 
         return create_sandbox_tool_message(

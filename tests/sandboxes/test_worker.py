@@ -90,15 +90,15 @@ class TestExecuteToolAsync:
         assert "missing_tool" in result["error"]
 
     @pytest.mark.asyncio
-    async def test_non_callable_returns_error(self):
-        """Non-callable attribute returns error."""
+    async def test_non_langchain_tool_returns_error(self):
+        """Non-LangChain tool (no ainvoke) returns error."""
         with patch("src.sandboxes.worker.importlib.import_module") as mock_import:
-            mock_import.return_value = MagicMock(not_callable="just a string")
+            mock_import.return_value = MagicMock(not_langchain="just a string")
 
-            result = await execute_tool_async("test.module", "not_callable", {})
+            result = await execute_tool_async("test.module", "not_langchain", {})
 
         assert result["success"] is False
-        assert "Cannot find callable" in result["error"]
+        assert "not a LangChain tool" in result["error"]
 
     @pytest.mark.asyncio
     async def test_exception_includes_traceback(self):
@@ -119,7 +119,15 @@ class TestExecuteToolAsync:
 
     @pytest.mark.asyncio
     async def test_runtime_injected_when_schema_requires(self):
-        """Runtime is injected when tool schema has runtime field."""
+        """Runtime is injected when tool schema has runtime field and runtime_context provided."""
+        from typing import Any
+
+        from src.sandboxes.serialization import (
+            SerializedConfig,
+            SerializedContext,
+            SerializedState,
+        )
+
         mock_tool = MagicMock()
         mock_tool.ainvoke = AsyncMock(return_value="result")
         mock_tool.args_schema = MagicMock()
@@ -127,43 +135,69 @@ class TestExecuteToolAsync:
             "runtime": MagicMock(),
             "query": MagicMock(),
         }
-        mock_runtime = MagicMock()
 
-        with (
-            patch("src.sandboxes.worker.importlib.import_module") as mock_import,
-            patch.object(
-                __import__("src.sandboxes.worker", fromlist=["create_mock_runtime"]),
-                "create_mock_runtime",
-                return_value=mock_runtime,
+        # Create a valid runtime_context structure
+        runtime_context: dict[str, Any] = {
+            "tool_call_id": "test-123",
+            "state": SerializedState(
+                todos=None,
+                files=None,
+                current_input_tokens=None,
+                current_output_tokens=None,
+                total_cost=None,
             ),
-        ):
+            "context": SerializedContext(
+                approval_mode="semi-active",
+                working_dir="/tmp",
+                platform="",
+                os_version="",
+                current_date_time_zoned="",
+                user_memory="",
+                input_cost_per_mtok=None,
+                output_cost_per_mtok=None,
+                tool_output_max_tokens=None,
+            ),
+            "config": SerializedConfig(
+                tags=[],
+                metadata={},
+                run_name=None,
+                run_id=None,
+                recursion_limit=25,
+                configurable={},
+            ),
+        }
+
+        with patch("src.sandboxes.worker.importlib.import_module") as mock_import:
             mock_import.return_value = MagicMock(test_tool=mock_tool)
 
             result = await execute_tool_async(
-                "test.module", "test_tool", {"query": "test"}
+                "test.module",
+                "test_tool",
+                {"query": "test"},
+                runtime_context=runtime_context,
             )
 
         assert result["success"] is True
         call_args = mock_tool.ainvoke.call_args[0][0]
-        assert call_args["runtime"] is mock_runtime
+        assert "runtime" in call_args
         assert call_args["query"] == "test"
 
     @pytest.mark.asyncio
-    async def test_async_function_without_invoke(self):
-        """Async functions without invoke method work."""
-
-        async def async_func(a, b):
-            return f"sum={a + b}"
+    async def test_tool_without_runtime_requirement_works(self):
+        """Tools that don't require runtime still work."""
+        mock_tool = MagicMock()
+        mock_tool.ainvoke = AsyncMock(return_value="result from tool")
+        mock_tool.args_schema = MagicMock()
+        mock_tool.args_schema.model_fields = {"query": MagicMock()}  # No runtime field
 
         with patch("src.sandboxes.worker.importlib.import_module") as mock_import:
-            mock_import.return_value = MagicMock(async_func=async_func)
+            mock_import.return_value = MagicMock(simple_tool=mock_tool)
 
             result = await execute_tool_async(
-                "test.module", "async_func", {"a": 1, "b": 2}
+                "test.module", "simple_tool", {"query": "test"}
             )
 
         assert result["success"] is True
-        assert result["content"] == "sum=3"
 
 
 class TestMain:
@@ -210,7 +244,7 @@ class TestMain:
         request = json.dumps({"module": "test.module", "tool_name": "test_tool"})
         captured_args = {}
 
-        async def mock_execute(module_path, tool_name, args):
+        async def mock_execute(module_path, tool_name, args, runtime_context=None):
             captured_args["args"] = args
             return {"success": True, "content": "ok"}
 

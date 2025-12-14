@@ -9,7 +9,13 @@ import importlib
 import json
 import sys
 import traceback
+from dataclasses import asdict
 from typing import Any
+
+from langchain_core.messages import ToolMessage
+from langgraph.types import Command
+
+from src.sandboxes.serialization import deserialize_runtime
 
 
 def serialize_result(result: Any) -> dict:
@@ -17,12 +23,7 @@ def serialize_result(result: Any) -> dict:
 
     Tools return ToolMessage, str, or Command (for graph control flow).
     """
-    from langchain_core.messages import ToolMessage
-    from langgraph.types import Command
-
     if isinstance(result, Command):
-        from dataclasses import asdict
-
         return {
             "success": True,
             "is_command": True,
@@ -42,92 +43,38 @@ def serialize_result(result: Any) -> dict:
     return {"success": True, "content": str(result)}
 
 
-def create_mock_runtime(tool_call_id: str = "sandbox-tool-call"):
-    """Create a mock ToolRuntime for sandbox execution."""
-    import os
-    from pathlib import Path
+async def execute_tool_async(
+    module_path: str, tool_name: str, args: dict, runtime_context: dict | None = None
+) -> dict:
+    """Execute a LangChain tool asynchronously and return serialized result.
 
-    from langchain.tools import ToolRuntime
-    from langchain_core.runnables import RunnableConfig
-
-    from src.agents.context import AgentContext
-    from src.agents.state import AgentState
-    from src.configs import ApprovalMode
-
-    # Get working directory from environment variable (set by executor)
-    # Use sentinel path when not set - tools will fail deterministically
-    # if they try to use working_dir without FILESYSTEM permission
-    working_dir_str = os.environ.get(
-        "LANGREPL_WORKING_DIR", "/dev/null/no-filesystem-permission"
-    )
-    working_dir = Path(working_dir_str)
-
-    # Create a minimal AgentContext
-    context = AgentContext(
-        approval_mode=ApprovalMode.SEMI_ACTIVE,
-        working_dir=working_dir,
-    )
-
-    # Create minimal state
-    state = AgentState(
-        messages=[],
-        todos=None,
-        files=None,
-        current_input_tokens=None,
-        current_output_tokens=None,
-        total_cost=None,
-    )
-
-    # Create minimal config
-    config = RunnableConfig()
-
-    # Create a no-op stream writer
-    async def noop_stream_writer(data):
-        pass
-
-    return ToolRuntime(
-        state=state,
-        context=context,
-        config=config,
-        stream_writer=noop_stream_writer,
-        tool_call_id=tool_call_id,
-        store=None,
-    )
-
-
-async def execute_tool_async(module_path: str, tool_name: str, args: dict) -> dict:
-    """Execute a tool asynchronously and return serialized result."""
+    All sandboxed tools are @tool decorated, so they always have ainvoke.
+    """
     try:
         # Import the module containing the tool
         module = importlib.import_module(module_path)
         tool = getattr(module, tool_name)
 
-        # Check if the tool requires a 'runtime' parameter
+        if not hasattr(tool, "ainvoke"):
+            return {
+                "success": False,
+                "error": f"Tool {tool_name} is not a LangChain tool",
+            }
+
+        # Build args for invoke, injecting runtime if tool schema requires it
         args_for_invoke = dict(args)
         if hasattr(tool, "args_schema") and tool.args_schema:
             schema_fields = getattr(tool.args_schema, "model_fields", {})
             if "runtime" in schema_fields and "runtime" not in args_for_invoke:
-                # Inject mock runtime
-                args_for_invoke["runtime"] = create_mock_runtime(
-                    tool_call_id=args.get("_tool_call_id", "sandbox-call")
-                )
+                if runtime_context:
+                    args_for_invoke["runtime"] = deserialize_runtime(runtime_context)
+                else:
+                    return {
+                        "success": False,
+                        "error": "Tool requires runtime but no runtime_context provided",
+                    }
 
-        # Check if it's a LangChain BaseTool (has ainvoke method)
-        if hasattr(tool, "ainvoke"):
-            # LangChain tool - use ainvoke
-            result = await tool.ainvoke(args_for_invoke)
-        elif hasattr(tool, "invoke"):
-            # Sync LangChain tool
-            result = tool.invoke(args_for_invoke)
-        elif asyncio.iscoroutinefunction(tool):
-            # Regular async function
-            result = await tool(**args_for_invoke)
-        elif callable(tool):
-            # Regular sync function
-            result = tool(**args_for_invoke)
-        else:
-            return {"success": False, "error": f"Cannot find callable for {tool_name}"}
-
+        result = await tool.ainvoke(args_for_invoke)
         return serialize_result(result)
 
     except Exception as e:
@@ -155,13 +102,16 @@ def main():
     module_path = request.get("module")
     tool_name = request.get("tool_name")
     args = request.get("args", {})
+    runtime_context = request.get("runtime_context")
 
     if not module_path or not tool_name:
         print(json.dumps({"success": False, "error": "Missing module or tool_name"}))
         sys.exit(1)
 
     # Run the async execution
-    result = asyncio.run(execute_tool_async(module_path, tool_name, args))
+    result = asyncio.run(
+        execute_tool_async(module_path, tool_name, args, runtime_context)
+    )
 
     # Output result as JSON
     print(json.dumps(result))

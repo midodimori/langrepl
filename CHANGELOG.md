@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.9.4 (2025-12-15)
+
+### Bug Fixes
+
+- Breaking changes in langgraph-checkpoint-sqlite>=3.0.1
+  ([`fa3a72b`](https://github.com/midodimori/langrepl/commit/fa3a72b51ad55c6abf08d1740824bb46e1be4b40))
+
+
 ## v1.9.3 (2025-12-13)
 
 ### Bug Fixes

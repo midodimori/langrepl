@@ -4,6 +4,8 @@ import hashlib
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from langchain_mcp_adapters.sessions import Connection
+
 from src.core.settings import settings
 from src.mcp.client import MCPClient
 
@@ -56,7 +58,7 @@ class MCPFactory:
         if self._client and self._config_hash == config_hash:
             return self._client
 
-        server_config = {}
+        server_config: dict[str, Connection] = {}
         tool_filters = {}
         repair_commands = {}
         server_hashes = {}
@@ -78,20 +80,26 @@ class MCPFactory:
                 env.setdefault("HTTPS_PROXY", https_proxy)
                 env.setdefault("https_proxy", https_proxy)
 
-            server_dict: dict[str, Any] = {
-                "transport": server.transport,
-            }
+            server_dict: Connection | None = None
 
             if server.transport == "stdio":
                 if server.command:
-                    server_dict["command"] = server.command
-                server_dict["args"] = server.args
-                server_dict["env"] = env
+                    server_dict = {
+                        "transport": "stdio",
+                        "command": server.command,
+                        "args": server.args,
+                        "env": env,
+                    }
             elif server.transport == "streamable_http":
                 if server.url:
-                    server_dict["url"] = server.url
-                    if server.headers:
-                        server_dict["headers"] = server.headers
+                    server_dict = {
+                        "transport": "streamable_http",
+                        "url": server.url,
+                        "headers": server.headers,
+                    }
+
+            if server_dict is None:
+                continue
 
             server_config[name] = server_dict
 

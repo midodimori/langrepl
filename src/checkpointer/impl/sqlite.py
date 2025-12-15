@@ -28,6 +28,20 @@ class IndexedAsyncSqliteSaver(AsyncSqliteSaver, BaseCheckpointer):
 
     async def setup(self) -> None:
         """Initialize tables including message index table."""
+        # langgraph-checkpoint-sqlite>=3.0.1 calls Connection.is_alive(), but
+        # aiosqlite<=0.22 (current dependency) does not expose that helper.
+        # Provide a small shim so the parent setup remains compatible across
+        # versions without modifying upstream packages.
+        if not hasattr(self.conn, "is_alive"):
+
+            def _is_alive() -> bool:
+                return bool(
+                    getattr(self.conn, "_running", False)
+                    and getattr(self.conn, "_connection", None) is not None
+                )
+
+            setattr(self.conn, "is_alive", _is_alive)  # type: ignore[attr-defined]
+
         await super().setup()
 
         async with self.lock:

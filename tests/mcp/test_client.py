@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
@@ -18,7 +19,7 @@ class TestMCPClientGetTools:
             connections={"server1": Mock()},
             enable_approval=False,
         )
-        client.get_tools = AsyncMock(return_value=[mock_tool1, mock_tool2])
+        cast(Any, client).get_tools = AsyncMock(return_value=[mock_tool1, mock_tool2])
 
         tools = await client.get_mcp_tools()
 
@@ -36,7 +37,7 @@ class TestMCPClientGetTools:
             tool_filters=tool_filters,
             enable_approval=False,
         )
-        client.get_tools = AsyncMock(return_value=[mock_tool1, mock_tool2])
+        cast(Any, client).get_tools = AsyncMock(return_value=[mock_tool1, mock_tool2])
 
         tools = await client.get_mcp_tools()
 
@@ -55,7 +56,7 @@ class TestMCPClientGetTools:
             tool_filters=tool_filters,
             enable_approval=False,
         )
-        client.get_tools = AsyncMock(return_value=[mock_tool1, mock_tool2])
+        cast(Any, client).get_tools = AsyncMock(return_value=[mock_tool1, mock_tool2])
 
         tools = await client.get_mcp_tools()
 
@@ -73,7 +74,7 @@ class TestMCPClientGetTools:
             tool_filters=tool_filters,
             enable_approval=False,
         )
-        client.get_tools = AsyncMock(return_value=[mock_tool])
+        cast(Any, client).get_tools = AsyncMock(return_value=[mock_tool])
 
         tools = await client.get_mcp_tools()
 
@@ -94,7 +95,7 @@ class TestMCPClientGetTools:
             connections={"server1": Mock(), "server2": Mock()},
             enable_approval=False,
         )
-        client.get_tools = AsyncMock(side_effect=get_tools_side_effect)
+        cast(Any, client).get_tools = AsyncMock(side_effect=get_tools_side_effect)
 
         tools = await client.get_mcp_tools()
 
@@ -106,7 +107,7 @@ class TestMCPClientGetTools:
             connections={"server1": Mock()},
             enable_approval=False,
         )
-        client.get_tools = AsyncMock(side_effect=Exception("Server error"))
+        cast(Any, client).get_tools = AsyncMock(side_effect=Exception("Server error"))
 
         tools = await client.get_mcp_tools()
 
@@ -120,7 +121,7 @@ class TestMCPClientGetTools:
             connections={"server1": Mock()},
             enable_approval=True,
         )
-        client.get_tools = AsyncMock(return_value=[mock_tool])
+        cast(Any, client).get_tools = AsyncMock(return_value=[mock_tool])
 
         tools = await client.get_mcp_tools()
 

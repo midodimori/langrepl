@@ -1,4 +1,9 @@
-from src.agents.state import add_reducer, file_reducer, replace_reducer, sum_reducer
+from langrepl.agents.state import (
+    add_reducer,
+    file_reducer,
+    replace_reducer,
+    sum_reducer,
+)
 
 
 class TestFileReducer:

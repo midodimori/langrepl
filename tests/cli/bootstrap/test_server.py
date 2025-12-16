@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.cli.bootstrap.server import (
+from langrepl.cli.bootstrap.server import (
     _set_assistant_version,
     _upsert_assistant,
     _wait_for_server_ready,
@@ -14,7 +14,7 @@ from src.cli.bootstrap.server import (
     get_graph,
     handle_server_command,
 )
-from src.core.constants import CONFIG_LANGGRAPH_FILE_NAME
+from langrepl.core.constants import CONFIG_LANGGRAPH_FILE_NAME
 
 
 @pytest.fixture
@@ -44,7 +44,7 @@ def mock_subprocess():
 @pytest.fixture
 def patch_get_graph(mock_initializer):
     """Patch initializer for get_graph tests."""
-    with patch("src.cli.bootstrap.server.initializer", mock_initializer):
+    with patch("langrepl.cli.bootstrap.server.initializer", mock_initializer):
         yield mock_initializer
 
 
@@ -60,11 +60,12 @@ def patch_server_dependencies(
     mock_agent_config.llm = mock_llm_config
 
     with (
-        patch("src.cli.bootstrap.server.initializer", mock_initializer),
+        patch("langrepl.cli.bootstrap.server.initializer", mock_initializer),
         patch(
-            "src.cli.bootstrap.server.subprocess.Popen", return_value=mock_subprocess
+            "langrepl.cli.bootstrap.server.subprocess.Popen",
+            return_value=mock_subprocess,
         ) as mock_popen,
-        patch("src.cli.bootstrap.server.httpx.AsyncClient") as mock_client_cls,
+        patch("langrepl.cli.bootstrap.server.httpx.AsyncClient") as mock_client_cls,
     ):
         mock_client_cls.return_value.__aenter__ = AsyncMock(
             return_value=mock_http_client
@@ -103,7 +104,10 @@ class TestGenerateLanggraphJson:
         assert "dependencies" in config
         assert "graphs" in config
         assert "agent" in config["graphs"]
-        assert config["graphs"]["agent"] == "src/cli/bootstrap/server.py:get_graph"
+        assert (
+            config["graphs"]["agent"]
+            == "src/langrepl/cli/bootstrap/server.py:get_graph"
+        )
 
     def test_generate_langgraph_json_includes_env_when_exists(self, temp_dir):
         """Test that .env is included in config when it exists."""
@@ -263,7 +267,9 @@ class TestUpsertAssistant:
     """Tests for _upsert_assistant function."""
 
     @pytest.mark.asyncio
-    @patch("src.cli.bootstrap.server._set_assistant_version", new_callable=AsyncMock)
+    @patch(
+        "langrepl.cli.bootstrap.server._set_assistant_version", new_callable=AsyncMock
+    )
     async def test_upsert_assistant_creates_new_assistant(
         self,
         _mock_set_version,
@@ -387,7 +393,7 @@ class TestHandleServerCommand:
 
     @pytest.mark.asyncio
     @patch(
-        "src.cli.bootstrap.server._wait_for_server_ready",
+        "langrepl.cli.bootstrap.server._wait_for_server_ready",
         new_callable=AsyncMock,
         return_value=True,
     )
@@ -404,7 +410,7 @@ class TestHandleServerCommand:
 
     @pytest.mark.asyncio
     @patch(
-        "src.cli.bootstrap.server._wait_for_server_ready",
+        "langrepl.cli.bootstrap.server._wait_for_server_ready",
         new_callable=AsyncMock,
         return_value=False,
     )

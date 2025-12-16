@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.cli.handlers.tools import ToolsHandler
+from langrepl.cli.handlers.tools import ToolsHandler
 
 
 class TestToolsHandler:
@@ -27,7 +27,7 @@ class TestToolsHandler:
             await handler.handle(tools)
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.tools.Application")
+    @patch("langrepl.cli.handlers.tools.Application")
     async def test_get_tool_selection_with_empty_list(self, mock_app_cls, mock_session):
         """Test that _get_tool_selection returns None for no tools."""
         handler = ToolsHandler(mock_session)
@@ -37,7 +37,7 @@ class TestToolsHandler:
         mock_app_cls.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.tools.Application")
+    @patch("langrepl.cli.handlers.tools.Application")
     async def test_get_tool_selection_displays_tools(
         self, mock_app_cls, mock_session, create_mock_tool
     ):
@@ -53,7 +53,7 @@ class TestToolsHandler:
         mock_app.run_async.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.tools.Application")
+    @patch("langrepl.cli.handlers.tools.Application")
     async def test_get_tool_selection_keyboard_interrupt(
         self, mock_app_cls, mock_session, create_mock_tool
     ):
@@ -68,7 +68,7 @@ class TestToolsHandler:
         await handler._get_tool_selection(tools)
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.tools.Application")
+    @patch("langrepl.cli.handlers.tools.Application")
     async def test_get_tool_selection_eof_error(
         self, mock_app_cls, mock_session, create_mock_tool
     ):

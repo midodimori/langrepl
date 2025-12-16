@@ -5,10 +5,10 @@ from unittest.mock import Mock
 import pytest
 from langchain_core.messages import AIMessage
 
-from src.agents.context import AgentContext
-from src.agents.state import AgentState
-from src.core.config import ApprovalMode
-from src.middleware.token_cost import TokenCostMiddleware
+from langrepl.agents.context import AgentContext
+from langrepl.agents.state import AgentState
+from langrepl.configs import ApprovalMode
+from langrepl.middlewares.token_cost import TokenCostMiddleware
 
 
 class TestTokenCostMiddleware:

@@ -8,7 +8,7 @@ import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.types import Interrupt
 
-from src.cli.dispatchers.messages import MessageDispatcher
+from langrepl.cli.dispatchers.messages import MessageDispatcher
 
 
 class TestMessageDispatcher:
@@ -223,7 +223,7 @@ class TestMessageDispatcher:
         status_obj = MagicMock()
         with (
             patch(
-                "src.cli.dispatchers.messages.console.console.status",
+                "langrepl.cli.dispatchers.messages.console.console.status",
                 return_value=nullcontext(status_obj),
             ),
             patch.object(dispatcher, "_finalize_streaming", MagicMock()) as finalize,
@@ -341,7 +341,7 @@ class TestMessageDispatcher:
         mock_session.renderer.render_message.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("src.cli.dispatchers.messages.initializer")
+    @patch("langrepl.cli.dispatchers.messages.initializer")
     async def test_check_auto_compression_disabled(
         self,
         mock_initializer,
@@ -363,7 +363,7 @@ class TestMessageDispatcher:
         await dispatcher._check_auto_compression()
 
     @pytest.mark.asyncio
-    @patch("src.cli.dispatchers.messages.initializer")
+    @patch("langrepl.cli.dispatchers.messages.initializer")
     async def test_check_auto_compression_handles_exceptions(
         self,
         mock_initializer,

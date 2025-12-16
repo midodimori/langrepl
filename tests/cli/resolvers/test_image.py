@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.cli.resolvers.image import ImageResolver
+from langrepl.cli.resolvers.image import ImageResolver
 
 
 @pytest.fixture
@@ -201,7 +201,7 @@ class TestImageResolverGetImageFiles:
 
         # Mock execute_bash_command to return all files
         with patch(
-            "src.cli.resolvers.image.execute_bash_command",
+            "langrepl.cli.resolvers.image.execute_bash_command",
             new_callable=AsyncMock,
             return_value=(0, "photo.png\ndoc.txt\nscript.py\n", ""),
         ):
@@ -217,7 +217,7 @@ class TestImageResolverGetImageFiles:
     async def test_get_image_files_handles_empty_results(self, tmp_path):
         """Test that _get_image_files handles no results."""
         with patch(
-            "src.cli.resolvers.image.execute_bash_command",
+            "langrepl.cli.resolvers.image.execute_bash_command",
             new_callable=AsyncMock,
             return_value=(0, "", ""),
         ):
@@ -231,7 +231,7 @@ class TestImageResolverGetImageFiles:
         """Test that _get_image_files handles command failures."""
         # Mock both git and fd commands to fail
         with patch(
-            "src.cli.resolvers.image.execute_bash_command",
+            "langrepl.cli.resolvers.image.execute_bash_command",
             new_callable=AsyncMock,
             return_value=(1, "", "error"),
         ):

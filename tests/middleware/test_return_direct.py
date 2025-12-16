@@ -5,8 +5,8 @@ from unittest.mock import Mock
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
-from src.agents.state import AgentState
-from src.middleware.return_direct import ReturnDirectMiddleware
+from langrepl.agents.state import AgentState
+from langrepl.middlewares.return_direct import ReturnDirectMiddleware
 
 
 class TestReturnDirectMiddleware:

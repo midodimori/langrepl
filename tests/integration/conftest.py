@@ -18,8 +18,8 @@ def create_test_graph():
         from langgraph.graph import StateGraph
         from langgraph.prebuilt import ToolNode
 
-        from src.agents.context import AgentContext
-        from src.agents.state import AgentState
+        from langrepl.agents.context import AgentContext
+        from langrepl.agents.state import AgentState
 
         graph = StateGraph(AgentState, context_schema=AgentContext)
 

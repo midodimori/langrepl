@@ -1,9 +1,9 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from src.agents import deep_agent
-from src.agents.deep_agent import create_deep_agent
-from src.tools.subagents.task import SubAgent
+from langrepl.agents import deep_agent
+from langrepl.agents.deep_agent import create_deep_agent
+from langrepl.tools.subagents.task import SubAgent
 
 
 def test_create_deep_agent_builds_model_via_provider(monkeypatch):

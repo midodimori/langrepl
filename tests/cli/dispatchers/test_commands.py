@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.cli.dispatchers.commands import CommandDispatcher
+from langrepl.cli.dispatchers.commands import CommandDispatcher
 
 
 class TestCommandDispatcher:
@@ -153,7 +153,7 @@ class TestCommandDispatcher:
 
     @pytest.mark.asyncio
     @patch.object(CommandDispatcher, "tools_handler", create=True)
-    @patch("src.cli.dispatchers.commands.initializer")
+    @patch("langrepl.cli.dispatchers.commands.initializer")
     async def test_cmd_tools(
         self,
         mock_initializer_patch,
@@ -195,7 +195,7 @@ class TestCommandDispatcher:
         mock_memory_handler.handle.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.dispatchers.commands.console.clear")
+    @patch("langrepl.cli.dispatchers.commands.console.clear")
     async def test_cmd_clear(self, mock_clear, mock_session, mock_context):
         """Test cmd_clear creates new thread and clears screen."""
         mock_session.context = mock_context

@@ -498,7 +498,7 @@ agents:
 
 ### Custom Tools
 
-1. Implement in `src/tools/impl/my_tool.py`:
+1. Implement in `src/langrepl/tools/impl/my_tool.py`:
    ```python
    from langchain.tools import tool
 
@@ -508,7 +508,7 @@ agents:
        return result
    ```
 
-2. Register in `src/tools/factory.py`:
+2. Register in `src/langrepl/tools/factory.py`:
    ```python
    MY_TOOLS = [my_tool]
    self.impl_tools.extend(MY_TOOLS)

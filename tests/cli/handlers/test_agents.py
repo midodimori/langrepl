@@ -4,14 +4,14 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.cli.handlers.agents import AgentHandler
+from langrepl.cli.handlers.agents import AgentHandler
 
 
 class TestAgentHandler:
     """Tests for AgentHandler class."""
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.agents.initializer.load_agents_config")
+    @patch("langrepl.cli.handlers.agents.initializer.load_agents_config")
     async def test_handle_with_no_other_agents(
         self, mock_load_agents, mock_session, mock_agents_config
     ):
@@ -24,9 +24,9 @@ class TestAgentHandler:
         mock_load_agents.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.agents.initializer.update_default_agent")
-    @patch("src.cli.handlers.agents.initializer.load_agent_config")
-    @patch("src.cli.handlers.agents.initializer.load_agents_config")
+    @patch("langrepl.cli.handlers.agents.initializer.update_default_agent")
+    @patch("langrepl.cli.handlers.agents.initializer.load_agent_config")
+    @patch("langrepl.cli.handlers.agents.initializer.load_agents_config")
     async def test_handle_updates_context_on_selection(
         self,
         mock_load_agents,
@@ -66,7 +66,7 @@ class TestAgentHandler:
             )
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.agents.initializer.load_agents_config")
+    @patch("langrepl.cli.handlers.agents.initializer.load_agents_config")
     async def test_handle_does_not_update_on_cancel(
         self,
         mock_load_agents,
@@ -95,7 +95,7 @@ class TestAgentHandler:
             mock_session.update_context.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.agents.Application")
+    @patch("langrepl.cli.handlers.agents.Application")
     async def test_get_agent_selection_returns_selected_agent(
         self, mock_app_cls, mock_session, mock_agent_config, mock_llm_config
     ):
@@ -149,7 +149,7 @@ class TestAgentHandler:
         assert len(formatted) > 0
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.agents.initializer.load_agents_config")
+    @patch("langrepl.cli.handlers.agents.initializer.load_agents_config")
     async def test_handle_with_exception(self, mock_load_agents, mock_session):
         """Test that handle handles exceptions gracefully."""
         handler = AgentHandler(mock_session)

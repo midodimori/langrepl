@@ -8,9 +8,9 @@ import pytest
 from langchain.tools.tool_node import ToolCallRequest
 from langchain_core.messages import ToolMessage
 
-from src.agents.context import AgentContext
-from src.core.config import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
-from src.middleware.approval import (
+from langrepl.agents.context import AgentContext
+from langrepl.configs import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
+from langrepl.middlewares.approval import (
     DENY,
     ApprovalMiddleware,
     create_field_extractor,
@@ -234,7 +234,7 @@ class TestApprovalMiddleware:
             )
 
             # Mock the interrupt to return DENY
-            with patch("src.middleware.approval.interrupt", return_value=DENY):
+            with patch("langrepl.middlewares.approval.interrupt", return_value=DENY):
                 handler = AsyncMock()
                 result = await middleware.awrap_tool_call(request, handler)
 

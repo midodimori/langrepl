@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from src.agents.state import Todo
-from src.tools.internal.todo import read_todos, write_todos
+from langrepl.agents.state import Todo
+from langrepl.tools.internal.todo import read_todos, write_todos
 from tests.fixtures.tool_helpers import make_tool_call, run_tool
 
 

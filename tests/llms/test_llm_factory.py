@@ -1,8 +1,8 @@
 import pytest
 from pydantic import SecretStr
 
-from src.core.config import LLMProvider, RateConfig
-from src.llms.factory import LLMFactory
+from langrepl.configs import LLMProvider, RateConfig
+from langrepl.llms.factory import LLMFactory
 
 
 class TestLLMFactoryCreateLimiter:

@@ -1,6 +1,6 @@
 import pytest
 
-from src.mcp.factory import MCPFactory
+from langrepl.mcp.factory import MCPFactory
 
 
 class TestMCPFactory:

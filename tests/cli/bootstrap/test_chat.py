@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.cli.bootstrap.chat import handle_chat_command
+from langrepl.cli.bootstrap.chat import handle_chat_command
 
 
 class TestHandleChatCommand:
@@ -174,12 +174,12 @@ def patch_chat_dependencies(mock_context, mock_session):
     """Patch Context.create and Session for chat tests."""
     with (
         patch(
-            "src.cli.bootstrap.chat.Context.create", return_value=mock_context
+            "langrepl.cli.bootstrap.chat.Context.create", return_value=mock_context
         ) as mock_create,
         patch(
-            "src.cli.bootstrap.chat.Session", return_value=mock_session
+            "langrepl.cli.bootstrap.chat.Session", return_value=mock_session
         ) as mock_session_cls,
-        patch("src.cli.bootstrap.chat.enable_timer") as mock_enable_timer,
+        patch("langrepl.cli.bootstrap.chat.enable_timer") as mock_enable_timer,
     ):
         yield {
             "context_create": mock_create,

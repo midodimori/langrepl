@@ -2,7 +2,7 @@ import time
 
 import pytest
 
-from src.utils.rate_limiter import TokenBucketLimiter
+from langrepl.utils.rate_limiter import TokenBucketLimiter
 
 
 class TestTokenBucketLimiter:

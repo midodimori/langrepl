@@ -5,8 +5,8 @@ from unittest.mock import patch
 
 import pytest
 
-from src.cli.core.context import Context
-from src.core.config import ApprovalMode
+from langrepl.cli.core.context import Context
+from langrepl.configs import ApprovalMode
 
 
 def _configure_initializer_mock(target, source):
@@ -19,7 +19,7 @@ class TestContextCreate:
     """Tests for Context.create() classmethod."""
 
     @pytest.mark.asyncio
-    @patch("src.cli.core.context.initializer")
+    @patch("langrepl.cli.core.context.initializer")
     async def test_create_without_resume_generates_new_thread_id(
         self,
         mock_initializer_patch,
@@ -41,7 +41,7 @@ class TestContextCreate:
         mock_initializer.get_threads.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("src.cli.core.context.initializer")
+    @patch("langrepl.cli.core.context.initializer")
     async def test_create_with_resume_retrieves_latest_thread(
         self,
         mock_initializer_patch,
@@ -67,7 +67,7 @@ class TestContextCreate:
         mock_initializer.get_threads.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.core.context.initializer")
+    @patch("langrepl.cli.core.context.initializer")
     async def test_create_with_resume_generates_thread_when_none_exist(
         self,
         mock_initializer_patch,
@@ -91,7 +91,7 @@ class TestContextCreate:
         mock_initializer.get_threads.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.core.context.initializer")
+    @patch("langrepl.cli.core.context.initializer")
     async def test_create_with_custom_model(
         self,
         mock_initializer_patch,
@@ -115,7 +115,7 @@ class TestContextCreate:
         )
 
     @pytest.mark.asyncio
-    @patch("src.cli.core.context.initializer")
+    @patch("langrepl.cli.core.context.initializer")
     async def test_create_without_custom_model_uses_agent_llm(
         self,
         mock_initializer_patch,
@@ -137,7 +137,7 @@ class TestContextCreate:
         mock_initializer.load_llm_config.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("src.cli.core.context.initializer")
+    @patch("langrepl.cli.core.context.initializer")
     async def test_create_with_custom_approval_mode(
         self,
         mock_initializer_patch,
@@ -157,7 +157,7 @@ class TestContextCreate:
         assert context.approval_mode == ApprovalMode.ACTIVE
 
     @pytest.mark.asyncio
-    @patch("src.cli.core.context.initializer")
+    @patch("langrepl.cli.core.context.initializer")
     async def test_create_without_approval_mode_defaults_to_semi_active(
         self,
         mock_initializer_patch,
@@ -177,7 +177,7 @@ class TestContextCreate:
         assert context.approval_mode == ApprovalMode.SEMI_ACTIVE
 
     @pytest.mark.asyncio
-    @patch("src.cli.core.context.initializer")
+    @patch("langrepl.cli.core.context.initializer")
     async def test_create_populates_llm_config_fields(
         self,
         mock_initializer_patch,
@@ -200,7 +200,7 @@ class TestContextCreate:
         assert context.output_cost_per_mtok == mock_llm_config.output_cost_per_mtok
 
     @pytest.mark.asyncio
-    @patch("src.cli.core.context.initializer")
+    @patch("langrepl.cli.core.context.initializer")
     async def test_create_populates_agent_config_fields(
         self,
         mock_initializer_patch,
@@ -227,7 +227,7 @@ class TestContextCreate:
         assert context.tool_output_max_tokens == expected_tool_output_max_tokens
 
     @pytest.mark.asyncio
-    @patch("src.cli.core.context.initializer")
+    @patch("langrepl.cli.core.context.initializer")
     async def test_create_with_none_agent_uses_default(
         self,
         mock_initializer_patch,

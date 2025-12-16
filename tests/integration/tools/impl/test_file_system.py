@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from src.tools.impl.file_system import (
+from langrepl.tools.impl.file_system import (
     MoveOperation,
     create_dir,
     delete_dir,

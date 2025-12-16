@@ -4,13 +4,13 @@ from unittest.mock import patch
 
 import pytest
 
-from src.cli.bootstrap.timer import _Timer, enable_timer, timer
+from langrepl.cli.bootstrap.timer import _Timer, enable_timer, timer
 
 
 @pytest.fixture
 def mock_console():
     """Mock console for timer tests."""
-    with patch("src.cli.bootstrap.timer.console.console") as mock_console:
+    with patch("langrepl.cli.bootstrap.timer.console.console") as mock_console:
         yield mock_console
 
 
@@ -18,7 +18,7 @@ def mock_console():
 def mock_perf_counter():
     """Mock perf_counter that returns 0.0, then 1.5 seconds."""
     with patch(
-        "src.cli.bootstrap.timer.time.perf_counter", side_effect=[0.0, 1.5]
+        "langrepl.cli.bootstrap.timer.time.perf_counter", side_effect=[0.0, 1.5]
     ) as mock:
         yield mock
 
@@ -26,7 +26,7 @@ def mock_perf_counter():
 @pytest.fixture
 def timer_module_state():
     """Save and restore timer module's _enabled state."""
-    import src.cli.bootstrap.timer as timer_module
+    import langrepl.cli.bootstrap.timer as timer_module
 
     initial_state = timer_module._enabled
     yield timer_module
@@ -65,7 +65,7 @@ class TestTimer:
 
         assert result is timer_instance
 
-    @patch("src.cli.bootstrap.timer.time.perf_counter", side_effect=[0.0, 1.0])
+    @patch("langrepl.cli.bootstrap.timer.time.perf_counter", side_effect=[0.0, 1.0])
     def test_timer_handles_exception_in_context(
         self,
         _mock_perf_counter,
@@ -83,7 +83,7 @@ class TestTimer:
         mock_console.print.assert_called_once()
 
     @patch(
-        "src.cli.bootstrap.timer.time.perf_counter",
+        "langrepl.cli.bootstrap.timer.time.perf_counter",
         side_effect=[0.0, 0.123456],
     )
     def test_timer_formats_time_with_three_decimals(
@@ -168,7 +168,7 @@ class TestTimerFunction:
             pass
 
     @patch(
-        "src.cli.bootstrap.timer.time.perf_counter",
+        "langrepl.cli.bootstrap.timer.time.perf_counter",
         side_effect=[0.0, 2.5],
     )
     def test_timer_function_prints_when_enabled(
@@ -200,7 +200,7 @@ class TestTimerFunction:
         mock_console.print.assert_not_called()
 
     @patch(
-        "src.cli.bootstrap.timer.time.perf_counter",
+        "langrepl.cli.bootstrap.timer.time.perf_counter",
         side_effect=[0.0, 1.0, 2.0, 3.5],
     )
     def test_timer_function_multiple_timers_independent(

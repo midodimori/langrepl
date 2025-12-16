@@ -5,15 +5,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 from langgraph.checkpoint.base import CheckpointTuple
 
-from src.cli.handlers.compress import CompressionHandler
-from src.core.config import CompressionConfig
+from langrepl.cli.handlers.compress import CompressionHandler
+from langrepl.configs import CompressionConfig
 
 
 class TestCompressionHandler:
     """Tests for CompressionHandler class."""
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.compress.initializer.load_agents_config")
+    @patch("langrepl.cli.handlers.compress.initializer.load_agents_config")
     async def test_handle_with_agent_not_found(self, mock_load_agents, mock_session):
         """Test that handle shows error when agent not found."""
         handler = CompressionHandler(mock_session)
@@ -27,8 +27,8 @@ class TestCompressionHandler:
         mock_load_agents.assert_called_once_with(mock_session.context.working_dir)
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.compress.initializer.load_agents_config")
-    @patch("src.cli.handlers.compress.initializer.get_checkpointer")
+    @patch("langrepl.cli.handlers.compress.initializer.load_agents_config")
+    @patch("langrepl.cli.handlers.compress.initializer.get_checkpointer")
     async def test_handle_with_no_checkpoint(
         self,
         mock_get_checkpointer,
@@ -52,8 +52,8 @@ class TestCompressionHandler:
         mock_checkpointer.aget_tuple.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.compress.initializer.load_agents_config")
-    @patch("src.cli.handlers.compress.initializer.get_checkpointer")
+    @patch("langrepl.cli.handlers.compress.initializer.load_agents_config")
+    @patch("langrepl.cli.handlers.compress.initializer.get_checkpointer")
     async def test_handle_with_no_messages(
         self,
         mock_get_checkpointer,
@@ -85,11 +85,11 @@ class TestCompressionHandler:
         await handler.handle()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.compress.compress_messages")
-    @patch("src.cli.handlers.compress.calculate_message_tokens")
-    @patch("src.cli.handlers.compress.initializer.llm_factory")
-    @patch("src.cli.handlers.compress.initializer.load_agents_config")
-    @patch("src.cli.handlers.compress.initializer.get_checkpointer")
+    @patch("langrepl.cli.handlers.compress.compress_messages")
+    @patch("langrepl.cli.handlers.compress.calculate_message_tokens")
+    @patch("langrepl.cli.handlers.compress.initializer.llm_factory")
+    @patch("langrepl.cli.handlers.compress.initializer.load_agents_config")
+    @patch("langrepl.cli.handlers.compress.initializer.get_checkpointer")
     async def test_handle_compresses_successfully(
         self,
         mock_get_checkpointer,
@@ -128,7 +128,7 @@ class TestCompressionHandler:
         mock_calc_tokens.side_effect = [1000, 500]
         mock_compress.return_value = [sample_messages[0]]
 
-        with patch("src.cli.handlers.compress.console.console.status"):
+        with patch("langrepl.cli.handlers.compress.console.console.status"):
             await handler.handle()
 
             mock_compress.assert_called_once()
@@ -137,12 +137,12 @@ class TestCompressionHandler:
             mock_session.renderer.render_message.assert_called()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.compress.console.console.status")
-    @patch("src.cli.handlers.compress.compress_messages")
-    @patch("src.cli.handlers.compress.calculate_message_tokens")
-    @patch("src.cli.handlers.compress.initializer.llm_factory")
-    @patch("src.cli.handlers.compress.initializer.load_agents_config")
-    @patch("src.cli.handlers.compress.initializer.get_checkpointer")
+    @patch("langrepl.cli.handlers.compress.console.console.status")
+    @patch("langrepl.cli.handlers.compress.compress_messages")
+    @patch("langrepl.cli.handlers.compress.calculate_message_tokens")
+    @patch("langrepl.cli.handlers.compress.initializer.llm_factory")
+    @patch("langrepl.cli.handlers.compress.initializer.load_agents_config")
+    @patch("langrepl.cli.handlers.compress.initializer.get_checkpointer")
     async def test_handle_uses_custom_compression_config(
         self,
         mock_get_checkpointer,
@@ -195,7 +195,7 @@ class TestCompressionHandler:
         assert kwargs["prompt"] == "prompt"
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.compress.initializer.load_agents_config")
+    @patch("langrepl.cli.handlers.compress.initializer.load_agents_config")
     async def test_handle_with_exception(self, mock_load_agents, mock_session):
         """Test that handle handles exceptions gracefully."""
         handler = CompressionHandler(mock_session)

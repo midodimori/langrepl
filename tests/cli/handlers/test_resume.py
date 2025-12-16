@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langgraph.checkpoint.base import CheckpointTuple
 
-from src.cli.handlers.resume import ResumeHandler
+from langrepl.cli.handlers.resume import ResumeHandler
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ class TestResumeHandler:
     """Tests for ResumeHandler class."""
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.resume.initializer.get_threads")
+    @patch("langrepl.cli.handlers.resume.initializer.get_threads")
     async def test_handle_with_no_threads(self, mock_get_threads, mock_session):
         """Test that handle shows error when no threads found."""
         handler = ResumeHandler(mock_session)
@@ -35,7 +35,7 @@ class TestResumeHandler:
         )
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.resume.initializer.get_threads")
+    @patch("langrepl.cli.handlers.resume.initializer.get_threads")
     async def test_handle_filters_current_thread(self, mock_get_threads, mock_session):
         """Test that handle filters out current thread from list."""
         handler = ResumeHandler(mock_session)
@@ -52,7 +52,7 @@ class TestResumeHandler:
             mock_get_threads.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.resume.initializer.get_threads")
+    @patch("langrepl.cli.handlers.resume.initializer.get_threads")
     async def test_handle_loads_selected_thread(self, mock_get_threads, mock_session):
         """Test that handle loads selected thread."""
         handler = ResumeHandler(mock_session)
@@ -79,7 +79,7 @@ class TestResumeHandler:
             mock_load.assert_called_once_with("specific-thread", render_history=True)
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.resume.Application")
+    @patch("langrepl.cli.handlers.resume.Application")
     async def test_get_thread_selection_with_empty_list(
         self, mock_app_cls, mock_session
     ):
@@ -92,7 +92,7 @@ class TestResumeHandler:
         mock_app_cls.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.resume.Application")
+    @patch("langrepl.cli.handlers.resume.Application")
     async def test_get_thread_selection_with_selection(
         self, mock_app_cls, mock_session
     ):
@@ -112,7 +112,7 @@ class TestResumeHandler:
         mock_app.run_async.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.resume.Application")
+    @patch("langrepl.cli.handlers.resume.Application")
     async def test_get_thread_selection_keyboard_interrupt(
         self, mock_app_cls, mock_session
     ):
@@ -130,7 +130,7 @@ class TestResumeHandler:
         assert result == ""
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.resume.initializer.get_checkpointer")
+    @patch("langrepl.cli.handlers.resume.initializer.get_checkpointer")
     async def test_load_thread_with_no_checkpoint(
         self, mock_get_checkpointer, mock_session, mock_checkpointer
     ):
@@ -145,7 +145,7 @@ class TestResumeHandler:
         mock_checkpointer.aget_tuple.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.resume.initializer.get_checkpointer")
+    @patch("langrepl.cli.handlers.resume.initializer.get_checkpointer")
     async def test_load_thread_with_valid_checkpoint(
         self,
         mock_get_checkpointer,
@@ -183,7 +183,7 @@ class TestResumeHandler:
         mock_session.update_context.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.resume.initializer.get_checkpointer")
+    @patch("langrepl.cli.handlers.resume.initializer.get_checkpointer")
     async def test_load_thread_handles_exception(
         self, mock_get_checkpointer, mock_session
     ):
@@ -217,7 +217,7 @@ class TestResumeHandler:
         assert formatted is not None
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.resume.initializer.get_threads")
+    @patch("langrepl.cli.handlers.resume.initializer.get_threads")
     async def test_handle_with_exception(self, mock_get_threads, mock_session):
         """Test that handle handles exceptions gracefully."""
         handler = ResumeHandler(mock_session)

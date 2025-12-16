@@ -31,7 +31,7 @@ You assist the main agent by conducting **deep codebase exploration** on:
 
 ## Output Guidelines
 
-- Provide **specific file paths and line numbers** (e.g., `src/tools/factory.py:15`)
+- Provide **specific file paths and line numbers** (e.g., `src/langrepl/tools/factory.py:15`)
 - Explain **how code works**, not just where it is
 - Include **relevant code snippets** when helpful
 - Describe **relationships** between components

@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.skills.factory import Skill, SkillFactory
+from langrepl.skills.factory import Skill, SkillFactory
 
 
 class TestSkill:

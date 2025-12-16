@@ -1,7 +1,7 @@
 """Tests for MessageContentBuilder."""
 
-from src.cli.builders.message import MessageContentBuilder
-from src.cli.resolvers import RefType
+from langrepl.cli.builders.message import MessageContentBuilder
+from langrepl.cli.resolvers import RefType
 
 
 class TestExtractReferences:

@@ -1,4 +1,4 @@
-from src.utils.cost import (
+from langrepl.utils.cost import (
     calculate_context_percentage,
     calculate_cost,
     format_cost,

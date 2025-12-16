@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.cli.core.session import Session
+from langrepl.cli.core.session import Session
 
 
 class TestSessionInit:
@@ -32,7 +32,7 @@ class TestSessionInit:
         assert session.prefilled_text is None
         assert session.prefilled_reference_mapping == {}
 
-    @patch("src.cli.core.session.InteractivePrompt")
+    @patch("langrepl.cli.core.session.InteractivePrompt")
     def test_init_registers_mode_change_callback(
         self,
         mock_prompt_cls,
@@ -54,7 +54,7 @@ class TestSessionStart:
 
     @pytest.mark.asyncio
     @patch.object(Session, "_main_loop", new_callable=AsyncMock)
-    @patch("src.cli.core.session.initializer.get_graph")
+    @patch("langrepl.cli.core.session.initializer.get_graph")
     async def test_start_loads_graph(
         self,
         mock_get_graph,
@@ -77,7 +77,7 @@ class TestSessionStart:
 
     @pytest.mark.asyncio
     @patch.object(Session, "_main_loop", new_callable=AsyncMock)
-    @patch("src.cli.core.session.initializer.get_graph")
+    @patch("langrepl.cli.core.session.initializer.get_graph")
     async def test_start_shows_welcome_by_default(
         self,
         mock_get_graph,
@@ -101,7 +101,7 @@ class TestSessionStart:
 
     @pytest.mark.asyncio
     @patch.object(Session, "_main_loop", new_callable=AsyncMock)
-    @patch("src.cli.core.session.initializer.get_graph")
+    @patch("langrepl.cli.core.session.initializer.get_graph")
     async def test_start_hides_welcome_when_requested(
         self,
         mock_get_graph,
@@ -125,7 +125,7 @@ class TestSessionStart:
 
     @pytest.mark.asyncio
     @patch.object(Session, "_main_loop", new_callable=AsyncMock)
-    @patch("src.cli.core.session.initializer.get_graph")
+    @patch("langrepl.cli.core.session.initializer.get_graph")
     async def test_start_calls_main_loop(
         self,
         mock_get_graph,

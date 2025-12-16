@@ -1,4 +1,4 @@
-from src.tools.factory import ToolFactory
+from langrepl.tools.factory import ToolFactory
 
 
 class TestToolFactory:

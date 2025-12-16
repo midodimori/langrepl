@@ -5,7 +5,7 @@ import binascii
 
 import pytest
 
-from src.utils.image import (
+from langrepl.utils.image import (
     get_image_mime_type,
     is_image_file,
     is_image_path,

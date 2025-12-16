@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from src.tools.internal.memory import (
+from langrepl.tools.internal.memory import (
     edit_memory_file,
     list_memory_files,
     read_memory_file,

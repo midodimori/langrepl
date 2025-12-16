@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langgraph.types import Interrupt
 
-from src.cli.handlers.interrupts import InterruptHandler
-from src.middleware.approval import InterruptPayload
+from langrepl.cli.handlers.interrupts import InterruptHandler
+from langrepl.middlewares.approval import InterruptPayload
 
 
 class TestInterruptHandler:
@@ -22,7 +22,7 @@ class TestInterruptHandler:
         assert result is None
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.interrupts.PromptSession")
+    @patch("langrepl.cli.handlers.interrupts.PromptSession")
     async def test_handle_with_valid_choice(
         self, mock_prompt_session_cls, mock_session, mock_prompt_session
     ):
@@ -42,7 +42,7 @@ class TestInterruptHandler:
         assert result == "allow"
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.interrupts.PromptSession")
+    @patch("langrepl.cli.handlers.interrupts.PromptSession")
     async def test_handle_with_partial_match(
         self, mock_prompt_session_cls, mock_session, mock_prompt_session
     ):
@@ -62,7 +62,7 @@ class TestInterruptHandler:
         assert result == "allow"
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.interrupts.PromptSession")
+    @patch("langrepl.cli.handlers.interrupts.PromptSession")
     async def test_handle_with_case_insensitive_match(
         self, mock_prompt_session_cls, mock_session, mock_prompt_session
     ):
@@ -82,7 +82,7 @@ class TestInterruptHandler:
         assert result == "Allow"
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.interrupts.PromptSession")
+    @patch("langrepl.cli.handlers.interrupts.PromptSession")
     async def test_handle_with_empty_input_reprompts(
         self, mock_prompt_session_cls, mock_session, mock_prompt_session
     ):
@@ -103,7 +103,7 @@ class TestInterruptHandler:
         assert mock_prompt_session.prompt_async.call_count == 3
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.interrupts.PromptSession")
+    @patch("langrepl.cli.handlers.interrupts.PromptSession")
     async def test_handle_with_invalid_choice_reprompts(
         self, mock_prompt_session_cls, mock_session, mock_prompt_session
     ):
@@ -124,7 +124,7 @@ class TestInterruptHandler:
         assert mock_prompt_session.prompt_async.call_count == 2
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.interrupts.PromptSession")
+    @patch("langrepl.cli.handlers.interrupts.PromptSession")
     async def test_handle_with_ambiguous_choice_reprompts(
         self, mock_prompt_session_cls, mock_session, mock_prompt_session
     ):
@@ -145,7 +145,7 @@ class TestInterruptHandler:
         assert mock_prompt_session.prompt_async.call_count == 2
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.interrupts.PromptSession")
+    @patch("langrepl.cli.handlers.interrupts.PromptSession")
     async def test_handle_with_keyboard_interrupt(
         self, mock_prompt_session_cls, mock_session, mock_prompt_session
     ):
@@ -165,7 +165,7 @@ class TestInterruptHandler:
         assert result == ""
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.interrupts.PromptSession")
+    @patch("langrepl.cli.handlers.interrupts.PromptSession")
     async def test_handle_with_eof_error(
         self, mock_prompt_session_cls, mock_session, mock_prompt_session
     ):
@@ -197,7 +197,7 @@ class TestInterruptHandler:
         assert result is None
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.interrupts.PromptSession")
+    @patch("langrepl.cli.handlers.interrupts.PromptSession")
     async def test_handle_multiple_interrupts(
         self, mock_prompt_session_cls, mock_session, mock_prompt_session
     ):

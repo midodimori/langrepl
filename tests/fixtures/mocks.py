@@ -58,13 +58,16 @@ def mock_initializer(mock_agent_config, mock_llm_config, mock_checkpointer, mock
 @pytest.fixture
 def initializer():
     """Create a real Initializer instance for testing."""
-    from src.cli.bootstrap.initializer import Initializer
+    from langrepl.cli.bootstrap.initializer import Initializer
 
     return Initializer()
 
 
 @pytest_asyncio.fixture
-async def config_dir(temp_dir, initializer):
+async def config_dir(temp_dir):
     """Create and initialize config directory for tests."""
-    await initializer._ensure_config_dir(temp_dir)
+    from langrepl.configs import ConfigRegistry
+
+    registry = ConfigRegistry(temp_dir)
+    await registry.ensure_config_dir()
     return temp_dir

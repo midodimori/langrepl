@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from src.tools.impl.grep_search import OutputMode, grep_search
+from langrepl.tools.impl.grep_search import OutputMode, grep_search
 from tests.fixtures.tool_helpers import make_tool_call, run_tool
 
 

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from src.tools.impl.file_system import EditOperation, edit_file
+from langrepl.tools.impl.file_system import EditOperation, edit_file
 from tests.fixtures.tool_helpers import make_tool_call, run_tool
 
 

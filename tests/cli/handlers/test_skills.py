@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.cli.handlers.skills import SkillsHandler
-from src.skills.factory import Skill
+from langrepl.cli.handlers.skills import SkillsHandler
+from langrepl.skills.factory import Skill
 
 
 @pytest.fixture
@@ -33,7 +33,7 @@ class TestSkillsHandler:
         """Test that handle shows error when no skills available."""
         handler = SkillsHandler(mock_session)
 
-        with patch("src.cli.handlers.skills.console") as mock_console:
+        with patch("langrepl.cli.handlers.skills.console") as mock_console:
             await handler.handle([])
             mock_console.print_error.assert_called_once_with("No skills available")
 
@@ -50,7 +50,7 @@ class TestSkillsHandler:
             mock_selection.assert_called_once_with(skills)
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.skills.Application")
+    @patch("langrepl.cli.handlers.skills.Application")
     async def test_get_skill_selection_displays_skills(
         self, mock_app_cls, mock_session, create_mock_skill
     ):
@@ -66,7 +66,7 @@ class TestSkillsHandler:
         mock_app.run_async.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.skills.Application")
+    @patch("langrepl.cli.handlers.skills.Application")
     async def test_get_skill_selection_keyboard_interrupt(
         self, mock_app_cls, mock_session, create_mock_skill
     ):
@@ -81,7 +81,7 @@ class TestSkillsHandler:
         await handler._get_skill_selection(skills)
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.skills.Application")
+    @patch("langrepl.cli.handlers.skills.Application")
     async def test_get_skill_selection_eof_error(
         self, mock_app_cls, mock_session, create_mock_skill
     ):
@@ -129,8 +129,8 @@ class TestSkillsHandler:
         with patch.object(
             handler, "_get_skill_selection", side_effect=Exception("Test error")
         ):
-            with patch("src.cli.handlers.skills.console") as mock_console:
-                with patch("src.cli.handlers.skills.logger") as mock_logger:
+            with patch("langrepl.cli.handlers.skills.console") as mock_console:
+                with patch("langrepl.cli.handlers.skills.logger") as mock_logger:
                     await handler.handle(skills)
                     # Verify error message was printed
                     mock_console.print_error.assert_called_once()

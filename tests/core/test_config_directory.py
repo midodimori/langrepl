@@ -1,6 +1,10 @@
 import pytest
 
-from src.core.config import BatchAgentConfig, BatchCheckpointerConfig, BatchLLMConfig
+from langrepl.configs import (
+    BatchAgentConfig,
+    BatchCheckpointerConfig,
+    BatchLLMConfig,
+)
 
 
 @pytest.mark.asyncio

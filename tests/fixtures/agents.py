@@ -6,8 +6,8 @@ import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 from pydantic import SecretStr
 
-from src.core.config import AgentConfig, LLMConfig, LLMProvider
-from src.core.settings import LLMSettings
+from langrepl.configs import AgentConfig, LLMConfig, LLMProvider
+from langrepl.core.settings import LLMSettings
 
 
 @pytest.fixture
@@ -153,8 +153,8 @@ def create_mock_tool():
 @pytest.fixture
 def agent_context(temp_dir):
     """Create AgentContext for tests."""
-    from src.agents.context import AgentContext
-    from src.core.config import ApprovalMode
+    from langrepl.agents.context import AgentContext
+    from langrepl.configs import ApprovalMode
 
     return AgentContext(
         approval_mode=ApprovalMode.AGGRESSIVE,

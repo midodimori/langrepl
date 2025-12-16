@@ -4,8 +4,8 @@ import pytest
 from prompt_toolkit.completion import CompleteEvent
 from prompt_toolkit.document import Document
 
-from src.cli.completers.reference import ReferenceCompleter, parse_reference
-from src.cli.resolvers import RefType
+from langrepl.cli.completers.reference import ReferenceCompleter, parse_reference
+from langrepl.cli.resolvers import RefType
 
 
 class TestParseReference:

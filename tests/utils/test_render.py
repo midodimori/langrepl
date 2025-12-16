@@ -1,4 +1,4 @@
-from src.utils.render import (
+from langrepl.utils.render import (
     _adjust_diff_line_numbers,
     _find_content_line_number,
     format_tool_response,

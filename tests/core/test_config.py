@@ -1,7 +1,7 @@
 import pytest
 import yaml
 
-from src.core.config import (
+from langrepl.core.config import (
     BatchAgentConfig,
     BatchCheckpointerConfig,
     BatchLLMConfig,

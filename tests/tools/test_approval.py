@@ -1,5 +1,5 @@
-from src.core.config import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
-from src.middleware.approval import (
+from langrepl.core.config import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
+from langrepl.middlewares.approval import (
     ApprovalMiddleware,
     create_field_extractor,
     create_field_transformer,

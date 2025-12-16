@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from src.utils.time import format_relative_time
+from langrepl.utils.time import format_relative_time
 
 
 class TestFormatRelativeTime:

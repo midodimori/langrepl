@@ -3,7 +3,7 @@
 from prompt_toolkit.completion import CompleteEvent
 from prompt_toolkit.document import Document
 
-from src.cli.completers.slash import SlashCommandCompleter
+from langrepl.cli.completers.slash import SlashCommandCompleter
 
 
 class TestSlashCommandCompleter:

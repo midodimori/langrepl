@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.cli.dispatchers.messages import MessageDispatcher
+from langrepl.cli.dispatchers.messages import MessageDispatcher
 
 
 class TestBuildContentBlock:
@@ -12,7 +12,7 @@ class TestBuildContentBlock:
 
     def test_image_resolver_builds_block(self, create_test_image):
         """Test ImageResolver builds image content block."""
-        from src.cli.resolvers.image import ImageResolver
+        from langrepl.cli.resolvers.image import ImageResolver
 
         resolver = ImageResolver()
         image_path = create_test_image("photo")
@@ -27,7 +27,7 @@ class TestBuildContentBlock:
 
     def test_image_resolver_invalid_path(self):
         """Test ImageResolver raises FileNotFoundError for invalid path."""
-        from src.cli.resolvers.image import ImageResolver
+        from langrepl.cli.resolvers.image import ImageResolver
 
         resolver = ImageResolver()
         with pytest.raises(FileNotFoundError, match="Image not found"):
@@ -35,7 +35,7 @@ class TestBuildContentBlock:
 
     def test_file_resolver_returns_none(self):
         """Test FileResolver returns None (text-only)."""
-        from src.cli.resolvers.file import FileResolver
+        from langrepl.cli.resolvers.file import FileResolver
 
         resolver = FileResolver()
         block = resolver.build_content_block("/some/file.txt")

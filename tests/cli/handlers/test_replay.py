@@ -6,14 +6,14 @@ import pytest
 from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.base import CheckpointTuple
 
-from src.checkpointer.base import HumanMessageEntry
-from src.cli.handlers.replay import ReplayHandler
+from langrepl.checkpointer.base import HumanMessageEntry
+from langrepl.cli.handlers.replay import ReplayHandler
 
 
 @pytest.fixture
 def sample_replay_message():
     """Create a sample HumanMessageEntry for replay testing."""
-    from src.checkpointer.base import HumanMessageEntry
+    from langrepl.checkpointer.base import HumanMessageEntry
 
     return HumanMessageEntry(
         text="Hello",
@@ -63,7 +63,7 @@ class TestReplayHandler:
                 handler, "_replay_from_message", AsyncMock(return_value="cp1")
             ) as mock_replay,
             patch(
-                "src.cli.handlers.replay.initializer.get_checkpointer"
+                "langrepl.cli.handlers.replay.initializer.get_checkpointer"
             ) as mock_get_checkpointer,
         ):
             mock_get_checkpointer.return_value.__aenter__.return_value = (
@@ -100,7 +100,7 @@ class TestReplayHandler:
             assert mock_session.prefilled_text == ""
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.replay.initializer.get_checkpointer")
+    @patch("langrepl.cli.handlers.replay.initializer.get_checkpointer")
     async def test_get_human_messages_returns_messages(
         self,
         mock_get_checkpointer,
@@ -123,7 +123,7 @@ class TestReplayHandler:
             pending_writes=mock_checkpointer_tuple.pending_writes,
         )
 
-        from src.checkpointer.base import HumanMessageEntry
+        from langrepl.checkpointer.base import HumanMessageEntry
 
         mock_checkpointer.aget_tuple.return_value = checkpoint_tuple
         mock_checkpointer.get_human_messages = AsyncMock(
@@ -150,7 +150,7 @@ class TestReplayHandler:
         assert len(all_messages) > 0
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.replay.initializer.get_checkpointer")
+    @patch("langrepl.cli.handlers.replay.initializer.get_checkpointer")
     async def test_get_human_messages_with_no_checkpoint(
         self, mock_get_checkpointer, mock_session, mock_checkpointer
     ):
@@ -165,7 +165,7 @@ class TestReplayHandler:
         assert result == ([], [])
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.replay.Application")
+    @patch("langrepl.cli.handlers.replay.Application")
     async def test_get_message_selection_with_empty_list(
         self, mock_app_cls, mock_session
     ):
@@ -178,7 +178,7 @@ class TestReplayHandler:
         mock_app_cls.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.replay.Application")
+    @patch("langrepl.cli.handlers.replay.Application")
     async def test_get_message_selection_with_selection(
         self, mock_app_cls, mock_session, sample_replay_message
     ):
@@ -194,7 +194,7 @@ class TestReplayHandler:
         mock_app.run_async.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.replay.Application")
+    @patch("langrepl.cli.handlers.replay.Application")
     async def test_get_message_selection_keyboard_interrupt(
         self, mock_app_cls, mock_session, sample_replay_message
     ):
@@ -212,7 +212,7 @@ class TestReplayHandler:
 
     def test_format_message_list_formats_correctly(self):
         """Test that _format_message_list formats messages correctly."""
-        from src.checkpointer.base import HumanMessageEntry
+        from langrepl.checkpointer.base import HumanMessageEntry
 
         messages = [
             HumanMessageEntry(
@@ -229,7 +229,7 @@ class TestReplayHandler:
 
     def test_format_message_list_with_scrolling(self):
         """Test that _format_message_list handles scrolling window."""
-        from src.checkpointer.base import HumanMessageEntry
+        from langrepl.checkpointer.base import HumanMessageEntry
 
         messages = [
             HumanMessageEntry(
@@ -246,12 +246,12 @@ class TestReplayHandler:
         assert formatted is not None
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.replay.console.clear")
+    @patch("langrepl.cli.handlers.replay.console.clear")
     async def test_replay_from_message_clears_and_renders(
         self, mock_clear, mock_session
     ):
         """Test that _replay_from_message clears screen and renders messages."""
-        from src.checkpointer.base import HumanMessageEntry
+        from langrepl.checkpointer.base import HumanMessageEntry
 
         handler = ReplayHandler(mock_session)
 
@@ -294,7 +294,7 @@ class TestReplayHandler:
 
         with (
             patch(
-                "src.cli.handlers.replay.console.clear",
+                "langrepl.cli.handlers.replay.console.clear",
                 side_effect=Exception("Test error"),
             ),
             pytest.raises(Exception, match="Test error"),
@@ -325,7 +325,7 @@ class TestReplayHandler:
                 AsyncMock(side_effect=Exception("Replay failed")),
             ) as mock_replay,
             patch(
-                "src.cli.handlers.replay.initializer.get_checkpointer"
+                "langrepl.cli.handlers.replay.initializer.get_checkpointer"
             ) as mock_get_checkpointer,
         ):
             mock_get_checkpointer.return_value.__aenter__.return_value = (
@@ -366,7 +366,7 @@ class TestReplayHandler:
             ),
             patch.object(handler, "_get_message_selection", AsyncMock(return_value=0)),
             patch(
-                "src.cli.handlers.replay.initializer.get_checkpointer"
+                "langrepl.cli.handlers.replay.initializer.get_checkpointer"
             ) as mock_get_checkpointer,
         ):
             mock_get_checkpointer.return_value.__aenter__.return_value = (

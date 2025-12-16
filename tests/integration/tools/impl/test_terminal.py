@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from src.tools.impl.terminal import get_directory_structure, run_command
+from langrepl.tools.impl.terminal import get_directory_structure, run_command
 from tests.fixtures.tool_helpers import make_tool_call, run_tool
 
 

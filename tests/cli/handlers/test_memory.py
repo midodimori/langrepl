@@ -5,8 +5,8 @@ from unittest.mock import patch
 
 import pytest
 
-from src.cli.handlers.memory import MemoryHandler
-from src.core.constants import CONFIG_MEMORY_FILE_NAME
+from langrepl.cli.handlers.memory import MemoryHandler
+from langrepl.core.constants import CONFIG_MEMORY_FILE_NAME
 
 
 class TestMemoryHandler:
@@ -66,7 +66,7 @@ class TestMemoryHandler:
         assert mock_session.running is True
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.memory.settings")
+    @patch("langrepl.cli.handlers.memory.settings")
     @patch("subprocess.run")
     async def test_handle_uses_editor_from_settings(
         self, mock_run, mock_settings, mock_session

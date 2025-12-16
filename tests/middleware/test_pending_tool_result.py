@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage, ToolMessage
 
-from src.agents.state import AgentState
-from src.middleware.pending_tool_result import PendingToolResultMiddleware
+from langrepl.agents.state import AgentState
+from langrepl.middlewares.pending_tool_result import PendingToolResultMiddleware
 
 
 @pytest.fixture

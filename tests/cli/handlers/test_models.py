@@ -4,16 +4,16 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.cli.handlers.models import ModelHandler
-from src.core.config import AgentConfig
+from langrepl.cli.handlers.models import ModelHandler
+from langrepl.core.config import AgentConfig
 
 
 class TestModelHandler:
     """Tests for ModelHandler class."""
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.models.initializer.load_llms_config")
-    @patch("src.cli.handlers.models.initializer.load_agent_config")
+    @patch("langrepl.cli.handlers.models.initializer.load_llms_config")
+    @patch("langrepl.cli.handlers.models.initializer.load_agent_config")
     async def test_handle_with_no_other_models(
         self,
         mock_load_agent,
@@ -35,7 +35,7 @@ class TestModelHandler:
                 "_get_agent_selection",
                 return_value=("agent", "test-agent", mock_agent_config),
             ),
-            patch("src.cli.handlers.models.console") as mock_console,
+            patch("langrepl.cli.handlers.models.console") as mock_console,
         ):
             await handler.handle()
 
@@ -43,9 +43,9 @@ class TestModelHandler:
             mock_console.print_error.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.models.initializer.update_agent_llm")
-    @patch("src.cli.handlers.models.initializer.load_llms_config")
-    @patch("src.cli.handlers.models.initializer.load_agent_config")
+    @patch("langrepl.cli.handlers.models.initializer.update_agent_llm")
+    @patch("langrepl.cli.handlers.models.initializer.load_llms_config")
+    @patch("langrepl.cli.handlers.models.initializer.load_agent_config")
     async def test_handle_updates_agent_model(
         self,
         mock_load_agent,
@@ -83,9 +83,9 @@ class TestModelHandler:
             mock_session.update_context.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.models.initializer.update_subagent_llm")
-    @patch("src.cli.handlers.models.initializer.load_llms_config")
-    @patch("src.cli.handlers.models.initializer.load_agent_config")
+    @patch("langrepl.cli.handlers.models.initializer.update_subagent_llm")
+    @patch("langrepl.cli.handlers.models.initializer.load_llms_config")
+    @patch("langrepl.cli.handlers.models.initializer.load_agent_config")
     async def test_handle_updates_subagent_model(
         self,
         mock_load_agent,
@@ -128,7 +128,7 @@ class TestModelHandler:
             )
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.models.Application")
+    @patch("langrepl.cli.handlers.models.Application")
     async def test_get_agent_selection_with_no_agents(self, mock_app_cls, mock_session):
         """Test that _get_agent_selection returns None for empty list."""
         handler = ModelHandler(mock_session)
@@ -139,7 +139,7 @@ class TestModelHandler:
         mock_app_cls.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.models.Application")
+    @patch("langrepl.cli.handlers.models.Application")
     async def test_get_agent_selection_with_selection(
         self, mock_app_cls, mock_session, mock_agent_config
     ):
@@ -156,7 +156,7 @@ class TestModelHandler:
         mock_app.run_async.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.models.Application")
+    @patch("langrepl.cli.handlers.models.Application")
     async def test_get_agent_selection_keyboard_interrupt(
         self, mock_app_cls, mock_session, mock_agent_config
     ):
@@ -174,7 +174,7 @@ class TestModelHandler:
         assert result is None
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.models.Application")
+    @patch("langrepl.cli.handlers.models.Application")
     async def test_get_model_selection_with_no_models(self, mock_app_cls, mock_session):
         """Test that _get_model_selection returns empty string for no models."""
         handler = ModelHandler(mock_session)
@@ -185,7 +185,7 @@ class TestModelHandler:
         mock_app_cls.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.models.Application")
+    @patch("langrepl.cli.handlers.models.Application")
     async def test_get_model_selection_with_selection(
         self, mock_app_cls, mock_session, mock_llm_config
     ):
@@ -202,7 +202,7 @@ class TestModelHandler:
         mock_app.run_async.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.models.Application")
+    @patch("langrepl.cli.handlers.models.Application")
     async def test_get_model_selection_keyboard_interrupt(
         self, mock_app_cls, mock_session, mock_llm_config
     ):
@@ -245,7 +245,7 @@ class TestModelHandler:
         assert mock_llm_config.alias in formatted_str
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.models.initializer.load_agent_config")
+    @patch("langrepl.cli.handlers.models.initializer.load_agent_config")
     async def test_handle_with_exception(self, mock_load_agent, mock_session):
         """Test that handle handles exceptions gracefully."""
         handler = ModelHandler(mock_session)
@@ -256,8 +256,8 @@ class TestModelHandler:
         mock_load_agent.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.models.initializer.load_llms_config")
-    @patch("src.cli.handlers.models.initializer.load_agent_config")
+    @patch("langrepl.cli.handlers.models.initializer.load_llms_config")
+    @patch("langrepl.cli.handlers.models.initializer.load_agent_config")
     async def test_handle_cancelled_agent_selection(
         self, mock_load_agent, mock_load_llms, mock_session, mock_agent_config
     ):
@@ -271,8 +271,8 @@ class TestModelHandler:
             mock_load_llms.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.models.initializer.load_llms_config")
-    @patch("src.cli.handlers.models.initializer.load_agent_config")
+    @patch("langrepl.cli.handlers.models.initializer.load_llms_config")
+    @patch("langrepl.cli.handlers.models.initializer.load_agent_config")
     async def test_handle_cancelled_model_selection(
         self,
         mock_load_agent,

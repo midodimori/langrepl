@@ -4,7 +4,7 @@ import pytest
 from prompt_toolkit.completion import CompleteEvent
 from prompt_toolkit.document import Document
 
-from src.cli.completers.router import CompleterRouter
+from langrepl.cli.completers.router import CompleterRouter
 
 
 class TestCompleterRouter:

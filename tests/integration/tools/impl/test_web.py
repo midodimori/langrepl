@@ -5,13 +5,13 @@ from unittest.mock import patch
 
 import pytest
 
-from src.tools.impl.web import fetch_web_content
+from langrepl.tools.impl.web import fetch_web_content
 from tests.fixtures.tool_helpers import make_tool_call, run_tool
 
 
 @pytest.mark.asyncio
-@patch("src.tools.impl.web.trafilatura.extract")
-@patch("src.tools.impl.web.trafilatura.fetch_url")
+@patch("langrepl.tools.impl.web.trafilatura.extract")
+@patch("langrepl.tools.impl.web.trafilatura.fetch_url")
 async def test_fetch_web_content(
     mock_fetch,
     mock_extract,
@@ -39,8 +39,8 @@ async def test_fetch_web_content(
 
 
 @pytest.mark.asyncio
-@patch("src.tools.impl.web.trafilatura.extract")
-@patch("src.tools.impl.web.trafilatura.fetch_url")
+@patch("langrepl.tools.impl.web.trafilatura.extract")
+@patch("langrepl.tools.impl.web.trafilatura.fetch_url")
 async def test_fetch_web_content_no_content(
     mock_fetch,
     mock_extract,
@@ -65,7 +65,7 @@ async def test_fetch_web_content_no_content(
 
 
 @pytest.mark.asyncio
-@patch("src.tools.impl.web.trafilatura.fetch_url")
+@patch("langrepl.tools.impl.web.trafilatura.fetch_url")
 async def test_fetch_web_content_network_error(
     mock_fetch,
     create_test_graph,

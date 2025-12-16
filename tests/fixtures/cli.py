@@ -6,13 +6,13 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from prompt_toolkit.history import InMemoryHistory
 
-from src.core.config import ApprovalMode
+from langrepl.core.config import ApprovalMode
 
 
 @pytest.fixture
 def mock_context(temp_dir):
     """Create a mock CLI context for testing."""
-    from src.cli.core.context import Context
+    from langrepl.cli.core.context import Context
 
     return Context(
         agent="test-agent",
@@ -61,7 +61,7 @@ def mock_prompt_session():
 @pytest.fixture
 def mock_renderer():
     """Create a mock renderer for testing."""
-    from src.cli.ui.renderer import Renderer
+    from langrepl.cli.ui.renderer import Renderer
 
     renderer = MagicMock(spec=Renderer)
     renderer.render_message = MagicMock()
@@ -83,7 +83,7 @@ async def _empty_async_iter():
 @pytest.fixture
 def mock_completer():
     """Create a mock completer router for testing."""
-    from src.cli.completers.router import CompleterRouter
+    from langrepl.cli.completers.router import CompleterRouter
 
     completer = MagicMock(spec=CompleterRouter)
     completer.get_completions_async = MagicMock(

@@ -4,15 +4,15 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.cli.handlers.mcp import MCPHandler
-from src.core.config import MCPConfig
+from langrepl.cli.handlers.mcp import MCPHandler
+from langrepl.core.config import MCPConfig
 
 
 class TestMCPHandler:
     """Tests for MCPHandler class."""
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.mcp.initializer.load_mcp_config")
+    @patch("langrepl.cli.handlers.mcp.initializer.load_mcp_config")
     async def test_handle_with_no_servers(
         self, mock_load_mcp, mock_session, mock_mcp_config
     ):
@@ -25,8 +25,8 @@ class TestMCPHandler:
         mock_load_mcp.assert_called_once_with(mock_session.context.working_dir)
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.mcp.initializer.save_mcp_config")
-    @patch("src.cli.handlers.mcp.initializer.load_mcp_config")
+    @patch("langrepl.cli.handlers.mcp.initializer.save_mcp_config")
+    @patch("langrepl.cli.handlers.mcp.initializer.load_mcp_config")
     async def test_handle_with_servers_and_modifications(
         self, mock_load_mcp, mock_save_mcp, mock_session, mock_mcp_server_config
     ):
@@ -46,7 +46,7 @@ class TestMCPHandler:
             assert mock_session.running is False
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.mcp.initializer.load_mcp_config")
+    @patch("langrepl.cli.handlers.mcp.initializer.load_mcp_config")
     async def test_handle_with_no_modifications(
         self, mock_load_mcp, mock_session, mock_mcp_server_config
     ):
@@ -62,7 +62,7 @@ class TestMCPHandler:
             assert mock_session.needs_reload is False
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.mcp.Application")
+    @patch("langrepl.cli.handlers.mcp.Application")
     async def test_get_mcp_selection_with_empty_servers(
         self, mock_app_cls, mock_session
     ):
@@ -75,7 +75,7 @@ class TestMCPHandler:
         mock_app_cls.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.mcp.Application")
+    @patch("langrepl.cli.handlers.mcp.Application")
     async def test_get_mcp_selection_displays_servers(
         self, mock_app_cls, mock_session, mock_mcp_server_config
     ):
@@ -91,7 +91,7 @@ class TestMCPHandler:
         mock_app.run_async.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.mcp.Application")
+    @patch("langrepl.cli.handlers.mcp.Application")
     async def test_get_mcp_selection_keyboard_interrupt(
         self, mock_app_cls, mock_session, mock_mcp_server_config
     ):
@@ -108,7 +108,7 @@ class TestMCPHandler:
         assert result is False
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.mcp.Application")
+    @patch("langrepl.cli.handlers.mcp.Application")
     async def test_get_mcp_selection_eof_error(
         self, mock_app_cls, mock_session, mock_mcp_server_config
     ):
@@ -141,7 +141,7 @@ class TestMCPHandler:
         assert formatted is not None
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.mcp.initializer.load_mcp_config")
+    @patch("langrepl.cli.handlers.mcp.initializer.load_mcp_config")
     async def test_handle_with_exception(self, mock_load_mcp, mock_session):
         """Test that handle handles exceptions gracefully."""
         handler = MCPHandler(mock_session)

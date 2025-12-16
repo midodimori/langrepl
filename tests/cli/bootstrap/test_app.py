@@ -5,8 +5,8 @@ from unittest.mock import patch
 
 import pytest
 
-from src.cli.bootstrap.app import cli, create_parser, main
-from src.core.config import ApprovalMode
+from langrepl.cli.bootstrap.app import cli, create_parser, main
+from langrepl.core.config import ApprovalMode
 
 
 @pytest.fixture
@@ -232,7 +232,7 @@ class TestMain:
 class TestCli:
     """Tests for cli function."""
 
-    @patch("src.cli.bootstrap.app.sys.exit")
+    @patch("langrepl.cli.bootstrap.app.sys.exit")
     def test_cli_exits_with_return_code_zero(
         self,
         mock_exit,
@@ -248,7 +248,7 @@ class TestCli:
 
         mock_exit.assert_called_once_with(0)
 
-    @patch("src.cli.bootstrap.app.sys.exit")
+    @patch("langrepl.cli.bootstrap.app.sys.exit")
     def test_cli_exits_with_return_code_one(
         self,
         mock_exit,
@@ -265,7 +265,7 @@ class TestCli:
 
         mock_exit.assert_called_once_with(1)
 
-    @patch("src.cli.bootstrap.app.sys.exit")
+    @patch("langrepl.cli.bootstrap.app.sys.exit")
     def test_cli_handles_keyboard_interrupt(
         self,
         mock_exit,
@@ -282,7 +282,7 @@ class TestCli:
 
         mock_exit.assert_called_once_with(0)
 
-    @patch("src.cli.bootstrap.app.sys.exit")
+    @patch("langrepl.cli.bootstrap.app.sys.exit")
     def test_cli_handles_exception(
         self,
         mock_exit,
@@ -304,10 +304,12 @@ class TestCli:
 def patch_main_dependencies():
     """Patch create_parser and command handlers for main tests."""
     with (
-        patch("src.cli.bootstrap.app.create_parser") as mock_parser,
-        patch("src.cli.bootstrap.app.handle_chat_command", return_value=0) as mock_chat,
+        patch("langrepl.cli.bootstrap.app.create_parser") as mock_parser,
         patch(
-            "src.cli.bootstrap.app.handle_server_command", return_value=0
+            "langrepl.cli.bootstrap.app.handle_chat_command", return_value=0
+        ) as mock_chat,
+        patch(
+            "langrepl.cli.bootstrap.app.handle_server_command", return_value=0
         ) as mock_server,
     ):
         yield {

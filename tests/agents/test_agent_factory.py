@@ -1,4 +1,4 @@
-from src.agents.factory import AgentFactory
+from langrepl.agents.factory import AgentFactory
 
 
 class TestParseToolReferences:

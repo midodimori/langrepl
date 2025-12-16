@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, SystemMessage
 
-from src.utils.compression import (
+from langrepl.utils.compression import (
     calculate_message_tokens,
     compress_messages,
     should_auto_compress,

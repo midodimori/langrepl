@@ -9,7 +9,7 @@ from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.key_binding import KeyPressEvent
 from prompt_toolkit.keys import Keys
 
-from src.cli.ui.prompt import InteractivePrompt
+from langrepl.cli.ui.prompt import InteractivePrompt
 
 
 class TestInteractivePromptCtrlCBehavior:

@@ -79,13 +79,14 @@ Issues = "https://github.com/midodimori/langrepl/issues"
 Changelog = "https://github.com/midodimori/langrepl/blob/main/CHANGELOG.md"
 
 [project.scripts]
-langrepl = "src.cli.bootstrap.app:cli"
-lg = "src.cli.bootstrap.app:cli"
+langrepl = "langrepl.cli.bootstrap.app:cli"
+lg = "langrepl.cli.bootstrap.app:cli"
 
 
 
 [tool.mypy]
 python_version = "3.13"
+mypy_path = ["src"]
 
 [[tool.mypy.overrides]]
 module = [
@@ -96,8 +97,8 @@ ignore_missing_imports = true
 
 
 [tool.pytest.ini_options]
-# Add the project root to the Python path so that tests can import from src
-pythonpath = ["."]
+# Add project root (resources) and src to the Python path so tests can import langrepl and bundled resources
+pythonpath = [".", "src"]
 testpaths = ["tests"]
 filterwarnings = [
     "ignore:LangSmith now uses UUID v7:UserWarning:pydantic.v1.main",
@@ -124,7 +125,8 @@ dev = [
 
 
 [tool.hatch.build.targets.wheel]
-packages = ["src", "resources"]
+packages = ["src/langrepl", "resources"]
+force-include = {"src/langrepl/py.typed" = "langrepl/py.typed"}
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]

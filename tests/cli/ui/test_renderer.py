@@ -4,8 +4,8 @@ import re
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
-from src.cli.ui.markdown import wrap_html_in_code_blocks
-from src.cli.ui.renderer import Renderer
+from langrepl.cli.ui.markdown import wrap_html_in_code_blocks
+from langrepl.cli.ui.renderer import Renderer
 
 
 class TestRendererThinkingExtraction:

@@ -58,7 +58,7 @@ def mock_initializer(mock_agent_config, mock_llm_config, mock_checkpointer, mock
 @pytest.fixture
 def initializer():
     """Create a real Initializer instance for testing."""
-    from src.cli.bootstrap.initializer import Initializer
+    from langrepl.cli.bootstrap.initializer import Initializer
 
     return Initializer()
 

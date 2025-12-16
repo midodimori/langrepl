@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
-from src.mcp.client import MCPClient
-from src.tools.schema import ToolSchema
+from langrepl.mcp.client import MCPClient
+from langrepl.tools.schema import ToolSchema
 
 
 class TestMCPClientGetTools:

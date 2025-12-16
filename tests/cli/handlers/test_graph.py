@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.cli.handlers.graph import GraphHandler
+from langrepl.cli.handlers.graph import GraphHandler
 
 
 @pytest.fixture
@@ -19,7 +19,7 @@ class TestGraphHandler:
     """Tests for GraphHandler class."""
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.graph.console")
+    @patch("langrepl.cli.handlers.graph.console")
     async def test_handle_with_no_graph(self, mock_console, mock_session):
         """Test that handle shows error when no graph available."""
         handler = GraphHandler(mock_session)
@@ -78,7 +78,7 @@ class TestGraphHandler:
             )
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.graph.console")
+    @patch("langrepl.cli.handlers.graph.console")
     async def test_handle_with_exception(self, mock_console, mock_session):
         """Test that handle handles exceptions gracefully."""
         handler = GraphHandler(mock_session)
@@ -92,8 +92,8 @@ class TestGraphHandler:
         assert "Test error" in error_message
 
     @pytest.mark.asyncio
-    @patch("src.cli.handlers.graph.webbrowser.open")
-    @patch("src.cli.handlers.graph.tempfile.NamedTemporaryFile")
+    @patch("langrepl.cli.handlers.graph.webbrowser.open")
+    @patch("langrepl.cli.handlers.graph.tempfile.NamedTemporaryFile")
     async def test_try_render_png_success(
         self, mock_tempfile, mock_webbrowser, mock_session, mock_drawable_graph
     ):
@@ -105,7 +105,7 @@ class TestGraphHandler:
         mock_temp.__enter__.return_value = mock_temp
         mock_tempfile.return_value = mock_temp
 
-        with patch("src.cli.handlers.graph.Path") as mock_path_cls:
+        with patch("langrepl.cli.handlers.graph.Path") as mock_path_cls:
             mock_path = MagicMock()
             mock_html_path = MagicMock()
             mock_html_path.absolute.return_value = "/tmp/test.html"

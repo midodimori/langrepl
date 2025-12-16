@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.cli.bootstrap.initializer import Initializer
-from src.core.config import (
+from langrepl.cli.bootstrap.initializer import Initializer
+from langrepl.core.config import (
     AgentConfig,
     BatchAgentConfig,
     BatchCheckpointerConfig,
@@ -16,7 +16,7 @@ from src.core.config import (
     CheckpointerProvider,
     LLMConfig,
 )
-from src.core.constants import (
+from langrepl.core.constants import (
     CONFIG_AGENTS_DIR,
     CONFIG_CHECKPOINTERS_DIR,
     CONFIG_DIR_NAME,

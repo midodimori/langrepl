@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.9.5 (2025-12-16)
+
+### Refactoring
+
+- Code structure + config registry (#65) ([#65](https://github.com/midodimori/langrepl/pull/65),
+  [`d4bc23e`](https://github.com/midodimori/langrepl/commit/d4bc23e524ab20dba1aaf64564b3e6dd53aed4b3))
+
+
 ## v1.9.4 (2025-12-15)
 
 ### Bug Fixes

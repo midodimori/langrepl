@@ -1,6 +1,6 @@
 import pytest
 
-from langrepl.core.config import (
+from langrepl.configs import (
     BatchAgentConfig,
     BatchCheckpointerConfig,
     BatchLLMConfig,

@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from langrepl.checkpointer.base import BaseCheckpointer
 from langrepl.checkpointer.impl.memory import MemoryCheckpointer
 from langrepl.checkpointer.impl.sqlite import AsyncSqliteCheckpointer
-from langrepl.core.config import CheckpointerConfig, CheckpointerProvider
+from langrepl.configs import CheckpointerConfig, CheckpointerProvider
 
 
 class CheckpointerFactory:

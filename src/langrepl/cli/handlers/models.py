@@ -19,7 +19,7 @@ from langrepl.core.logging import get_logger
 from langrepl.core.settings import settings
 
 if TYPE_CHECKING:
-    from langrepl.core.config import AgentConfig, LLMConfig, SubAgentConfig
+    from langrepl.configs import AgentConfig, LLMConfig, SubAgentConfig
 
 logger = get_logger(__name__)
 

@@ -9,7 +9,7 @@ from langchain.tools.tool_node import ToolCallRequest
 from langchain_core.messages import ToolMessage
 
 from langrepl.agents.context import AgentContext
-from langrepl.core.config import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
+from langrepl.configs import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
 from langrepl.middlewares.approval import (
     DENY,
     ApprovalMiddleware,

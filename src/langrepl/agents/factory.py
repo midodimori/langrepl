@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from langrepl.agents.deep_agent import create_deep_agent
-from langrepl.core.config import LLMConfig
+from langrepl.configs import LLMConfig
 from langrepl.core.constants import (
     TOOL_CATEGORY_IMPL,
     TOOL_CATEGORY_INTERNAL,
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from langgraph.graph.state import CompiledStateGraph
 
     from langrepl.agents import ContextSchemaType, StateSchemaType
-    from langrepl.core.config import (
+    from langrepl.configs import (
         AgentConfig,
         SkillsConfig,
         SubAgentConfig,

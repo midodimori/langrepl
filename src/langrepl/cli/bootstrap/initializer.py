@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-import shutil
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from importlib.resources import files
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -16,37 +14,25 @@ from langrepl.agents.state import AgentState
 from langrepl.checkpointer.base import BaseCheckpointer
 from langrepl.checkpointer.factory import CheckpointerFactory
 from langrepl.cli.bootstrap.timer import timer
-from langrepl.core.config import (
+from langrepl.configs import (
     AgentConfig,
     BatchAgentConfig,
     BatchCheckpointerConfig,
     BatchLLMConfig,
     BatchSubAgentConfig,
     CheckpointerConfig,
+    ConfigRegistry,
     LLMConfig,
     MCPConfig,
 )
 from langrepl.core.constants import (
-    CONFIG_AGENTS_DIR,
-    CONFIG_AGENTS_FILE_NAME,
-    CONFIG_APPROVAL_FILE_NAME,
-    CONFIG_CHECKPOINTERS_DIR,
-    CONFIG_CHECKPOINTERS_FILE_NAME,
     CONFIG_CHECKPOINTS_URL_FILE_NAME,
-    CONFIG_DIR_NAME,
-    CONFIG_LLMS_DIR,
-    CONFIG_LLMS_FILE_NAME,
     CONFIG_MCP_CACHE_DIR,
-    CONFIG_MCP_FILE_NAME,
-    CONFIG_MEMORY_FILE_NAME,
     CONFIG_SKILLS_DIR,
-    CONFIG_SUBAGENTS_DIR,
-    CONFIG_SUBAGENTS_FILE_NAME,
 )
 from langrepl.core.settings import settings
 from langrepl.llms.factory import LLMFactory
 from langrepl.mcp.factory import MCPFactory
-from langrepl.skills.factory import SkillFactory
 from langrepl.tools.factory import ToolFactory
 
 if TYPE_CHECKING:
@@ -57,10 +43,12 @@ if TYPE_CHECKING:
 
 
 class Initializer:
-    """Centralized service"""
+    """Centralized service for initializing and managing agent resources."""
 
     def __init__(self):
         self.tool_factory = ToolFactory()
+        from langrepl.skills.factory import SkillFactory
+
         self.skill_factory = SkillFactory()
         self.llm_factory = LLMFactory(settings.llm)
         self.mcp_factory = MCPFactory()
@@ -74,189 +62,72 @@ class Initializer:
         self.cached_tools_in_catalog: list[BaseTool] = []
         self.cached_agent_skills: list[Skill] = []
 
-    @staticmethod
-    async def _ensure_config_dir(working_dir: Path):
-        """Ensure config directory exists, copy from template if needed."""
-        target_config_dir = Path(working_dir) / CONFIG_DIR_NAME
-        if not target_config_dir.exists():
-            template_config_dir = Path(str(files("resources") / "configs" / "default"))
+        # Registry cache per working_dir
+        self._registries: dict[Path, ConfigRegistry] = {}
 
-            await asyncio.to_thread(
-                shutil.copytree,
-                template_config_dir,
-                target_config_dir,
-                ignore=shutil.ignore_patterns(
-                    CONFIG_CHECKPOINTS_URL_FILE_NAME.name.replace(".db", ".*"),
-                    CONFIG_APPROVAL_FILE_NAME.name,
-                ),
-            )
-
-        # Ensure CONFIG_DIR_NAME is ignored in git (local-only, not committed)
-        git_info_exclude = Path(working_dir) / ".git" / "info" / "exclude"
-        if git_info_exclude.parent.exists():
-            try:
-                existing_content = ""
-                if git_info_exclude.exists():
-                    existing_content = await asyncio.to_thread(
-                        git_info_exclude.read_text
-                    )
-
-                ignore_pattern = f"{CONFIG_DIR_NAME}/"
-                if ignore_pattern not in existing_content:
-
-                    def write_exclude():
-                        with git_info_exclude.open("a") as f:
-                            f.write(f"\n# Langrepl configuration\n{ignore_pattern}\n")
-
-                    await asyncio.to_thread(write_exclude)
-            except Exception:
-                pass
+    def get_registry(self, working_dir: Path) -> ConfigRegistry:
+        """Get or create a ConfigRegistry for the given working directory."""
+        if working_dir not in self._registries:
+            self._registries[working_dir] = ConfigRegistry(working_dir)
+        return self._registries[working_dir]
 
     async def load_llms_config(self, working_dir: Path) -> BatchLLMConfig:
         """Load LLMs configuration."""
-        await self._ensure_config_dir(working_dir)
-        return await BatchLLMConfig.from_yaml(
-            file_path=Path(working_dir) / CONFIG_LLMS_FILE_NAME,
-            dir_path=Path(working_dir) / CONFIG_LLMS_DIR,
-        )
+        return await self.get_registry(working_dir).load_llms()
 
     async def load_llm_config(self, model: str, working_dir: Path) -> LLMConfig:
         """Load LLM configuration by name."""
-        llm_configs = await self.load_llms_config(working_dir)
-        llm = llm_configs.get_llm_config(model)
-        if llm:
-            return llm
-        else:
-            raise ValueError(
-                f"LLM '{model}' not found. Available: {llm_configs.llm_names}"
-            )
+        return await self.get_registry(working_dir).get_llm(model)
 
     async def load_checkpointers_config(
         self, working_dir: Path
     ) -> BatchCheckpointerConfig:
         """Load checkpointers configuration."""
-        await self._ensure_config_dir(working_dir)
-        return await BatchCheckpointerConfig.from_yaml(
-            file_path=Path(working_dir) / CONFIG_CHECKPOINTERS_FILE_NAME,
-            dir_path=Path(working_dir) / CONFIG_CHECKPOINTERS_DIR,
-        )
+        return await self.get_registry(working_dir).load_checkpointers()
 
     async def load_subagents_config(self, working_dir: Path) -> BatchSubAgentConfig:
         """Load subagents configuration."""
-        await self._ensure_config_dir(working_dir)
-
-        llm_config = None
-        if (Path(working_dir) / CONFIG_LLMS_FILE_NAME).exists() or (
-            Path(working_dir) / CONFIG_LLMS_DIR
-        ).exists():
-            llm_config = await self.load_llms_config(working_dir)
-
-        return await BatchSubAgentConfig.from_yaml(
-            file_path=Path(working_dir) / CONFIG_SUBAGENTS_FILE_NAME,
-            dir_path=Path(working_dir) / CONFIG_SUBAGENTS_DIR,
-            batch_llm_config=llm_config,
-        )
+        return await self.get_registry(working_dir).load_subagents()
 
     async def load_agents_config(self, working_dir: Path) -> BatchAgentConfig:
         """Load agents configuration with resolved subagent references."""
-        await self._ensure_config_dir(working_dir)
-
-        llm_config = None
-        checkpointer_config = None
-        if (Path(working_dir) / CONFIG_LLMS_FILE_NAME).exists() or (
-            Path(working_dir) / CONFIG_LLMS_DIR
-        ).exists():
-            llm_config = await self.load_llms_config(working_dir)
-        if (Path(working_dir) / CONFIG_CHECKPOINTERS_FILE_NAME).exists() or (
-            Path(working_dir) / CONFIG_CHECKPOINTERS_DIR
-        ).exists():
-            checkpointer_config = await self.load_checkpointers_config(working_dir)
-
-        subagents_config = None
-        if (Path(working_dir) / CONFIG_SUBAGENTS_FILE_NAME).exists() or (
-            Path(working_dir) / CONFIG_SUBAGENTS_DIR
-        ).exists():
-            subagents_config = await self.load_subagents_config(working_dir)
-
-        return await BatchAgentConfig.from_yaml(
-            file_path=Path(working_dir) / CONFIG_AGENTS_FILE_NAME,
-            dir_path=Path(working_dir) / CONFIG_AGENTS_DIR,
-            batch_llm_config=llm_config,
-            batch_checkpointer_config=checkpointer_config,
-            batch_subagent_config=subagents_config,
-        )
+        return await self.get_registry(working_dir).load_agents()
 
     async def load_agent_config(
         self, agent: str | None, working_dir: Path
     ) -> AgentConfig:
         """Load agent configuration by name."""
-        agent_configs = await self.load_agents_config(working_dir)
-        agent_config = agent_configs.get_agent_config(agent)
-        if agent_config:
-            return agent_config
-        raise ValueError(
-            f"Agent '{agent}' not found. Available: {agent_configs.agent_names}"
-        )
+        return await self.get_registry(working_dir).get_agent(agent)
 
-    @staticmethod
-    async def load_mcp_config(working_dir: Path) -> MCPConfig:
+    async def load_mcp_config(self, working_dir: Path) -> MCPConfig:
         """Get MCP configuration."""
-        return await MCPConfig.from_json(Path(working_dir) / CONFIG_MCP_FILE_NAME)
+        return await self.get_registry(working_dir).load_mcp()
 
-    @staticmethod
-    async def save_mcp_config(mcp_config: MCPConfig, working_dir: Path):
+    async def save_mcp_config(self, mcp_config: MCPConfig, working_dir: Path) -> None:
         """Save MCP configuration."""
-        mcp_config.to_json(Path(working_dir) / CONFIG_MCP_FILE_NAME)
+        await self.get_registry(working_dir).save_mcp(mcp_config)
 
-    @staticmethod
-    async def update_agent_llm(agent_name: str, new_llm_name: str, working_dir: Path):
+    async def update_agent_llm(
+        self, agent_name: str, new_llm_name: str, working_dir: Path
+    ) -> None:
         """Update a specific agent's LLM in the config file."""
-        await BatchAgentConfig.update_agent_llm(
-            file_path=Path(working_dir) / CONFIG_AGENTS_FILE_NAME,
-            agent_name=agent_name,
-            new_llm_name=new_llm_name,
-            dir_path=Path(working_dir) / CONFIG_AGENTS_DIR,
-        )
+        await self.get_registry(working_dir).update_agent_llm(agent_name, new_llm_name)
 
-    @staticmethod
     async def update_subagent_llm(
-        subagent_name: str, new_llm_name: str, working_dir: Path
-    ):
+        self, subagent_name: str, new_llm_name: str, working_dir: Path
+    ) -> None:
         """Update a specific subagent's LLM in the config file."""
-        await BatchAgentConfig.update_agent_llm(
-            file_path=Path(working_dir) / CONFIG_SUBAGENTS_FILE_NAME,
-            agent_name=subagent_name,
-            new_llm_name=new_llm_name,
-            dir_path=Path(working_dir) / CONFIG_SUBAGENTS_DIR,
+        await self.get_registry(working_dir).update_subagent_llm(
+            subagent_name, new_llm_name
         )
 
-    @staticmethod
-    async def update_default_agent(agent_name: str, working_dir: Path):
+    async def update_default_agent(self, agent_name: str, working_dir: Path) -> None:
         """Update which agent is marked as default in the config file."""
-        await BatchAgentConfig.update_default_agent(
-            file_path=Path(working_dir) / CONFIG_AGENTS_FILE_NAME,
-            agent_name=agent_name,
-            dir_path=Path(working_dir) / CONFIG_AGENTS_DIR,
-        )
+        await self.get_registry(working_dir).update_default_agent(agent_name)
 
-    @staticmethod
-    async def load_user_memory(working_dir: Path) -> str:
-        """Load user memory from project-specific memory file.
-
-        Args:
-            working_dir: Project working directory
-
-        Returns:
-            Formatted user memory string for prompt injection, or empty string if no memory
-        """
-
-        memory_path = working_dir / CONFIG_MEMORY_FILE_NAME
-        if memory_path.exists():
-            content = await asyncio.to_thread(memory_path.read_text)
-            content = content.strip()
-            if content:
-                return f"<user-memory>\n{content}\n</user-memory>"
-        return ""
+    async def load_user_memory(self, working_dir: Path) -> str:
+        """Load user memory from project-specific memory file."""
+        return await self.get_registry(working_dir).load_user_memory()
 
     @asynccontextmanager
     async def get_checkpointer(
@@ -278,17 +149,19 @@ class Initializer:
         working_dir: Path,
     ) -> AsyncIterator[CompiledStateGraph]:
         """Get compiled graph for agent."""
+        registry = self.get_registry(working_dir)
+
         with timer("Load configs"):
             if model:
                 agent_config, llm_config, mcp_config = await asyncio.gather(
-                    self.load_agent_config(agent, working_dir),
-                    self.load_llm_config(model, working_dir),
-                    self.load_mcp_config(working_dir),
+                    registry.get_agent(agent),
+                    registry.get_llm(model),
+                    registry.load_mcp(),
                 )
             else:
                 agent_config, mcp_config = await asyncio.gather(
-                    self.load_agent_config(agent, working_dir),
-                    self.load_mcp_config(working_dir),
+                    registry.get_agent(agent),
+                    registry.load_mcp(),
                 )
                 llm_config = None
 

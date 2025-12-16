@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from langrepl.cli.bootstrap.app import cli, create_parser, main
-from langrepl.core.config import ApprovalMode
+from langrepl.configs import ApprovalMode
 
 
 @pytest.fixture

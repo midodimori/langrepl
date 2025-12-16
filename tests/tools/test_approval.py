@@ -1,4 +1,4 @@
-from langrepl.core.config import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
+from langrepl.configs import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
 from langrepl.middlewares.approval import (
     ApprovalMiddleware,
     create_field_extractor,

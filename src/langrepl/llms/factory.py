@@ -6,7 +6,7 @@ import httpx
 from botocore.config import Config
 from pydantic import SecretStr
 
-from langrepl.core.config import LLMConfig, LLMProvider
+from langrepl.configs import LLMConfig, LLMProvider
 from langrepl.core.settings import LLMSettings
 from langrepl.utils.rate_limiter import TokenBucketLimiter
 

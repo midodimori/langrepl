@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from langrepl.cli.handlers.models import ModelHandler
-from langrepl.core.config import AgentConfig
+from langrepl.configs import AgentConfig
 
 
 class TestModelHandler:

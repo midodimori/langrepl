@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from langrepl.cli.core.context import Context
-from langrepl.core.config import ApprovalMode
+from langrepl.configs import ApprovalMode
 
 
 def _configure_initializer_mock(target, source):

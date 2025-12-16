@@ -6,7 +6,7 @@ import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 from pydantic import SecretStr
 
-from langrepl.core.config import AgentConfig, LLMConfig, LLMProvider
+from langrepl.configs import AgentConfig, LLMConfig, LLMProvider
 from langrepl.core.settings import LLMSettings
 
 
@@ -154,7 +154,7 @@ def create_mock_tool():
 def agent_context(temp_dir):
     """Create AgentContext for tests."""
     from langrepl.agents.context import AgentContext
-    from langrepl.core.config import ApprovalMode
+    from langrepl.configs import ApprovalMode
 
     return AgentContext(
         approval_mode=ApprovalMode.AGGRESSIVE,

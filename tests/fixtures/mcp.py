@@ -2,7 +2,7 @@
 
 import pytest
 
-from langrepl.core.config import MCPConfig, MCPServerConfig
+from langrepl.configs import MCPConfig, MCPServerConfig
 
 
 @pytest.fixture

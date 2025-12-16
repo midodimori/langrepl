@@ -7,7 +7,7 @@ from langchain_core.messages import AIMessage
 
 from langrepl.agents.context import AgentContext
 from langrepl.agents.state import AgentState
-from langrepl.core.config import ApprovalMode
+from langrepl.configs import ApprovalMode
 from langrepl.middlewares.token_cost import TokenCostMiddleware
 
 

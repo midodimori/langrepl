@@ -6,7 +6,7 @@ import pytest
 from langgraph.checkpoint.base import CheckpointTuple
 
 from langrepl.cli.handlers.compress import CompressionHandler
-from langrepl.core.config import CompressionConfig
+from langrepl.configs import CompressionConfig
 
 
 class TestCompressionHandler:

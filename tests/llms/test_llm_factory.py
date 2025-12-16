@@ -1,7 +1,7 @@
 import pytest
 from pydantic import SecretStr
 
-from langrepl.core.config import LLMProvider, RateConfig
+from langrepl.configs import LLMProvider, RateConfig
 from langrepl.llms.factory import LLMFactory
 
 

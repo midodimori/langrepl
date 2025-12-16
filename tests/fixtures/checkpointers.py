@@ -7,7 +7,7 @@ import pytest
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import CheckpointTuple
 
-from langrepl.core.config import CheckpointerConfig, CheckpointerProvider
+from langrepl.configs import CheckpointerConfig, CheckpointerProvider
 
 
 @pytest.fixture

@@ -64,7 +64,10 @@ def initializer():
 
 
 @pytest_asyncio.fixture
-async def config_dir(temp_dir, initializer):
+async def config_dir(temp_dir):
     """Create and initialize config directory for tests."""
-    await initializer._ensure_config_dir(temp_dir)
+    from langrepl.configs import ConfigRegistry
+
+    registry = ConfigRegistry(temp_dir)
+    await registry.ensure_config_dir()
     return temp_dir

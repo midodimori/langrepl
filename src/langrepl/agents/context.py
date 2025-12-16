@@ -6,7 +6,7 @@ from typing import Any
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
-from langrepl.core.config import ApprovalMode
+from langrepl.configs import ApprovalMode
 from langrepl.skills.factory import Skill
 
 

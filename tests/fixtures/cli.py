@@ -6,7 +6,19 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from prompt_toolkit.history import InMemoryHistory
 
-from langrepl.core.config import ApprovalMode
+from langrepl.configs import ApprovalMode, ConfigRegistry
+
+
+@pytest.fixture
+def registry(temp_dir):
+    """Create a ConfigRegistry for testing."""
+    return ConfigRegistry(temp_dir)
+
+
+@pytest.fixture
+def config_registry(config_dir):
+    """Create a ConfigRegistry with initialized config directory."""
+    return ConfigRegistry(config_dir)
 
 
 @pytest.fixture

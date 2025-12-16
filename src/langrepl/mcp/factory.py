@@ -10,7 +10,7 @@ from langrepl.core.settings import settings
 from langrepl.mcp.client import MCPClient
 
 if TYPE_CHECKING:
-    from langrepl.core.config import MCPConfig, MCPServerConfig
+    from langrepl.configs import MCPConfig, MCPServerConfig
 
 
 class MCPFactory:

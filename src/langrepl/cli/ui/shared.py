@@ -9,7 +9,7 @@ from prompt_toolkit.layout.controls import FormattedTextControl
 from prompt_toolkit.styles import Style
 
 from langrepl.cli.theme import theme
-from langrepl.core.config import ApprovalMode
+from langrepl.configs import ApprovalMode
 from langrepl.utils.version import get_version
 
 

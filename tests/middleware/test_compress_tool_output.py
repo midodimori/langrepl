@@ -9,7 +9,7 @@ from langchain_core.messages import ToolMessage
 from langgraph.types import Command
 
 from langrepl.agents.context import AgentContext
-from langrepl.core.config import ApprovalMode
+from langrepl.configs import ApprovalMode
 from langrepl.middlewares.compress_tool_output import CompressToolOutputMiddleware
 from langrepl.tools.internal.memory import read_memory_file
 

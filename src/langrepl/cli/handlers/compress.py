@@ -11,7 +11,7 @@ from langchain_core.runnables import RunnableConfig
 from langrepl.agents.context import AgentContext
 from langrepl.cli.bootstrap.initializer import initializer
 from langrepl.cli.theme import console, theme
-from langrepl.core.config import CompressionConfig
+from langrepl.configs import CompressionConfig
 from langrepl.core.constants import OS_VERSION, PLATFORM
 from langrepl.core.logging import get_logger
 from langrepl.utils.compression import calculate_message_tokens, compress_messages

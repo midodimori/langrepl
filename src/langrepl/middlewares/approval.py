@@ -14,7 +14,7 @@ from pydantic import BaseModel
 
 from langrepl.agents import AgentState
 from langrepl.agents.context import AgentContext
-from langrepl.core.config import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
+from langrepl.configs import ApprovalMode, ToolApprovalConfig, ToolApprovalRule
 from langrepl.core.constants import CONFIG_APPROVAL_FILE_NAME
 from langrepl.core.logging import get_logger
 from langrepl.utils.render import create_tool_message

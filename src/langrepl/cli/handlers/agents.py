@@ -13,7 +13,7 @@ from prompt_toolkit.layout.controls import FormattedTextControl
 from langrepl.cli.bootstrap.initializer import initializer
 from langrepl.cli.theme import console, theme
 from langrepl.cli.ui.shared import create_bottom_toolbar, create_prompt_style
-from langrepl.core.config import AgentConfig
+from langrepl.configs import AgentConfig
 from langrepl.core.logging import get_logger
 from langrepl.core.settings import settings
 

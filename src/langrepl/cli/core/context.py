@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from langrepl.cli.bootstrap.initializer import initializer
 from langrepl.cli.bootstrap.timer import timer
-from langrepl.core.config import ApprovalMode
+from langrepl.configs import ApprovalMode
 
 
 class Context(BaseModel):

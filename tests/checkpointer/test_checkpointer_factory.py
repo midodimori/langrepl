@@ -1,7 +1,7 @@
 import pytest
 
 from langrepl.checkpointer.factory import CheckpointerFactory
-from langrepl.core.config import CheckpointerConfig, CheckpointerProvider
+from langrepl.configs import CheckpointerConfig, CheckpointerProvider
 
 
 class TestCheckpointerFactory:

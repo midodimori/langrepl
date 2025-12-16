@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from langrepl.cli.handlers.mcp import MCPHandler
-from langrepl.core.config import MCPConfig
+from langrepl.configs import MCPConfig
 
 
 class TestMCPHandler:

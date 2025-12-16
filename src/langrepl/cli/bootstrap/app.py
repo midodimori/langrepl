@@ -8,7 +8,7 @@ import sys
 from langrepl.cli.bootstrap.chat import handle_chat_command
 from langrepl.cli.bootstrap.server import handle_server_command
 from langrepl.cli.theme import console
-from langrepl.core.config import ApprovalMode
+from langrepl.configs import ApprovalMode
 from langrepl.core.constants import APP_NAME
 from langrepl.core.logging import configure_logging, get_logger
 

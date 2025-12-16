@@ -64,12 +64,14 @@ https://github.com/user-attachments/assets/d95444c9-733f-481d-80c7-7d1cc28a732a
   - macOS: `brew install ripgrep`
   - Ubuntu/Debian: `sudo apt install ripgrep`
   - Arch Linux: `sudo pacman -S ripgrep`
-  - Windows: `choco install ripgrep` or download from [releases](https://github.com/BurntSushi/ripgrep/releases)
 - **[fd](https://github.com/sharkdp/fd)** - Required for fast file/directory completion with `@` (fallback when not in a Git repository):
   - macOS: `brew install fd`
   - Ubuntu/Debian: `sudo apt install fd-find`
   - Arch Linux: `sudo pacman -S fd`
-  - Windows: `choco install fd` or download from [releases](https://github.com/sharkdp/fd/releases)
+- **tree** - Required for file system visualization:
+  - macOS: `brew install tree`
+  - Ubuntu/Debian: `sudo apt install tree`
+  - Arch Linux: `sudo pacman -S tree`
 - **Node.js & npm** (optional) - Required only if using MCP servers that run via npx
 
 ## Installation

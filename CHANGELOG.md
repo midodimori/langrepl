@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.9.6 (2025-12-16)
+
+### Bug Fixes
+
+- Ensure approval mode switch during interrupt affects current stream immediately
+  ([`084a59e`](https://github.com/midodimori/langrepl/commit/084a59e601b8dea324074a3a784c0d57fa82b65c))
+
+### Chores
+
+- Readme
+  ([`61e7ca9`](https://github.com/midodimori/langrepl/commit/61e7ca91bd74f549df04204453adeff37e1298cc))
+
+
 ## v1.9.5 (2025-12-16)
 
 ### Refactoring

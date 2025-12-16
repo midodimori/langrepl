@@ -137,6 +137,11 @@ class MessageDispatcher:
                                 resume_value = await self.interrupt_handler.handle(
                                     interrupts
                                 )
+                                # Sync approval mode from session context in case it changed during interrupt
+                                context.approval_mode = (
+                                    self.session.context.approval_mode
+                                )
+
                                 if isinstance(resume_value, dict):
                                     current_input = Command(resume=resume_value)
                                 else:

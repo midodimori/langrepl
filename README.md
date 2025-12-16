@@ -8,7 +8,7 @@ Interactive terminal CLI for building and running LLM agents. Built with LangCha
 [![Python Version](https://img.shields.io/pypi/pyversions/langrepl?logo=python&logoColor=white)](https://pypi.org/project/langrepl/)
 [![License](https://img.shields.io/github/license/midodimori/langrepl)](https://github.com/midodimori/langrepl/blob/main/LICENSE)
 
-https://github.com/user-attachments/assets/d95444c9-733f-481d-80c7-7d1cc28a732a
+https://github.com/user-attachments/assets/f9573310-29dc-4c67-aa1b-cc6b6ab051a2
 
 ## Table of Contents
 

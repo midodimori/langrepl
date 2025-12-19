@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.9.7 (2025-12-19)
+
+### Bug Fixes
+
+- Use message.text in compress_tool_output
+  ([`d2fcb80`](https://github.com/midodimori/langrepl/commit/d2fcb808e9d687b9e465db5065444f783f0a7100))
+
+### Chores
+
+- Demo
+  ([`05493ed`](https://github.com/midodimori/langrepl/commit/05493ed829ff2fc9a933b2eb979c14f0046c071f))
+
+
 ## v1.9.6 (2025-12-16)
 
 ### Bug Fixes

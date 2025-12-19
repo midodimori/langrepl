@@ -61,13 +61,13 @@ class CompressToolOutputMiddleware(AgentMiddleware[AgentState, AgentContext]):
             return tool_msg
 
         # Check if content exceeds token limit
-        content = tool_msg.content
-        if not isinstance(content, str) or not content.strip():
+        text_content = tool_msg.text
+        if not text_content or not text_content.strip():
 
             return tool_msg
 
         token_count = calculate_message_tokens(
-            [HumanMessage(content=content)], self.model
+            [HumanMessage(content=text_content)], self.model
         )
 
         if token_count > max_tokens:
@@ -96,7 +96,7 @@ class CompressToolOutputMiddleware(AgentMiddleware[AgentState, AgentContext]):
             cmd = Command(
                 update={
                     "messages": [compressed_msg],
-                    "files": {file_id: content},
+                    "files": {file_id: text_content},
                 }
             )
 

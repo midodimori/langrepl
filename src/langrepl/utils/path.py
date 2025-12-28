@@ -130,15 +130,18 @@ def matches_hidden(
 
     for pattern in hidden_patterns:
         expanded = Path(pattern).expanduser()
-        pattern_str = str(expanded) if expanded.is_absolute() else pattern
 
-        if "*" in pattern_str:
+        if "*" in pattern:
+            # For glob patterns, use the original pattern string for matching
             check_path = path
             while check_path != check_path.parent:
-                if check_path.match(pattern_str):
+                if check_path.match(pattern):
                     return True
                 check_path = check_path.parent
         else:
+            # For literal paths, resolve relative patterns against working_dir
+            if not expanded.is_absolute():
+                expanded = working_dir / expanded
             pattern_path = expanded.resolve() if expanded.exists() else expanded
             try:
                 path.relative_to(pattern_path)

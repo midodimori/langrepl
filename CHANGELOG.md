@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.10.0 (2025-12-28)
+
+### Features
+
+- Sandbox (#66) ([#66](https://github.com/midodimori/langrepl/pull/66),
+  [`b35ade8`](https://github.com/midodimori/langrepl/commit/b35ade81397509ae070cb14f1479ca94580dbe1a))
+
+
 ## v1.9.7 (2025-12-19)
 
 ### Bug Fixes

@@ -9,6 +9,7 @@ from langrepl.middlewares import (
     CompressToolOutputMiddleware,
     PendingToolResultMiddleware,
     ReturnDirectMiddleware,
+    SandboxMiddleware,
     TokenCostMiddleware,
     create_dynamic_prompt_middleware,
 )
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
     from langgraph.store.base import BaseStore
 
     from langrepl.agents import ContextSchemaType, StateSchemaType
+    from langrepl.sandboxes import SandboxBackend
 
 
 def create_react_agent(
@@ -33,6 +35,7 @@ def create_react_agent(
     checkpointer: BaseCheckpointSaver | None = None,
     store: BaseStore | None = None,
     name: str | None = None,
+    tool_sandbox_map: dict[str, SandboxBackend | None] | None = None,
 ):
     """Create a ReAct agent using LangChain's create_agent."""
     has_read_memory = read_memory_file in tools
@@ -56,6 +59,9 @@ def create_react_agent(
     wrap_tool_call: list[AgentMiddleware[Any, Any]] = [
         ApprovalMiddleware(),  # Check approval before executing tools
     ]
+    # Add sandbox AFTER approval
+    if tool_sandbox_map:
+        wrap_tool_call.append(SandboxMiddleware(tool_sandbox_map))
     if has_read_memory:
         wrap_tool_call.append(
             CompressToolOutputMiddleware(model)  # Compress large tool outputs
@@ -72,7 +78,7 @@ def create_react_agent(
     ]
 
     # Combine all middleware
-    middleware: list[AgentMiddleware[Any, Any]] = (
+    middlewares: list[AgentMiddleware[Any, Any]] = (
         dynamic_prompt + after_model + wrap_tool_call + before_agent + before_model
     )
 
@@ -84,5 +90,5 @@ def create_react_agent(
         checkpointer=checkpointer,
         store=store,
         name=name,
-        middleware=middleware,
+        middleware=middlewares,
     )

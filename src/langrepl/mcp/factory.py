@@ -1,16 +1,22 @@
 from __future__ import annotations
 
 import hashlib
+from fnmatch import fnmatch
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from langchain_mcp_adapters.sessions import Connection
 
+from langrepl.core.constants import TOOL_CATEGORY_MCP
+from langrepl.core.logging import get_logger
 from langrepl.core.settings import settings
 from langrepl.mcp.client import MCPClient
+from langrepl.sandboxes.backends.base import SandboxBinding
 
 if TYPE_CHECKING:
     from langrepl.configs import MCPConfig, MCPServerConfig
+
+logger = get_logger(__name__)
 
 
 class MCPFactory:
@@ -53,6 +59,7 @@ class MCPFactory:
         self,
         config: MCPConfig,
         cache_dir: Path | None = None,
+        sandbox_bindings: list[SandboxBinding] | None = None,
     ) -> MCPClient:
         config_hash = self._get_config_hash(config, cache_dir)
         if self._client and self._config_hash == config_hash:
@@ -84,10 +91,40 @@ class MCPFactory:
 
             if server.transport == "stdio":
                 if server.command:
+                    command = server.command
+                    args = server.args or []
+
+                    # Match server against sandbox bindings
+                    sandbox_backend = None
+                    if sandbox_bindings:
+                        for binding in sandbox_bindings:
+                            if self._matches_mcp_pattern(name, binding.patterns):
+                                sandbox_backend = binding.backend
+                                break
+
+                    # Apply sandbox wrapping
+                    if sandbox_backend:
+                        try:
+                            wrapped = sandbox_backend.build_command(
+                                [command] + args, extra_env=env
+                            )
+                            command = wrapped[0]
+                            args = wrapped[1:] if len(wrapped) > 1 else []
+
+                            # Auto-inject offline env vars if sandbox blocks network
+                            if "*" not in sandbox_backend.config.network.remote:
+                                env["NPM_CONFIG_OFFLINE"] = "true"
+                                env["UV_OFFLINE"] = "1"
+                        except Exception as e:
+                            logger.warning(
+                                f"Failed to apply sandbox to MCP server '{name}', skipping: {e}"
+                            )
+                            continue
+
                     server_dict = {
                         "transport": "stdio",
-                        "command": server.command,
-                        "args": server.args,
+                        "command": command,
+                        "args": args,
                         "env": env,
                     }
             elif server.transport == "streamable_http":
@@ -124,3 +161,22 @@ class MCPFactory:
         )
         self._config_hash = config_hash
         return self._client
+
+    @staticmethod
+    def _matches_mcp_pattern(server_name: str, patterns: list[str]) -> bool:
+        """Check if MCP server matches any pattern (mcp:<server>:*)."""
+        for pattern in patterns:
+            parts = pattern.split(":")
+            if len(parts) != 3:
+                continue
+
+            category_pattern, server_pattern, tool_pattern = parts
+            if category_pattern == TOOL_CATEGORY_MCP:
+                if tool_pattern != "*":
+                    logger.warning(
+                        f"Invalid MCP pattern '{pattern}': tool part must be '*'"
+                    )
+                    continue
+                if fnmatch(server_name, server_pattern):
+                    return True
+        return False

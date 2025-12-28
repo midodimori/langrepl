@@ -53,8 +53,13 @@ async def run_command(
     status, stdout, stderr = await execute_bash_command(
         ["bash", "-c", command], cwd=str(context.working_dir)
     )
-    if status not in (0, 1):
-        raise ToolException(stderr)
+    if status != 0:
+        error_msg = (
+            stderr.strip()
+            if stderr.strip()
+            else f"Command failed with exit code {status}"
+        )
+        raise ToolException(error_msg)
 
     output_parts = []
     if stdout.strip():

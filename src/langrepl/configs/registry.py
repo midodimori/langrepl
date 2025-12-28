@@ -17,6 +17,7 @@ from langrepl.configs.approval import ToolApprovalConfig
 from langrepl.configs.checkpointer import BatchCheckpointerConfig, CheckpointerConfig
 from langrepl.configs.llm import BatchLLMConfig, LLMConfig
 from langrepl.configs.mcp import MCPConfig
+from langrepl.configs.sandbox import BatchSandboxConfig, SandboxConfig
 from langrepl.core.constants import (
     CONFIG_AGENTS_DIR,
     CONFIG_AGENTS_FILE_NAME,
@@ -29,6 +30,7 @@ from langrepl.core.constants import (
     CONFIG_LLMS_FILE_NAME,
     CONFIG_MCP_FILE_NAME,
     CONFIG_MEMORY_FILE_NAME,
+    CONFIG_SANDBOXES_DIR,
     CONFIG_SUBAGENTS_DIR,
     CONFIG_SUBAGENTS_FILE_NAME,
 )
@@ -46,6 +48,7 @@ class ConfigRegistry:
         self._checkpointers: BatchCheckpointerConfig | None = None
         self._agents: BatchAgentConfig | None = None
         self._subagents: BatchSubAgentConfig | None = None
+        self._sandboxes: BatchSandboxConfig | None = None
         self._mcp: MCPConfig | None = None
         self._approval: ToolApprovalConfig | None = None
 
@@ -151,6 +154,27 @@ class ConfigRegistry:
         subagents = await self.load_subagents()
         return subagents.get_subagent_config(name)
 
+    # === Sandbox configs ===
+
+    async def load_sandboxes(self, force_reload: bool = False) -> BatchSandboxConfig:
+        """Load all sandbox configs (cached)."""
+        if self._sandboxes is None or force_reload:
+            await self.ensure_config_dir()
+            self._sandboxes = await BatchSandboxConfig.from_yaml(
+                dir_path=self.working_dir / CONFIG_SANDBOXES_DIR,
+            )
+        return self._sandboxes
+
+    async def get_sandbox(self, name: str) -> SandboxConfig:
+        """Get single sandbox by name."""
+        sandboxes = await self.load_sandboxes()
+        sandbox = sandboxes.get_sandbox_config(name)
+        if sandbox:
+            return sandbox
+        raise ValueError(
+            f"Sandbox '{name}' not found. Available: {sandboxes.sandbox_names}"
+        )
+
     # === Agent configs ===
 
     async def load_agents(self, force_reload: bool = False) -> BatchAgentConfig:
@@ -177,12 +201,17 @@ class ConfigRegistry:
             ).exists():
                 subagents_config = await self.load_subagents()
 
+            sandboxes_config = None
+            if (self.working_dir / CONFIG_SANDBOXES_DIR).exists():
+                sandboxes_config = await self.load_sandboxes()
+
             self._agents = await BatchAgentConfig.from_yaml(
                 file_path=self.working_dir / CONFIG_AGENTS_FILE_NAME,
                 dir_path=self.working_dir / CONFIG_AGENTS_DIR,
                 batch_llm_config=llm_config,
                 batch_checkpointer_config=checkpointer_config,
                 batch_subagent_config=subagents_config,
+                batch_sandbox_config=sandboxes_config,
             )
         return self._agents
 
@@ -279,5 +308,6 @@ class ConfigRegistry:
         self._checkpointers = None
         self._agents = None
         self._subagents = None
+        self._sandboxes = None
         self._mcp = None
         self._approval = None

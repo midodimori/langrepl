@@ -1,4 +1,4 @@
-.PHONY: install lint-fix test pre-commit clean sync-versions
+.PHONY: install lint-fix test test-integration test-all pre-commit clean sync-versions
 
 install:
 	uv sync --all-groups
@@ -12,6 +12,12 @@ lint-fix:
 	uv run mypy src tests --check-untyped-defs
 
 test:
+	uv run pytest tests -m "not integration"
+
+test-integration:
+	uv run pytest tests/integration
+
+test-all:
 	uv run pytest tests
 
 pre-commit:

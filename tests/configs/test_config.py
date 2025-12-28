@@ -283,7 +283,7 @@ class TestVersionMigration:
         )
 
         content = yaml.safe_load(file_path.read_text())
-        assert content["agents"][0]["version"] == "2.2.0"
+        assert content["agents"][0]["version"] == "2.2.1"
 
     @pytest.mark.asyncio
     async def test_agent_compression_migration(self, temp_dir, mock_llm_config):
@@ -313,7 +313,7 @@ class TestVersionMigration:
 
         content = yaml.safe_load(file_path.read_text())
         compression = content["agents"][0]["compression"]
-        assert content["agents"][0]["version"] == "2.2.0"
+        assert content["agents"][0]["version"] == "2.2.1"
         assert "compression_llm" not in compression
         assert compression["llm"] == "test-model"
         assert compression["messages_to_keep"] == 0

@@ -37,6 +37,7 @@ https://github.com/user-attachments/assets/f9573310-29dc-4c67-aa1b-cc6b6ab051a2
   - [Skills](#skills)
   - [MCP Servers](#mcp-servers-configmcpjson)
   - [Tool Approval](#tool-approval-configapprovaljson)
+  - [Sandboxes (Beta)](#sandboxes-beta)
 - [Development](#development)
 - [License](#license)
 
@@ -54,6 +55,7 @@ https://github.com/user-attachments/assets/f9573310-29dc-4c67-aa1b-cc6b6ab051a2
 - **Human-in-the-Loop** - Configurable tool approval system with regex-based allow/deny rules
 - **Cost Tracking (Beta)** - Token usage and cost calculation per conversation
 - **MCP Server Support** - Integrate external tool servers via the MCP protocol
+- **Sandbox (Beta)** - Secure isolated execution for tools with filesystem, network, and syscall restrictions
 
 ## Prerequisites
 
@@ -66,12 +68,16 @@ https://github.com/user-attachments/assets/f9573310-29dc-4c67-aa1b-cc6b6ab051a2
   - Arch Linux: `sudo pacman -S ripgrep`
 - **[fd](https://github.com/sharkdp/fd)** - Required for fast file/directory completion with `@` (fallback when not in a Git repository):
   - macOS: `brew install fd`
-  - Ubuntu/Debian: `sudo apt install fd-find`
+  - Ubuntu/Debian: `sudo apt install fd-find && sudo ln -s $(which fdfind) /usr/bin/fd`
   - Arch Linux: `sudo pacman -S fd`
 - **tree** - Required for file system visualization:
   - macOS: `brew install tree`
   - Ubuntu/Debian: `sudo apt install tree`
   - Arch Linux: `sudo pacman -S tree`
+- **bubblewrap** (Linux only, optional) - Required for sandbox feature:
+  - Ubuntu/Debian: `sudo apt install bubblewrap`
+  - Arch Linux: `sudo pacman -S bubblewrap`
+  - Optional enhanced syscall filtering: `uv pip install pyseccomp`
 - **Node.js & npm** (optional) - Required only if using MCP servers that run via npx
 
 ## Installation
@@ -334,6 +340,11 @@ compression:
     - prompts/shared/general_compression.md
     - prompts/suffixes/environments.md
   messages_to_keep: 0  # Keep N recent messages verbatim during compression
+sandboxes:                    # See Sandboxes section
+  enabled: true
+  profiles:
+    - sandbox: rw-online-macos
+      patterns: [impl:*:*]
 ```
 
 <details>
@@ -591,6 +602,64 @@ skills/
 ```
 
 **Modes**: `SEMI_ACTIVE` (ask unless whitelisted), `ACTIVE` (auto-approve except denied), `AGGRESSIVE` (bypass all)
+
+### Sandboxes (Beta)
+
+Sandboxes provide secure, isolated execution environments for tools. They restrict filesystem access, network connectivity, and system calls to prevent potentially dangerous operations.
+
+**Prerequisites:**
+- **macOS**: Built-in `sandbox-exec` (no installation needed)
+- **Linux**: `bubblewrap` package required (see [Prerequisites](#prerequisites))
+
+`.langrepl/sandboxes/*.yml`:
+```yaml
+# sandboxes/rw-online-macos.yml (filename must match sandbox name)
+version: "1.0.0"
+name: rw-online-macos
+type: seatbelt      # macOS: seatbelt, Linux: bubblewrap
+os: macos           # macos or linux
+
+filesystem:
+  read:
+    - "."           # Working directory
+    - "/usr"        # System binaries
+    - "~/.local"    # User tools (uvx, pipx)
+  write:
+    - "."
+    - "/private/tmp"
+  hidden:           # Blocked paths (glob patterns)
+    - ".env"
+    - "~/.ssh"
+    - "*.pem"
+
+network:
+  remote:
+    - "*"           # "*" = allow all, [] = deny all
+  local: []         # Unix sockets
+```
+
+**Default profiles** (auto-copied per platform on first run):
+
+| Profile | Filesystem | Network | Use Case |
+|---------|------------|---------|----------|
+| `rw-online-{os}` | Read/Write | Yes | General development |
+| `rw-offline-{os}` | Read/Write | No | Sensitive data |
+| `ro-online-{os}` | Read-only | Yes | Code exploration |
+| `ro-offline-{os}` | Read-only | No | Maximum isolation |
+
+**Notes:**
+- **Package managers:** `uvx`, `npx`, `pip` may need network to check/download from registries. Default profiles include `~/.cache/uv`, `~/.npm`, `~/.local` for caching. Offline sandboxes auto-inject `NPM_CONFIG_OFFLINE=true` and `UV_OFFLINE=1` for MCP servers.
+- **Docker/containers:** Docker CLI requires socket access. Add to `network.local`: Docker Desktop (`/var/run/docker.sock`), OrbStack (`~/.orbstack/run/docker.sock`), Rancher Desktop (`~/.rd/docker.sock`), Colima (`~/.colima/default/docker.sock`).
+- **MCP servers:** Sandboxed at startup (command wrapped). Match with `mcp:server-name:*` (tool part must be `*`).
+- **Working directory (`"."`):** When included, mounted and used as cwd. When excluded: Linux = not mounted, cwd is `/` inside tmpfs; macOS = can list files but cannot read contents.
+- **Symlinks:** Symlinks resolving outside allowed boundaries are blocked. Warnings logged at startup. Add targets to `filesystem.read` if needed.
+
+**Limitations:**
+- **Network (remote):** Binary - `["*"]` allows all TCP/UDP, `[]` blocks all. `["*"]` reserved for future domain filtering.
+- **Network (local):** macOS = allowlist-based. Linux = binary (empty blocks all, any entry allows all); per-socket filtering reserved for future.
+- **macOS (Seatbelt):** Deny-by-default policy. Mach services allowed for DNS, TLS, keychain.
+- **Linux (Bubblewrap):** Namespace isolation (user, pid, ipc, uts, network). `pyseccomp` optional for syscall blocking.
+- **Other:** Sandbox worker only executes built-in tools (from `langrepl.tools.*` module). 60s timeout. 10MB stdout / 1MB stderr limits. Hidden patterns use gitignore-style glob.
 
 ## Development
 

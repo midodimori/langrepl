@@ -230,7 +230,8 @@ class SandboxBackend(ABC):
                 await process.wait()
             except TimeoutError:
                 try:
-                    os.killpg(process.pid, signal.SIGKILL)
+                    if process.pid:
+                        os.killpg(process.pid, signal.SIGKILL)
                 except (ProcessLookupError, OSError):
                     pass
                 process.kill()

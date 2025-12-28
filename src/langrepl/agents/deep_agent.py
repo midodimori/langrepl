@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
     from langrepl.agents import StateSchemaType
     from langrepl.configs import LLMConfig
+    from langrepl.sandboxes import SandboxBackend
 
 
 def create_deep_agent(
@@ -29,6 +30,7 @@ def create_deep_agent(
     internal_tools: list[BaseTool] | None = None,
     store: BaseStore | None = None,
     name: str | None = None,
+    tool_sandbox_map: dict[str, SandboxBackend | None] | None = None,
 ) -> CompiledStateGraph:
 
     model = model_provider(llm_config)
@@ -50,4 +52,5 @@ def create_deep_agent(
         checkpointer=checkpointer,
         store=store,
         name=name,
+        tool_sandbox_map=tool_sandbox_map,
     )

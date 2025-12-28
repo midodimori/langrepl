@@ -6,7 +6,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from langrepl.core.constants import DEFAULT_THEME
 
-load_dotenv(".env")
+try:
+    load_dotenv(".env")
+except PermissionError:
+    pass  # Sandbox may block .env access
 
 if os.getenv("SUPPRESS_GRPC_WARNINGS", "true").lower() == "true":
     os.environ["GRPC_VERBOSITY"] = "NONE"
@@ -134,4 +137,8 @@ class Settings(BaseSettings):
     )
 
 
-settings = Settings()
+try:
+    settings = Settings()
+except PermissionError:
+    # Sandbox may block .env access, use defaults
+    settings = Settings(_env_file=None)  # type: ignore[call-arg]

@@ -152,8 +152,6 @@ async def run_tool(
 run_tool.metadata = {
     "approval_config": {
         "is_catalog_proxy": True,
-        "underlying_tool_name_arg": "tool_name",
-        "underlying_tool_args_arg": "tool_args",
     }
 }
 

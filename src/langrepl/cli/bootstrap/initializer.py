@@ -33,6 +33,8 @@ from langrepl.core.constants import (
 from langrepl.core.settings import settings
 from langrepl.llms.factory import LLMFactory
 from langrepl.mcp.factory import MCPFactory
+from langrepl.sandboxes.factory import SandboxFactory
+from langrepl.skills.factory import SkillFactory
 from langrepl.tools.factory import ToolFactory
 
 if TYPE_CHECKING:
@@ -47,12 +49,11 @@ class Initializer:
 
     def __init__(self):
         self.tool_factory = ToolFactory()
-        from langrepl.skills.factory import SkillFactory
-
         self.skill_factory = SkillFactory()
         self.llm_factory = LLMFactory(settings.llm)
         self.mcp_factory = MCPFactory()
         self.checkpointer_factory = CheckpointerFactory()
+        self.sandbox_factory = SandboxFactory()
         self.agent_factory = AgentFactory(
             tool_factory=self.tool_factory,
             llm_factory=self.llm_factory,
@@ -171,9 +172,18 @@ class Initializer:
                 str(working_dir / CONFIG_CHECKPOINTS_URL_FILE_NAME),
             )
 
+        sandbox_bindings = None
+        if agent_config.sandboxes:
+            with timer("Build sandbox bindings"):
+                sandbox_bindings = self.sandbox_factory.build_bindings(
+                    agent_config.sandboxes, working_dir
+                )
+
         with timer("Create MCP client"):
             mcp_client = await self.mcp_factory.create(
-                mcp_config, working_dir / CONFIG_MCP_CACHE_DIR
+                config=mcp_config,
+                cache_dir=working_dir / CONFIG_MCP_CACHE_DIR,
+                sandbox_bindings=sandbox_bindings,
             )
 
         async with checkpointer_ctx as checkpointer:
@@ -186,6 +196,7 @@ class Initializer:
                     mcp_client=mcp_client,
                     llm_config=llm_config,
                     skills_dir=working_dir / CONFIG_SKILLS_DIR,
+                    sandbox_bindings=sandbox_bindings,
                 )
 
             self.cached_llm_tools = getattr(compiled_graph, "_llm_tools", [])

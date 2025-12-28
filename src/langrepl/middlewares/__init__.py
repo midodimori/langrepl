@@ -8,6 +8,7 @@ from langrepl.middlewares.compress_tool_output import CompressToolOutputMiddlewa
 from langrepl.middlewares.dynamic_prompt import create_dynamic_prompt_middleware
 from langrepl.middlewares.pending_tool_result import PendingToolResultMiddleware
 from langrepl.middlewares.return_direct import ReturnDirectMiddleware
+from langrepl.middlewares.sandbox import SandboxMiddleware
 from langrepl.middlewares.token_cost import TokenCostMiddleware
 
 __all__ = [
@@ -15,6 +16,7 @@ __all__ = [
     "CompressToolOutputMiddleware",
     "PendingToolResultMiddleware",
     "ReturnDirectMiddleware",
+    "SandboxMiddleware",
     "TokenCostMiddleware",
     "create_dynamic_prompt_middleware",
 ]

@@ -14,6 +14,7 @@ from langrepl.core.constants import (
     TOOL_CATEGORY_MCP,
 )
 from langrepl.core.logging import get_logger
+from langrepl.sandboxes.backends.base import SandboxBinding
 from langrepl.tools.catalog.skills import get_skill
 from langrepl.tools.subagents.task import SubAgent, think
 
@@ -31,6 +32,7 @@ if TYPE_CHECKING:
     )
     from langrepl.llms.factory import LLMFactory
     from langrepl.mcp.client import MCPClient
+    from langrepl.sandboxes import SandboxBackend
     from langrepl.skills.factory import Skill, SkillFactory
     from langrepl.tools.factory import ToolFactory
 
@@ -260,6 +262,25 @@ class AgentFactory:
 
         return [skill_dict[key] for key in matched_keys]
 
+    @staticmethod
+    def _matches_any_pattern(
+        tool_name: str, module_name: str, category: str, patterns: list[str]
+    ) -> bool:
+        """Check if tool matches any pattern in the list."""
+        for pattern in patterns:
+            parts = pattern.split(":")
+            if len(parts) != 3:
+                continue
+
+            category_pattern, module_pattern, tool_pattern = parts
+            if (
+                fnmatch(category, category_pattern)
+                and fnmatch(module_name, module_pattern)
+                and fnmatch(tool_name, tool_pattern)
+            ):
+                return True
+        return False
+
     def _resolve_skills(
         self,
         skills_config: SkillsConfig | None,
@@ -347,6 +368,7 @@ class AgentFactory:
         skills_dir: Path,
         checkpointer: BaseCheckpointSaver | None = None,
         llm_config: LLMConfig | None = None,
+        sandbox_bindings: list[SandboxBinding] | None = None,
     ) -> CompiledStateGraph:
         """Create a compiled graph with optional checkpointer support.
 
@@ -358,6 +380,7 @@ class AgentFactory:
             skills_dir: Skills directory path
             checkpointer: Optional checkpoint saver
             llm_config: Optional LLM configuration to override the one in config
+            sandbox_bindings: Optional sandbox pattern bindings
 
         Returns:
             CompiledStateGraph: The state graph
@@ -381,6 +404,59 @@ class AgentFactory:
 
         tool_selection = self._resolve_tools(config.tools, tool_resources)
         skill_selection = self._resolve_skills(config.skills, skill_resources)
+
+        # Build tool sandbox map from bindings
+        tool_sandbox_map: dict[str, SandboxBackend | None] = {}
+        if sandbox_bindings:
+            # Match impl and internal tools against patterns
+            impl_and_internal = {
+                **{
+                    name: tool_resources.impl_module_map.get(name, "")
+                    for name in tool_resources.impl.keys()
+                },
+                **{
+                    name: tool_resources.internal_module_map.get(name, "")
+                    for name in tool_resources.internal.keys()
+                },
+            }
+
+            for tool_name, module in impl_and_internal.items():
+                matched_backends: list[SandboxBackend] = []
+                has_bypass = False
+                category = (
+                    TOOL_CATEGORY_IMPL
+                    if tool_name in tool_resources.impl
+                    else TOOL_CATEGORY_INTERNAL
+                )
+
+                for binding in sandbox_bindings:
+                    if self._matches_any_pattern(
+                        tool_name, module, category, binding.patterns
+                    ):
+                        if binding.backend is None:
+                            has_bypass = True
+                            break
+                        matched_backends.append(binding.backend)
+
+                if has_bypass:
+                    tool_sandbox_map[tool_name] = None
+                elif len(matched_backends) == 1:
+                    tool_sandbox_map[tool_name] = matched_backends[0]
+                elif len(matched_backends) > 1:
+                    logger.warning(
+                        f"Tool '{tool_name}' matches multiple sandbox profiles, blocking"
+                    )
+                    # Don't add to map = blocked
+
+            # MCP tools: None (already sandboxed at MCP factory level)
+            for tool_name in tool_resources.mcp.keys():
+                tool_sandbox_map[tool_name] = None
+
+            # Catalog/skill tools: None (meta-tools, bypass)
+            for tool in self.tool_factory.get_catalog_tools():
+                tool_sandbox_map[tool.name] = None
+            for tool in self.tool_factory.get_skill_catalog_tools():
+                tool_sandbox_map[tool.name] = None
 
         resolved_subagents = None
         if config.subagents:
@@ -417,6 +493,7 @@ class AgentFactory:
             checkpointer=checkpointer,
             subagents=resolved_subagents,
             model_provider=self.llm_factory.create,
+            tool_sandbox_map=tool_sandbox_map,
         )
         agent._llm_tools = llm_tools + internal_tools  # type: ignore
         agent._tools_in_catalog = tools_in_catalog  # type: ignore

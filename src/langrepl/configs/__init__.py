@@ -21,6 +21,14 @@ from langrepl.configs.checkpointer import (
 from langrepl.configs.llm import BatchLLMConfig, LLMConfig, LLMProvider, RateConfig
 from langrepl.configs.mcp import MCPConfig, MCPServerConfig
 from langrepl.configs.registry import ConfigRegistry
+from langrepl.configs.sandbox import (
+    BatchSandboxConfig,
+    FilesystemConfig,
+    NetworkConfig,
+    SandboxConfig,
+    SandboxOS,
+    SandboxType,
+)
 from langrepl.configs.utils import load_prompt_content
 
 __all__ = [
@@ -48,6 +56,13 @@ __all__ = [
     # MCP
     "MCPConfig",
     "MCPServerConfig",
+    # Sandbox
+    "SandboxConfig",
+    "BatchSandboxConfig",
+    "SandboxType",
+    "SandboxOS",
+    "FilesystemConfig",
+    "NetworkConfig",
     # Approval
     "ApprovalMode",
     "ToolApprovalConfig",

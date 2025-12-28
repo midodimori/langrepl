@@ -70,6 +70,8 @@ dependencies = [
     'types-jsonschema>=4.25.1.20251009',
     'markdown-it-py>=4.0.0',
     'mdformat>=1.0.0',
+    'pyseccomp>=0.1.2; sys_platform == "linux"',
+    "pathspec>=0.12.1",
 ]
 
 [project.urls]
@@ -102,6 +104,9 @@ pythonpath = [".", "src"]
 testpaths = ["tests"]
 filterwarnings = [
     "ignore:LangSmith now uses UUID v7:UserWarning:pydantic.v1.main",
+]
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
 ]
 
 [build-system]

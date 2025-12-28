@@ -1,0 +1,65 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  integration-tests-linux:
+    # Linux integration tests require privileged container for bubblewrap namespace isolation
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.13
+      options: --privileged
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y bubblewrap ripgrep tree make
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv sync --all-groups
+
+      - name: Run integration tests
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          make test-integration
+
+  integration-tests-macos:
+    # macOS integration tests use Seatbelt (sandbox-exec)
+    if: github.actor != 'github-actions[bot]'
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Install system dependencies
+        run: brew install ripgrep tree fd
+
+      - name: Run integration tests
+        run: make test-integration

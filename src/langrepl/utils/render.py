@@ -101,6 +101,7 @@ def create_tool_message(
     tool_call_id: str,
     is_error: bool | None = None,
     return_direct: bool | None = None,
+    short_content: str | None = None,
 ) -> ToolMessage:
     """Create a ToolMessage from a tool execution result with proper formatting.
 
@@ -112,6 +113,7 @@ def create_tool_message(
         tool_call_id: ID of the tool call
         is_error: Override is_error flag (if None, extracted from result via getattr)
         return_direct: Override return_direct flag (if None, extracted from result via getattr)
+        short_content: Override short_content (if None, generated from result)
 
     Returns:
         Properly formatted ToolMessage with content and short_content
@@ -129,21 +131,22 @@ def create_tool_message(
     # Handle AIMessage specially, let format_tool_response handle everything else
     if isinstance(result, AIMessage):
         content = str(result.text)
-        short_content = None
+        extracted_short_content = None
     else:
-        content, short_content = format_tool_response(result)
+        content, extracted_short_content = format_tool_response(result)
 
-    # Generate short_content if not available
-    if short_content is None:
+    # Use provided short_content, or extracted, or generate from content
+    final_short_content = short_content or extracted_short_content
+    if final_short_content is None:
         # For errors, use full content; otherwise truncate
-        short_content = content if final_is_error else truncate_text(content, 200)
+        final_short_content = content if final_is_error else truncate_text(content, 200)
 
     return ToolMessage(
         id=str(uuid.uuid4()),
         name=tool_name,
         content=content,
         tool_call_id=tool_call_id,
-        short_content=short_content,
+        short_content=final_short_content,
         is_error=final_is_error,
         return_direct=final_return_direct,
     )

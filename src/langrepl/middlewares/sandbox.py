@@ -108,9 +108,9 @@ class SandboxMiddleware(AgentMiddleware[AgentState, AgentContext]):
             else tool.__module__
         )
         func_name = (
-            getattr(underlying_func, "__name__", tool.__class__.__name__)
+            getattr(underlying_func, "__name__", tool.name)
             if underlying_func
-            else tool.__class__.__name__
+            else tool.name
         )
 
         result = await backend.execute(

@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+from contextlib import AsyncExitStack
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.sessions import Connection
+from langchain_mcp_adapters.tools import load_mcp_tools
 from mcp.shared.exceptions import McpError
 
 from langrepl.core.logging import get_logger
@@ -40,7 +42,85 @@ class MCPClient(MultiServerMCPClient):
         self._live_tools: dict[str, dict[str, BaseTool]] = {}
         self._init_lock = asyncio.Lock()
         self._server_locks: dict[str, asyncio.Lock] = {}
+        
+        # Session management - store sessions to reuse instead of creating new ones
+        self._sessions: dict[str, Any] = {}
+        self._exit_stack: AsyncExitStack | None = None
+        self._sessions_initialized = False
+        
         super().__init__(connections)
+
+    async def _enter_sessions(self) -> None:
+        """
+        Enter async contexts for all MCP servers and store sessions.
+        This follows the pattern from MultiServerMCPClientGuide.py
+        """
+        if self._sessions_initialized:
+            return
+            
+        async with self._init_lock:
+            if self._sessions_initialized:
+                return
+                
+            logger.info("Initializing MCP sessions for all servers")
+            self._exit_stack = AsyncExitStack()
+            
+            for server_name in self.connections.keys():
+                try:
+                    # Use the session context manager from base class
+                    sess = await self._exit_stack.enter_async_context(
+                        self.session(server_name)
+                    )
+                    self._sessions[server_name] = sess
+                    logger.info(f"Successfully connected to MCP server '{server_name}'")
+                except Exception as e:
+                    logger.error(
+                        f"Failed to connect to MCP server '{server_name}': {e}",
+                        exc_info=True
+                    )
+            
+            self._sessions_initialized = True
+
+    async def get_tools(self, *, server_name: str | None = None) -> list[BaseTool]:
+        """
+        Override base class method to use stored sessions instead of creating new ones.
+        This ensures stable connections and better performance.
+        """
+        # Ensure sessions are initialized
+        if not self._sessions_initialized:
+            await self._enter_sessions()
+        
+        # If specific server requested and we have its session, use it
+        if server_name and server_name in self._sessions:
+            try:
+                session = self._sessions[server_name]
+                tools = await load_mcp_tools(session)
+                return tools
+            except Exception as e:
+                logger.error(
+                    f"Error loading tools from stored session for {server_name}: {e}",
+                    exc_info=True
+                )
+                # Fall back to base class method
+                return await super().get_tools(server_name=server_name)
+        
+        # If no server specified or session not found, fall back to base class
+        return await super().get_tools(server_name=server_name)
+
+    async def cleanup_sessions(self) -> None:
+        """
+        Cleanup all stored sessions. Should be called when the client is no longer needed.
+        """
+        if self._exit_stack:
+            try:
+                await self._exit_stack.aclose()
+                logger.info("Cleaned up all MCP sessions")
+            except Exception as e:
+                logger.error(f"Error cleaning up sessions: {e}", exc_info=True)
+            finally:
+                self._sessions.clear()
+                self._exit_stack = None
+                self._sessions_initialized = False
 
     def _is_mcp_error(self, exc: Exception) -> bool:
         if isinstance(exc, McpError):
@@ -53,13 +133,11 @@ class MCPClient(MultiServerMCPClient):
         filters = self._tool_filters.get(server_name)
         if not filters:
             return True
-
         include, exclude = filters.get("include", []), filters.get("exclude", [])
         if include and exclude:
             raise ValueError(
                 f"Cannot specify both include and exclude for server {server_name}"
             )
-
         if include:
             return tool_name in include
         if exclude:
@@ -82,20 +160,16 @@ class MCPClient(MultiServerMCPClient):
         path = self._get_cache_path(server_name)
         if not path or not path.exists():
             return None
-
         try:
             data = json.loads(path.read_text())
             cache_hash = None
             tools_data = data
-
             if isinstance(data, dict):
                 cache_hash = data.get("hash")
                 tools_data = data.get("tools", [])
-
             expected_hash = self._server_hashes.get(server_name)
             if expected_hash and cache_hash != expected_hash:
                 return None
-
             return [ToolSchema.model_validate(item) for item in tools_data]
         except Exception as exc:
             logger.warning(
@@ -112,7 +186,6 @@ class MCPClient(MultiServerMCPClient):
         path = self._get_cache_path(server_name)
         if not path:
             return
-
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             data = {
@@ -174,7 +247,6 @@ class MCPClient(MultiServerMCPClient):
             self._apply_metadata(tool)
             if self._register_tool(tool.name, server_name):
                 prepared.append(tool)
-
         self._live_tools[server_name] = {tool.name: tool for tool in prepared}
         return prepared
 
@@ -186,13 +258,10 @@ class MCPClient(MultiServerMCPClient):
             and tool_name in self._live_tools[server_name]
         ):
             return self._live_tools[server_name][tool_name]
-
         lock = self._server_locks.setdefault(server_name, asyncio.Lock())
-
         async with lock:
             if server_name in self._live_tools:
                 return self._live_tools[server_name].get(tool_name)
-
             tools = await self._get_server_tools(server_name)
             self._prepare_server_tools(server_name, tools)
             return self._live_tools[server_name].get(tool_name)
@@ -200,7 +269,6 @@ class MCPClient(MultiServerMCPClient):
     async def _load_and_cache_server(self, server_name: str) -> list[BaseTool]:
         tools = await self._get_server_tools(server_name)
         prepared = self._prepare_server_tools(server_name, tools)
-
         if prepared:
             tool_schemas = [ToolSchema.from_tool(t) for t in prepared]
             self._save_cached_schemas(server_name, tool_schemas)
@@ -209,20 +277,16 @@ class MCPClient(MultiServerMCPClient):
     async def get_mcp_tools(self) -> list[BaseTool]:
         if self._tools_cache is not None:
             return self._tools_cache
-
         async with self._init_lock:
             if self._tools_cache is not None:
                 return self._tools_cache
-
             tools: list[BaseTool] = []
             pending_servers: list[str] = []
-
             for server_name in self.connections.keys():
                 cached = self._load_cached_schemas(server_name)
                 if not cached:
                     pending_servers.append(server_name)
                     continue
-
                 for tool_schema in cached:
                     if not self._is_tool_allowed(tool_schema.name, server_name):
                         continue
@@ -235,13 +299,11 @@ class MCPClient(MultiServerMCPClient):
                     )
                     self._apply_metadata(lazy_tool)
                     tools.append(lazy_tool)
-
             if pending_servers:
                 results = await asyncio.gather(
                     *[self._load_and_cache_server(s) for s in pending_servers],
                     return_exceptions=True,
                 )
-
                 for server_name, server_result in zip(
                     pending_servers, results, strict=True
                 ):
@@ -266,7 +328,6 @@ class MCPClient(MultiServerMCPClient):
                             lazy_tool._loaded = tool
                             self._apply_metadata(lazy_tool)
                             tools.append(lazy_tool)
-
             self._tools_cache = tools
             return self._tools_cache
 

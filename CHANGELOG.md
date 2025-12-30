@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.10.3 (2025-12-30)
+
+### Bug Fixes
+
+- Version bump
+  ([`b7e8bef`](https://github.com/midodimori/langrepl/commit/b7e8beff113eb4af71390b495bfc566930a9fcac))
+
+
 ## v1.10.2 (2025-12-30)
 
 ### Features

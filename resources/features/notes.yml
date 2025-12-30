@@ -1,5 +1,6 @@
 features_by_version:
   "1.10.x":
+    - "Stateful MCP server connections for persistent state"
     - "Sandboxing (file system/network access) for secure execution (Beta)"
     - "Negative pattern support (!pattern) for tools, skills, and sandbox"
   "1.8.x":

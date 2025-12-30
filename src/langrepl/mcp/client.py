@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.sessions import Connection
+from langchain_mcp_adapters.tools import load_mcp_tools
+from mcp import ClientSession
 from mcp.shared.exceptions import McpError
 
 from langrepl.core.logging import get_logger
@@ -29,6 +31,7 @@ class MCPClient(MultiServerMCPClient):
         enable_approval: bool = True,
         cache_dir: Path | None = None,
         server_hashes: dict[str, str] | None = None,
+        stateful_servers: set[str] | None = None,
     ) -> None:
         self._tool_filters = tool_filters or {}
         self._repair_commands = repair_commands or {}
@@ -40,6 +43,10 @@ class MCPClient(MultiServerMCPClient):
         self._live_tools: dict[str, dict[str, BaseTool]] = {}
         self._init_lock = asyncio.Lock()
         self._server_locks: dict[str, asyncio.Lock] = {}
+        self._stateful_servers: set[str] = stateful_servers or set()
+        self._session_contexts: dict[str, ClientSession] = {}
+        self._session_tasks: dict[str, tuple[asyncio.Task[None], asyncio.Event]] = {}
+        self._session_locks: dict[str, asyncio.Lock] = {}
         super().__init__(connections)
 
     def _is_mcp_error(self, exc: Exception) -> bool:
@@ -144,6 +151,126 @@ class MCPClient(MultiServerMCPClient):
                 )
                 return []
 
+    async def _session_runner(
+        self,
+        server_name: str,
+        ready_event: asyncio.Event,
+        stop_event: asyncio.Event,
+        error_holder: list[BaseException | None],
+    ) -> None:
+        """Run a session in its own task to maintain proper cancel scope."""
+        try:
+            async with self.session(server_name) as session:
+                self._session_contexts[server_name] = session
+                ready_event.set()
+                await stop_event.wait()
+        except BaseException as e:
+            error_holder[0] = e
+            ready_event.set()
+            raise
+        finally:
+            self._session_contexts.pop(server_name, None)
+
+    async def _get_or_create_session(self, server_name: str) -> ClientSession:
+        """Get existing session or create new one for stateful servers."""
+        if server_name in self._session_contexts:
+            return self._session_contexts[server_name]
+
+        lock = self._session_locks.setdefault(server_name, asyncio.Lock())
+        async with lock:
+            if server_name in self._session_contexts:
+                return self._session_contexts[server_name]
+
+            ready_event = asyncio.Event()
+            stop_event = asyncio.Event()
+            error_holder: list[BaseException | None] = [None]
+            task = asyncio.create_task(
+                self._session_runner(server_name, ready_event, stop_event, error_holder)
+            )
+            self._session_tasks[server_name] = (task, stop_event)
+            await ready_event.wait()
+            if error_holder[0] is not None:
+                self._session_tasks.pop(server_name, None)
+                raise error_holder[0]
+            session = self._session_contexts[server_name]
+        return session
+
+    async def _close_session(self, server_name: str) -> None:
+        """Close a single stateful session."""
+        if server_name in self._session_tasks:
+            task, stop_event = self._session_tasks.pop(server_name)
+            stop_event.set()
+            try:
+                await asyncio.wait_for(task, timeout=5.0)
+            except TimeoutError:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+            except Exception:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+        self._session_contexts.pop(server_name, None)
+
+    async def _get_stateful_server_tools(self, server_name: str) -> list[BaseTool]:
+        """Get tools from a stateful server using a persistent session."""
+        try:
+            session = await self._get_or_create_session(server_name)
+            tools = await load_mcp_tools(session)
+            return self._filter_tools(tools, server_name)
+        except Exception as e:
+            if self._is_mcp_error(e) and server_name in self._repair_commands:
+                # Close failed session and retry
+                await self._close_session(server_name)
+                await self._run_repair_command(self._repair_commands[server_name])
+                session = await self._get_or_create_session(server_name)
+                tools = await load_mcp_tools(session)
+                return self._filter_tools(tools, server_name)
+            else:
+                logger.error(
+                    f"Error getting tools from stateful server {server_name}: {e}",
+                    exc_info=True,
+                )
+                return []
+
+    async def _close_session_task(
+        self, name: str, task: asyncio.Task[None], stop_event: asyncio.Event
+    ) -> None:
+        """Close a single session task."""
+        stop_event.set()
+        try:
+            await asyncio.wait_for(task, timeout=5.0)
+        except TimeoutError:
+            logger.warning(f"Timeout closing session for {name}, cancelling")
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+        except Exception as e:
+            logger.warning(f"Error closing session for {name}: {e}")
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+    async def close_sessions(self) -> None:
+        """Close all active stateful sessions in parallel."""
+        if self._session_tasks:
+            await asyncio.gather(
+                *(
+                    self._close_session_task(name, task, stop_event)
+                    for name, (task, stop_event) in self._session_tasks.items()
+                )
+            )
+        self._session_tasks.clear()
+        self._session_contexts.clear()
+
     def _apply_metadata(self, tool: BaseTool) -> None:
         if not self._enable_approval:
             return
@@ -193,12 +320,18 @@ class MCPClient(MultiServerMCPClient):
             if server_name in self._live_tools:
                 return self._live_tools[server_name].get(tool_name)
 
-            tools = await self._get_server_tools(server_name)
+            if server_name in self._stateful_servers:
+                tools = await self._get_stateful_server_tools(server_name)
+            else:
+                tools = await self._get_server_tools(server_name)
             self._prepare_server_tools(server_name, tools)
             return self._live_tools[server_name].get(tool_name)
 
     async def _load_and_cache_server(self, server_name: str) -> list[BaseTool]:
-        tools = await self._get_server_tools(server_name)
+        if server_name in self._stateful_servers:
+            tools = await self._get_stateful_server_tools(server_name)
+        else:
+            tools = await self._get_server_tools(server_name)
         prepared = self._prepare_server_tools(server_name, tools)
 
         if prepared:

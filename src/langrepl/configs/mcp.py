@@ -35,6 +35,10 @@ class MCPServerConfig(VersionedConfig):
         default=None,
         description="Command list to run if server initialization fails",
     )
+    stateful: bool = Field(
+        default=False,
+        description="Keep server connection alive between tool calls",
+    )
 
 
 class MCPConfig(BaseModel):

@@ -191,3 +191,41 @@ class TestFilterTools:
 
         assert len(result) == 2
         assert {t.name for t in result} == {"read_file", "read_dir"}
+
+    def test_filter_negative_pattern_excludes_tools(self, create_mock_tool):
+        mock_tool1 = create_mock_tool("read_file")
+        mock_tool2 = create_mock_tool("write_file")
+        mock_tool3 = create_mock_tool("delete_file")
+
+        all_tools = [mock_tool1, mock_tool2, mock_tool3]
+        tool_dict = AgentFactory._build_tool_dict(all_tools)
+        module_map = {
+            "read_file": "file_system",
+            "write_file": "file_system",
+            "delete_file": "file_system",
+        }
+        patterns = ["file_system:*", "!file_system:delete_file"]
+
+        result = AgentFactory._filter_tools(tool_dict, patterns, module_map)
+
+        assert len(result) == 2
+        assert {t.name for t in result} == {"read_file", "write_file"}
+
+    def test_filter_negative_pattern_with_wildcard(self, create_mock_tool):
+        mock_tool1 = create_mock_tool("read_file")
+        mock_tool2 = create_mock_tool("write_file")
+        mock_tool3 = create_mock_tool("run_command")
+
+        all_tools = [mock_tool1, mock_tool2, mock_tool3]
+        tool_dict = AgentFactory._build_tool_dict(all_tools)
+        module_map = {
+            "read_file": "file_system",
+            "write_file": "file_system",
+            "run_command": "terminal",
+        }
+        patterns = ["*:*", "!terminal:*"]
+
+        result = AgentFactory._filter_tools(tool_dict, patterns, module_map)
+
+        assert len(result) == 2
+        assert {t.name for t in result} == {"read_file", "write_file"}

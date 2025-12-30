@@ -257,8 +257,14 @@ class AgentFactory:
         tool_name: str, module_name: str, category: str, patterns: list[str]
     ) -> bool:
         """Check if tool matches patterns with negative pattern support."""
+
+        def warn_invalid(p: str) -> None:
+            logger.warning(
+                f"Invalid pattern '{p}': expected format 'category:module:name'"
+            )
+
         return matches_patterns(
-            patterns, three_part_matcher(tool_name, module_name, category)
+            patterns, three_part_matcher(tool_name, module_name, category, warn_invalid)
         )
 
     def _resolve_skills(

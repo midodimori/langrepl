@@ -22,22 +22,36 @@ def matches_patterns(
     return any(matcher(p) for p in positives) and not any(matcher(p) for p in negatives)
 
 
-def two_part_matcher(name: str, module: str) -> Callable[[str], bool]:
+def two_part_matcher(
+    name: str, module: str, on_invalid: Callable[[str], None] | None = None
+) -> Callable[[str], bool]:
     """Matcher for 2-part patterns (module:name)."""
 
     def match(p: str) -> bool:
-        mod_p, name_p = p.split(":")
+        parts = p.split(":")
+        if len(parts) != 2:
+            if on_invalid:
+                on_invalid(p)
+            return False
+        mod_p, name_p = parts
         return fnmatch(module, mod_p) and fnmatch(name, name_p)
 
     return match
 
 
-def three_part_matcher(name: str, module: str, category: str) -> Callable[[str], bool]:
+def three_part_matcher(
+    name: str,
+    module: str,
+    category: str,
+    on_invalid: Callable[[str], None] | None = None,
+) -> Callable[[str], bool]:
     """Matcher for 3-part patterns (category:module:name)."""
 
     def match(p: str) -> bool:
         parts = p.split(":")
         if len(parts) != 3:
+            if on_invalid:
+                on_invalid(p)
             return False
         cat_p, mod_p, name_p = parts
         return (

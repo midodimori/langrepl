@@ -54,7 +54,7 @@ https://github.com/user-attachments/assets/f9573310-29dc-4c67-aa1b-cc6b6ab051a2
 - **User Memory** - Project-specific custom instructions and preferences that persist across conversations
 - **Human-in-the-Loop** - Configurable tool approval system with regex-based allow/deny rules
 - **Cost Tracking (Beta)** - Token usage and cost calculation per conversation
-- **MCP Server Support** - Integrate external tool servers via the MCP protocol
+- **MCP Server Support** - Integrate external tool servers via MCP protocol with optional stateful connections
 - **Sandbox (Beta)** - Secure isolated execution for tools with filesystem, network, and syscall restrictions
 
 ## Prerequisites
@@ -569,6 +569,7 @@ skills/
       "args": ["my-mcp-package"],
       "transport": "stdio",
       "enabled": true,
+      "stateful": false,
       "include": ["tool1"],
       "exclude": [],
       "repair_command": "rm -rf .some_cache"
@@ -577,6 +578,7 @@ skills/
 }
 ```
 
+- `stateful`: Keep connection alive between tool calls (default: `false`). Use for servers that need persistent state.
 - `repair_command`: Runs if server fails, then run this command before retrying
 - Suppress stderr: `"command": "sh", "args": ["-c", "npx pkg 2>/dev/null"]`
 - Reference: `mcp:my-server:tool1`

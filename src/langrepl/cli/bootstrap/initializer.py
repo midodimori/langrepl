@@ -204,7 +204,10 @@ class Initializer:
                 compiled_graph, "_tools_in_catalog", []
             )
             self.cached_agent_skills = getattr(compiled_graph, "_agent_skills", [])
-            yield compiled_graph
+            try:
+                yield compiled_graph
+            finally:
+                await mcp_client.close_sessions()
 
     async def get_threads(self, agent: str, working_dir: Path) -> list[dict]:
         """Get all conversation threads with metadata.

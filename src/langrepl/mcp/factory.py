@@ -43,6 +43,7 @@ class MCPFactory:
             "include": tuple(server.include or []),
             "exclude": tuple(server.exclude or []),
             "repair_command": tuple(server.repair_command or []),
+            "stateful": server.stateful,
         }
         return hashlib.sha256(repr(signature).encode("utf-8")).hexdigest()
 
@@ -70,6 +71,7 @@ class MCPFactory:
         tool_filters = {}
         repair_commands = {}
         server_hashes = {}
+        stateful_servers: set[str] = set()
 
         for name, server in config.servers.items():
             if not server.enabled:
@@ -153,6 +155,9 @@ class MCPFactory:
 
             server_hashes[name] = self._compute_server_hash(server)
 
+            if server.stateful:
+                stateful_servers.add(name)
+
         self._client = MCPClient(
             server_config,
             tool_filters,
@@ -160,6 +165,7 @@ class MCPFactory:
             enable_approval=self.enable_approval,
             cache_dir=cache_dir,
             server_hashes=server_hashes,
+            stateful_servers=stateful_servers,
         )
         self._config_hash = config_hash
         return self._client

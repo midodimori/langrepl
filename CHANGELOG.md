@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.10.2 (2025-12-30)
+
+### Features
+
+- Add stateful MCP server support (#69) ([#69](https://github.com/midodimori/langrepl/pull/69),
+  [`02cb0fb`](https://github.com/midodimori/langrepl/commit/02cb0fb805733477e71537c0a96729eb3c0efbec))
+
+
 ## v1.10.1 (2025-12-30)
 
 ### Features

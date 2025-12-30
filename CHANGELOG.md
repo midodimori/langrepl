@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.10.1 (2025-12-30)
+
+### Features
+
+- Consolidate pattern matching (#68) ([#68](https://github.com/midodimori/langrepl/pull/68),
+  [`6a66da2`](https://github.com/midodimori/langrepl/commit/6a66da2d27d0c5aacdf307d60004c957762b4fef))
+
+
 ## v1.10.0 (2025-12-28)
 
 ### Features

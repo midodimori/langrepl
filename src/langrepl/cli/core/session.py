@@ -93,6 +93,10 @@ class Session:
                                 console.print("")
 
                     await self._main_loop()
+                    status.start()
+                    status.update(
+                        f"[{theme.spinner_color}]Cleaning...[/{theme.spinner_color}]"
+                    )
         finally:
             self._restore_sigint()
 

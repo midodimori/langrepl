@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from fnmatch import fnmatch
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -17,6 +16,11 @@ from langrepl.core.logging import get_logger
 from langrepl.sandboxes.backends.base import SandboxBinding
 from langrepl.tools.catalog.skills import get_skill
 from langrepl.tools.subagents.task import SubAgent, think
+from langrepl.utils.patterns import (
+    matches_patterns,
+    three_part_matcher,
+    two_part_matcher,
+)
 
 if TYPE_CHECKING:
     from langchain_core.tools import BaseTool
@@ -92,19 +96,25 @@ class AgentFactory:
         internal_patterns = []
 
         for ref in tool_refs:
-            parts = ref.split(":")
+            is_negative = ref.startswith("!")
+            clean_ref = ref[1:] if is_negative else ref
+
+            parts = clean_ref.split(":")
             if len(parts) != 3:
                 logger.warning(f"Invalid tool reference format: {ref}")
                 continue
 
             tool_type, module_pattern, tool_pattern = parts
+            pattern = f"{module_pattern}:{tool_pattern}"
+            if is_negative:
+                pattern = f"!{pattern}"
 
             if tool_type == TOOL_CATEGORY_IMPL:
-                impl_patterns.append(f"{module_pattern}:{tool_pattern}")
+                impl_patterns.append(pattern)
             elif tool_type == TOOL_CATEGORY_MCP:
-                mcp_patterns.append(f"{module_pattern}:{tool_pattern}")
+                mcp_patterns.append(pattern)
             elif tool_type == TOOL_CATEGORY_INTERNAL:
-                internal_patterns.append(f"{module_pattern}:{tool_pattern}")
+                internal_patterns.append(pattern)
             else:
                 logger.warning(f"Unknown tool type: {tool_type}")
 
@@ -180,30 +190,17 @@ class AgentFactory:
         patterns: list[str] | None,
         module_map: dict[str, str],
     ) -> list[BaseTool]:
-        """Filter tools by pattern with wildcard support.
-
-        Args:
-            tool_dict: Dict of all available tools keyed by name
-            patterns: List of patterns (module:tool), or None to include none
-            module_map: Map of tool name to module name
-
-        Returns:
-            Filtered list of tools
-        """
+        """Filter tools by pattern with wildcard and negative pattern support."""
         if not patterns:
             return []
 
-        matched_names = set()
-        for pattern in patterns:
-            module_pattern, tool_pattern = pattern.split(":")
-            for tool_name in tool_dict:
-                module_name = module_map.get(tool_name, "")
-                if fnmatch(module_name, module_pattern) and fnmatch(
-                    tool_name, tool_pattern
-                ):
-                    matched_names.add(tool_name)
-
-        return [tool_dict[name] for name in matched_names]
+        return [
+            tool
+            for name, tool in tool_dict.items()
+            if matches_patterns(
+                patterns, two_part_matcher(name, module_map.get(name, ""))
+            )
+        ]
 
     @staticmethod
     def _parse_skill_references(skill_refs: list[str] | None) -> list[str] | None:
@@ -240,46 +237,35 @@ class AgentFactory:
         patterns: list[str] | None,
         module_map: dict[str, str],
     ) -> list[Skill]:
+        """Filter skills by pattern with wildcard and negative pattern support."""
         if not patterns:
             return []
 
-        matched_keys = set()
-        for pattern in patterns:
-            category_pattern, skill_pattern = pattern.split(":")
-            for composite_key in skill_dict:
-                # composite_key format: "category:name"
-                category_name = module_map.get(composite_key, "")
-                # Extract skill name from composite key
-                skill_name = (
-                    composite_key.split(":", 1)[1]
-                    if ":" in composite_key
-                    else composite_key
-                )
-                if fnmatch(category_name, category_pattern) and fnmatch(
-                    skill_name, skill_pattern
-                ):
-                    matched_keys.add(composite_key)
+        def get_skill_name(key: str) -> str:
+            return key.split(":", 1)[1] if ":" in key else key
 
-        return [skill_dict[key] for key in matched_keys]
+        return [
+            skill
+            for key, skill in skill_dict.items()
+            if matches_patterns(
+                patterns, two_part_matcher(get_skill_name(key), module_map.get(key, ""))
+            )
+        ]
 
     @staticmethod
     def _matches_any_pattern(
         tool_name: str, module_name: str, category: str, patterns: list[str]
     ) -> bool:
-        """Check if tool matches any pattern in the list."""
-        for pattern in patterns:
-            parts = pattern.split(":")
-            if len(parts) != 3:
-                continue
+        """Check if tool matches patterns with negative pattern support."""
 
-            category_pattern, module_pattern, tool_pattern = parts
-            if (
-                fnmatch(category, category_pattern)
-                and fnmatch(module_name, module_pattern)
-                and fnmatch(tool_name, tool_pattern)
-            ):
-                return True
-        return False
+        def warn_invalid(p: str) -> None:
+            logger.warning(
+                f"Invalid pattern '{p}': expected format 'category:module:name'"
+            )
+
+        return matches_patterns(
+            patterns, three_part_matcher(tool_name, module_name, category, warn_invalid)
+        )
 
     def _resolve_skills(
         self,

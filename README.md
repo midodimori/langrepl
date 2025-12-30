@@ -344,7 +344,9 @@ sandboxes:                    # See Sandboxes section
   enabled: true
   profiles:
     - sandbox: rw-online-macos
-      patterns: [impl:*:*]
+      patterns: [impl:*:*, "!impl:terminal:*"]
+    - sandbox: null            # Bypass for excluded tools
+      patterns: [impl:terminal:*, mcp:*:*]
 ```
 
 <details>
@@ -382,9 +384,10 @@ agents:
 
 </details>
 
-**Tool naming**: `<category>:<module>:<function>` with wildcard support (`*`, `?`, `[seq]`)
+**Tool naming**: `<category>:<module>:<function>` with wildcard (`*`, `?`, `[seq]`) and negative (`!`) pattern support
 - `impl:*:*` - All built-in tools
 - `impl:file_system:read_*` - All read_* tools in file_system
+- `!impl:file_system:write_*` - Exclude write_* tools
 - `mcp:server:*` - All tools from MCP server
 
 **Tool catalog**: When `use_catalog: true`, impl/mcp tools are wrapped in a unified catalog interface to reduce token usage. The agent receives catalog tools instead of individual tool definitions.
@@ -548,9 +551,10 @@ skills/
         └── SKILL.md
 ```
 
-**Skill naming**: `<category>:<name>` with wildcard support
+**Skill naming**: `<category>:<name>` with wildcard (`*`) and negative (`!`) pattern support
 - `general:skill-creator` - Specific skill
 - `general:*` - All skills in category
+- `!general:dangerous-skill` - Exclude specific skill
 - `*:*` - All skills
 
 **Built-in**: [skill-creator](https://www.aitmpl.com/component/skill/skill-creator) - Guide for creating custom skills
@@ -650,7 +654,8 @@ network:
 **Notes:**
 - **Package managers:** `uvx`, `npx`, `pip` may need network to check/download from registries. Default profiles include `~/.cache/uv`, `~/.npm`, `~/.local` for caching. Offline sandboxes auto-inject `NPM_CONFIG_OFFLINE=true` and `UV_OFFLINE=1` for MCP servers.
 - **Docker/containers:** Docker CLI requires socket access. Add to `network.local`: Docker Desktop (`/var/run/docker.sock`), OrbStack (`~/.orbstack/run/docker.sock`), Rancher Desktop (`~/.rd/docker.sock`), Colima (`~/.colima/default/docker.sock`).
-- **MCP servers:** Sandboxed at startup (command wrapped). Match with `mcp:server-name:*` (tool part must be `*`).
+- **MCP servers:** Sandboxed at startup (command wrapped). Match with `mcp:server-name:*` (tool part must be `*`). HTTP servers require explicit bypass (`sandbox: null`).
+- **Sandbox patterns:** Support negative patterns. Use `!mcp:server:*` to exclude from a wildcard match. Tools/servers must match exactly one profile or they're blocked.
 - **Working directory (`"."`):** When included, mounted and used as cwd. When excluded: Linux = not mounted, cwd is `/` inside tmpfs; macOS = can list files but cannot read contents.
 - **Symlinks:** Symlinks resolving outside allowed boundaries are blocked. Warnings logged at startup. Add targets to `filesystem.read` if needed.
 

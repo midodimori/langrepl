@@ -15,6 +15,7 @@ from langrepl.sandboxes.backends.base import SandboxBinding
 
 if TYPE_CHECKING:
     from langrepl.configs import MCPConfig, MCPServerConfig
+    from langrepl.sandboxes.backends.base import SandboxBackend
 
 logger = get_logger(__name__)
 
@@ -74,6 +75,10 @@ class MCPFactory:
             if not server.enabled:
                 continue
 
+            sandbox_backend, is_blocked = self._resolve_sandbox(name, sandbox_bindings)
+            if is_blocked:
+                continue
+
             env = dict(server.env) if server.env else {}
 
             http_proxy = settings.llm.http_proxy.get_secret_value()
@@ -94,15 +99,6 @@ class MCPFactory:
                     command = server.command
                     args = server.args or []
 
-                    # Match server against sandbox bindings
-                    sandbox_backend = None
-                    if sandbox_bindings:
-                        for binding in sandbox_bindings:
-                            if self._matches_mcp_pattern(name, binding.patterns):
-                                sandbox_backend = binding.backend
-                                break
-
-                    # Apply sandbox wrapping
                     if sandbox_backend:
                         try:
                             wrapped = sandbox_backend.build_command(
@@ -117,7 +113,7 @@ class MCPFactory:
                                 env["UV_OFFLINE"] = "1"
                         except Exception as e:
                             logger.warning(
-                                f"Failed to apply sandbox to MCP server '{name}', skipping: {e}"
+                                f"Failed to apply sandbox to MCP server '{name}': {e}"
                             )
                             continue
 
@@ -129,6 +125,12 @@ class MCPFactory:
                     }
             elif server.transport == "streamable_http":
                 if server.url:
+                    if sandbox_backend:
+                        logger.warning(
+                            f"MCP server '{name}': HTTP cannot be sandboxed, "
+                            "use 'sandbox: null' to bypass"
+                        )
+                        continue
                     server_dict = {
                         "transport": "streamable_http",
                         "url": server.url,
@@ -161,6 +163,37 @@ class MCPFactory:
         )
         self._config_hash = config_hash
         return self._client
+
+    def _resolve_sandbox(
+        self,
+        server_name: str,
+        sandbox_bindings: list[SandboxBinding] | None,
+    ) -> tuple[SandboxBackend | None, bool]:
+        """Resolve sandbox for MCP server. Returns (backend, is_blocked)."""
+        if not sandbox_bindings:
+            return None, False
+
+        matched_backends: list[SandboxBackend] = []
+        has_bypass = False
+
+        for binding in sandbox_bindings:
+            if self._matches_mcp_pattern(server_name, binding.patterns):
+                if binding.backend is None:
+                    has_bypass = True
+                    break
+                matched_backends.append(binding.backend)
+
+        if has_bypass:
+            return None, False
+        if len(matched_backends) == 1:
+            return matched_backends[0], False
+        if len(matched_backends) > 1:
+            logger.warning(
+                f"MCP server '{server_name}' matches multiple sandbox profiles"
+            )
+            return None, True
+        logger.warning(f"MCP server '{server_name}' matches no sandbox profile")
+        return None, True
 
     @staticmethod
     def _matches_mcp_pattern(server_name: str, patterns: list[str]) -> bool:

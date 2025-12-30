@@ -23,6 +23,22 @@ logger = get_logger(__name__)
 
 
 class MCPClient(MultiServerMCPClient):
+    """
+    MCPClient extends MultiServerMCPClient with session persistence and caching.
+
+    This class caches MCP sessions (one per configured server) in an
+    AsyncExitStack so they can be reused across calls. Reusing sessions
+    prevents errors when interacting with servers that require a persistent
+    session (for example Playwright-backed MCP servers) and reduces the
+    overhead of repeatedly creating and tearing down connections.
+
+    Key responsibilities:
+    - Initialize and store sessions for all configured servers.
+    - Provide methods to load tools using stored sessions where possible.
+    - Cache tool schemas to disk and apply basic approval metadata.
+    - Offer a cleanup method to close all stored sessions.
+    """
+
     def __init__(
         self,
         connections: dict[str, Connection] | None = None,
@@ -42,29 +58,32 @@ class MCPClient(MultiServerMCPClient):
         self._live_tools: dict[str, dict[str, BaseTool]] = {}
         self._init_lock = asyncio.Lock()
         self._server_locks: dict[str, asyncio.Lock] = {}
-        
+
         # Session management - store sessions to reuse instead of creating new ones
         self._sessions: dict[str, Any] = {}
         self._exit_stack: AsyncExitStack | None = None
         self._sessions_initialized = False
-        
+
         super().__init__(connections)
 
     async def _enter_sessions(self) -> None:
         """
-        Enter async contexts for all MCP servers and store sessions.
-        This follows the pattern from MultiServerMCPClientGuide.py
+            Enter async contexts for all MCP servers and store sessions.
+            This follows the pattern from MultiServerMCPClientGuide.py
+
+        The method is idempotent and safe to call multiple times; it uses
+        an internal lock to serialize initialization.
         """
         if self._sessions_initialized:
             return
-            
+
         async with self._init_lock:
             if self._sessions_initialized:
                 return
-                
+
             logger.info("Initializing MCP sessions for all servers")
             self._exit_stack = AsyncExitStack()
-            
+
             for server_name in self.connections.keys():
                 try:
                     # Use the session context manager from base class
@@ -76,20 +95,24 @@ class MCPClient(MultiServerMCPClient):
                 except Exception as e:
                     logger.error(
                         f"Failed to connect to MCP server '{server_name}': {e}",
-                        exc_info=True
+                        exc_info=True,
                     )
-            
+
             self._sessions_initialized = True
 
     async def get_tools(self, *, server_name: str | None = None) -> list[BaseTool]:
         """
-        Override base class method to use stored sessions instead of creating new ones.
-        This ensures stable connections and better performance.
+            Override base class method to use stored sessions instead of creating new ones.
+            This ensures stable connections and better performance.
+
+        If a stored session for `server_name` exists, tools are loaded via
+        that session. Any exceptions fall back to the base class
+        implementation.
         """
         # Ensure sessions are initialized
         if not self._sessions_initialized:
             await self._enter_sessions()
-        
+
         # If specific server requested and we have its session, use it
         if server_name and server_name in self._sessions:
             try:
@@ -99,17 +122,20 @@ class MCPClient(MultiServerMCPClient):
             except Exception as e:
                 logger.error(
                     f"Error loading tools from stored session for {server_name}: {e}",
-                    exc_info=True
+                    exc_info=True,
                 )
                 # Fall back to base class method
                 return await super().get_tools(server_name=server_name)
-        
+
         # If no server specified or session not found, fall back to base class
         return await super().get_tools(server_name=server_name)
 
     async def cleanup_sessions(self) -> None:
         """
-        Cleanup all stored sessions. Should be called when the client is no longer needed.
+            Cleanup all stored sessions. Should be called when the client is no longer needed.
+
+        This will aclose the internal AsyncExitStack and clear internal
+        session state so the client can be reinitialized later if needed.
         """
         if self._exit_stack:
             try:
@@ -123,6 +149,11 @@ class MCPClient(MultiServerMCPClient):
                 self._sessions_initialized = False
 
     def _is_mcp_error(self, exc: Exception) -> bool:
+        """Return True if the exception is an MCP-related error.
+
+        The helper detects direct ``McpError`` instances and recursively
+        inspects ``ExceptionGroup`` contents.
+        """
         if isinstance(exc, McpError):
             return True
         if isinstance(exc, ExceptionGroup):

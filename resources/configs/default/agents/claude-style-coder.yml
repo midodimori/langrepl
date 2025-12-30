@@ -1,4 +1,4 @@
-version: 2.2.0
+version: 2.2.1
 name: claude-style-coder
 description: "An agent that mimics Claude Code's behavior for software development tasks"
 prompt:

@@ -1,4 +1,4 @@
-version: 2.2.0
+version: 2.2.1
 name: general
 description: "General-purpose agent for research, writing, analysis, and planning tasks"
 prompt:

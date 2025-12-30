@@ -96,19 +96,25 @@ class AgentFactory:
         internal_patterns = []
 
         for ref in tool_refs:
-            parts = ref.split(":")
+            is_negative = ref.startswith("!")
+            clean_ref = ref[1:] if is_negative else ref
+
+            parts = clean_ref.split(":")
             if len(parts) != 3:
                 logger.warning(f"Invalid tool reference format: {ref}")
                 continue
 
             tool_type, module_pattern, tool_pattern = parts
+            pattern = f"{module_pattern}:{tool_pattern}"
+            if is_negative:
+                pattern = f"!{pattern}"
 
             if tool_type == TOOL_CATEGORY_IMPL:
-                impl_patterns.append(f"{module_pattern}:{tool_pattern}")
+                impl_patterns.append(pattern)
             elif tool_type == TOOL_CATEGORY_MCP:
-                mcp_patterns.append(f"{module_pattern}:{tool_pattern}")
+                mcp_patterns.append(pattern)
             elif tool_type == TOOL_CATEGORY_INTERNAL:
-                internal_patterns.append(f"{module_pattern}:{tool_pattern}")
+                internal_patterns.append(pattern)
             else:
                 logger.warning(f"Unknown tool type: {tool_type}")
 

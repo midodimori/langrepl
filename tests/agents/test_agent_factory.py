@@ -77,6 +77,20 @@ class TestParseToolReferences:
         assert mcp == ["server:*"]
         assert internal == ["todo:write_*"]
 
+    def test_parse_negative_patterns(self):
+        tool_refs = [
+            "impl:*:*",
+            "!impl:terminal:*",
+            "mcp:*:*",
+            "!mcp:dangerous:*",
+        ]
+
+        impl, mcp, internal = AgentFactory._parse_tool_references(tool_refs)
+
+        assert impl == ["*:*", "!terminal:*"]
+        assert mcp == ["*:*", "!dangerous:*"]
+        assert internal is None
+
 
 class TestFilterTools:
     def test_filter_by_exact_patterns(self, create_mock_tool):

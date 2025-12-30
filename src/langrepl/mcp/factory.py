@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-from fnmatch import fnmatch
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -12,6 +11,7 @@ from langrepl.core.logging import get_logger
 from langrepl.core.settings import settings
 from langrepl.mcp.client import MCPClient
 from langrepl.sandboxes.backends.base import SandboxBinding
+from langrepl.utils.patterns import matches_patterns, mcp_server_matcher
 
 if TYPE_CHECKING:
     from langrepl.configs import MCPConfig, MCPServerConfig
@@ -197,19 +197,14 @@ class MCPFactory:
 
     @staticmethod
     def _matches_mcp_pattern(server_name: str, patterns: list[str]) -> bool:
-        """Check if MCP server matches any pattern (mcp:<server>:*)."""
-        for pattern in patterns:
-            parts = pattern.split(":")
-            if len(parts) != 3:
-                continue
-
-            category_pattern, server_pattern, tool_pattern = parts
-            if category_pattern == TOOL_CATEGORY_MCP:
-                if tool_pattern != "*":
-                    logger.warning(
-                        f"Invalid MCP pattern '{pattern}': tool part must be '*'"
-                    )
-                    continue
-                if fnmatch(server_name, server_pattern):
-                    return True
-        return False
+        """Check if MCP server matches patterns with negative pattern support."""
+        return matches_patterns(
+            patterns,
+            mcp_server_matcher(
+                server_name,
+                TOOL_CATEGORY_MCP,
+                lambda p: logger.warning(
+                    f"Invalid MCP pattern '{p}': tool part must be '*'"
+                ),
+            ),
+        )

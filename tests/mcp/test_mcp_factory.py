@@ -138,3 +138,23 @@ class TestMCPFactory:
         client = await factory.create(mock_mcp_config, sandbox_bindings=bindings)
 
         assert "http_server" in client.connections
+
+    @pytest.mark.asyncio
+    async def test_negative_pattern_excludes_server(
+        self, mock_mcp_config, mock_mcp_server_config
+    ):
+        mock_mcp_config.servers = {
+            "server1": mock_mcp_server_config,
+            "server2": MCPServerConfig(
+                command="python", args=["-m", "other"], transport="stdio", enabled=True
+            ),
+        }
+        bindings = [
+            SandboxBinding(patterns=["mcp:*:*", "!mcp:server1:*"], backend=None)
+        ]
+
+        factory = MCPFactory()
+        client = await factory.create(mock_mcp_config, sandbox_bindings=bindings)
+
+        assert "server1" not in client.connections
+        assert "server2" in client.connections

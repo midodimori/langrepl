@@ -3,6 +3,7 @@
 import pytest
 
 from langrepl.configs import MCPConfig, MCPServerConfig
+from langrepl.configs.mcp import MCPTransport
 
 
 @pytest.fixture
@@ -11,7 +12,7 @@ def mock_mcp_server_config():
     return MCPServerConfig(
         command="python",
         args=["-m", "server"],
-        transport="stdio",
+        transport=MCPTransport.STDIO,
         enabled=True,
     )
 

@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from langrepl.configs import MCPServerConfig
+from langrepl.configs.mcp import MCPTransport
 from langrepl.mcp.factory import MCPFactory
 from langrepl.sandboxes.backends.base import SandboxBackend, SandboxBinding
 
@@ -109,7 +110,7 @@ class TestMCPFactory:
     async def test_http_server_blocked_when_sandbox_assigned(self, mock_mcp_config):
         http_server = MCPServerConfig(
             url="http://localhost:8080",
-            transport="streamable_http",
+            transport=MCPTransport.HTTP,
             enabled=True,
         )
         mock_mcp_config.servers = {"http_server": http_server}
@@ -128,7 +129,7 @@ class TestMCPFactory:
     async def test_http_server_allowed_when_bypass(self, mock_mcp_config):
         http_server = MCPServerConfig(
             url="http://localhost:8080",
-            transport="streamable_http",
+            transport=MCPTransport.HTTP,
             enabled=True,
         )
         mock_mcp_config.servers = {"http_server": http_server}
@@ -146,7 +147,10 @@ class TestMCPFactory:
         mock_mcp_config.servers = {
             "server1": mock_mcp_server_config,
             "server2": MCPServerConfig(
-                command="python", args=["-m", "other"], transport="stdio", enabled=True
+                command="python",
+                args=["-m", "other"],
+                transport=MCPTransport.STDIO,
+                enabled=True,
             ),
         }
         bindings = [
@@ -158,3 +162,36 @@ class TestMCPFactory:
 
         assert "server1" not in client.connections
         assert "server2" in client.connections
+
+    @pytest.mark.asyncio
+    async def test_http_transport_alias(self, mock_mcp_config):
+        """streamable_http normalizes to http via validator."""
+        server = MCPServerConfig(
+            url="http://localhost:8080",
+            transport="streamable_http",  # type: ignore[arg-type]
+            enabled=True,
+        )
+        mock_mcp_config.servers = {"server": server}
+
+        factory = MCPFactory()
+        client = await factory.create(mock_mcp_config)
+
+        assert client.connections["server"]["transport"] == "http"
+
+    @pytest.mark.asyncio
+    async def test_http_transport_with_timeouts(self, mock_mcp_config):
+        server = MCPServerConfig(
+            url="http://localhost:8080",
+            transport=MCPTransport.HTTP,
+            enabled=True,
+            timeout=30.0,
+            sse_read_timeout=300.0,
+        )
+        mock_mcp_config.servers = {"server": server}
+
+        factory = MCPFactory()
+        client = await factory.create(mock_mcp_config)
+
+        conn = client.connections["server"]
+        assert conn["timeout"] == 30.0  # type: ignore[typeddict-item]
+        assert conn["sse_read_timeout"] == 300.0  # type: ignore[typeddict-item]

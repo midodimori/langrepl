@@ -573,11 +573,19 @@ skills/
       "include": ["tool1"],
       "exclude": [],
       "repair_command": "rm -rf .some_cache"
+    },
+    "remote-server": {
+      "url": "http://localhost:8080/mcp",
+      "transport": "http",
+      "timeout": 30,
+      "sse_read_timeout": 300
     }
   }
 }
 ```
 
+- `transport`: `stdio` (local command), `http` (HTTP/streamable), `sse` (Server-Sent Events), `websocket`. Aliases `streamable_http` and `streamable-http` map to `http`.
+- `timeout`, `sse_read_timeout`: Connection and SSE read timeouts in seconds (for HTTP-based transports)
 - `stateful`: Keep connection alive between tool calls (default: `false`). Use for servers that need persistent state.
 - `repair_command`: Runs if server fails, then run this command before retrying
 - Suppress stderr: `"command": "sh", "args": ["-c", "npx pkg 2>/dev/null"]`

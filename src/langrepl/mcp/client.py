@@ -334,6 +334,7 @@ class MCPClient(MultiServerMCPClient):
             tools = await self._get_server_tools(server_name)
         prepared = self._prepare_server_tools(server_name, tools)
 
+        logger.info(f"MCP server '{server_name}': loaded {len(prepared)} tools")
         if prepared:
             tool_schemas = [ToolSchema.from_tool(t) for t in prepared]
             self._save_cached_schemas(server_name, tool_schemas)

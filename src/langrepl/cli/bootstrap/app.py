@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import os
 import sys
+from pathlib import Path
 
 from langrepl.cli.bootstrap.chat import handle_chat_command
 from langrepl.cli.bootstrap.server import handle_server_command
@@ -11,9 +12,6 @@ from langrepl.cli.theme import console
 from langrepl.configs import ApprovalMode
 from langrepl.core.constants import APP_NAME
 from langrepl.core.logging import configure_logging, get_logger
-
-configure_logging()
-logger = get_logger(__name__)
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -83,6 +81,12 @@ def create_parser() -> argparse.ArgumentParser:
         default=ApprovalMode.SEMI_ACTIVE.value,
         help=f"Tool approval mode ({', '.join(mode.value for mode in ApprovalMode)})",
     )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose logging to console and .langrepl/app.log",
+    )
 
     return parser
 
@@ -91,6 +95,10 @@ async def main() -> int:
     """Main CLI entry point."""
     parser = create_parser()
     args = parser.parse_args()
+
+    # Configure logging after argument parsing
+    configure_logging(show_logs=args.verbose, working_dir=Path(args.working_dir))
+    logger = get_logger(__name__)
 
     try:
         # Route to server mode if -s flag is present

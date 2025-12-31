@@ -115,6 +115,7 @@ class CompressionHandler:
                     current_output_tokens=0,
                     total_cost=0.0,
                 )
+                logger.info(f"Thread ID: {new_thread_id}")
 
                 # Render the compressed messages
                 for message in compressed_messages:

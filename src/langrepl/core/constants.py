@@ -24,6 +24,7 @@ CONFIG_SKILLS_DIR = Path(f"{CONFIG_DIR_NAME}/skills")
 CONFIG_SANDBOXES_DIR = Path(f"{CONFIG_DIR_NAME}/sandboxes")
 CONFIG_MCP_CACHE_DIR = Path(f"{CONFIG_DIR_NAME}/cache/mcp")
 CONFIG_SANDBOX_CACHE_DIR = Path(f"{CONFIG_DIR_NAME}/cache/sandboxes")
+CONFIG_LOG_DIR = Path(f"{CONFIG_DIR_NAME}/logs")
 
 DEFAULT_CONFIG_DIR_NAME = "resources.configs.default"
 

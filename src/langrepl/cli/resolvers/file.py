@@ -6,8 +6,11 @@ from shlex import quote
 from prompt_toolkit.completion import Completion
 
 from langrepl.cli.resolvers.base import RefType, Resolver
+from langrepl.core.logging import get_logger
 from langrepl.utils.bash import execute_bash_command
 from langrepl.utils.path import resolve_path
+
+logger = get_logger(__name__)
 
 
 class FileResolver(Resolver):
@@ -84,6 +87,7 @@ class FileResolver(Resolver):
             resolved = resolve_path(str(working_dir), ref)
             return str(resolved)
         except Exception:
+            logger.debug("Failed to resolve file reference", exc_info=True)
             return ref
 
     async def complete(self, fragment: str, ctx: dict, limit: int) -> list[Completion]:
@@ -125,6 +129,6 @@ class FileResolver(Resolver):
                 )
 
         except Exception:
-            pass
+            logger.debug("File completion failed", exc_info=True)
 
         return completions

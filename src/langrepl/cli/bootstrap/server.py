@@ -15,7 +15,10 @@ import httpx
 from langrepl.cli.bootstrap.initializer import initializer
 from langrepl.cli.theme import console
 from langrepl.core.constants import CONFIG_LANGGRAPH_FILE_NAME
+from langrepl.core.logging import get_logger
 from langrepl.core.settings import settings
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from langgraph.graph.state import CompiledStateGraph
@@ -200,7 +203,7 @@ async def _get_or_create_thread(
                 if threads:
                     return threads[0]["thread_id"]
         except Exception:
-            pass
+            logger.debug("Failed to resume thread from server", exc_info=True)
 
     # Create new thread
     response = await client.post(f"{server_url}/threads", json={})
@@ -297,7 +300,7 @@ async def handle_server_command(args) -> int:
                             f"\n# Langgraph Server configuration\n{ignore_pattern}\n"
                         )
             except Exception:
-                pass
+                logger.debug("Git exclude update failed", exc_info=True)
 
         console.print("Starting LangGraph development server...")
         config_path = working_dir / CONFIG_LANGGRAPH_FILE_NAME

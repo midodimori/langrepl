@@ -8,6 +8,9 @@ from pydantic import BaseModel
 from langrepl.cli.bootstrap.initializer import initializer
 from langrepl.cli.bootstrap.timer import timer
 from langrepl.configs import ApprovalMode
+from langrepl.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class Context(BaseModel):
@@ -61,9 +64,15 @@ class Context(BaseModel):
             agent_config.tools.output_max_tokens if agent_config.tools else None
         )
 
+        resolved_agent = agent or agent_config.name
+        resolved_model = model or agent_config.llm.alias
+
+        logger.info(f"Agent: {resolved_agent}, Model: {resolved_model}")
+        logger.info(f"Thread ID: {thread_id}")
+
         return cls(
-            agent=agent or agent_config.name,
-            model=model or agent_config.llm.alias,
+            agent=resolved_agent,
+            model=resolved_model,
             thread_id=thread_id,
             working_dir=working_dir,
             approval_mode=approval_mode or ApprovalMode.SEMI_ACTIVE,

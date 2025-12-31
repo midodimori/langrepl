@@ -188,5 +188,5 @@ class InterruptHandler:
                     sys.stdout.flush()
                     return ""
         except Exception:
-            # Any other exception, just return None
+            logger.debug("Interrupt choice failed", exc_info=True)
             return None

@@ -16,8 +16,11 @@ from langrepl.cli.completers import CompleterRouter
 from langrepl.cli.core.context import Context
 from langrepl.cli.ui.shared import create_bottom_toolbar, create_prompt_style
 from langrepl.core.constants import CONFIG_HISTORY_FILE_NAME
+from langrepl.core.logging import get_logger
 from langrepl.core.settings import settings
 from langrepl.utils.cost import calculate_context_percentage, format_cost, format_tokens
+
+logger = get_logger(__name__)
 
 
 class InteractivePrompt:
@@ -271,6 +274,7 @@ class InteractivePrompt:
         try:
             app.loop.call_later(self._ctrl_c_timeout, hide)
         except Exception:
+            logger.debug("Hide message timer failed", exc_info=True)
             self._reset_ctrl_c_state()
 
     def refresh_style(self) -> None:

@@ -103,11 +103,15 @@ class ModelHandler:
                             else None
                         ),
                     )
+                    logger.info(f"Switched to Model: {selected_model_name}")
                 else:
                     await initializer.update_subagent_llm(
                         agent_name,
                         selected_model_name,
                         self.session.context.working_dir,
+                    )
+                    logger.info(
+                        f"Subagent '{agent_name}' switched to Model: {selected_model_name}"
                     )
                     console.print_success(
                         f"Updated subagent '{agent_name}' to use model '{selected_model_name}'"

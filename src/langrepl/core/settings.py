@@ -110,7 +110,6 @@ class ServerSettings(BaseModel):
 
 class Settings(BaseSettings):
     log_level: str = Field(default="INFO", description="The log level")
-    log_file: str = Field(default="app.log", description="The log file")
     suppress_grpc_warnings: bool = Field(
         default=True, description="Suppress gRPC warnings"
     )

@@ -261,6 +261,7 @@ class ResumeHandler:
                     ),
                     total_cost=latest_channel_values.get("total_cost"),
                 )
+                logger.info(f"Thread ID: {thread_id}")
 
         except Exception as e:
             console.print_error(f"Error loading thread history: {e}")

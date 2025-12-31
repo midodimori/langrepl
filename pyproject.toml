@@ -70,7 +70,7 @@ dependencies = [
     'types-jsonschema~=4.25.1.20251009',
     'markdown-it-py~=4.0.0',
     'mdformat~=1.0.0',
-    'pyseccomp~=0.1.2',
+    'pyseccomp~=0.1.2; sys_platform == "linux"',
     'pathspec~=0.12.1',
 ]
 

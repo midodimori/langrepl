@@ -51,6 +51,7 @@ def process_dependencies(
 
         pkg_name = req.name
         extras = f"[{','.join(sorted(req.extras))}]" if req.extras else ""
+        marker = f"; {req.marker}" if req.marker else ""
 
         locked_version = locked_versions.get(pkg_name)
         if not locked_version:
@@ -89,7 +90,7 @@ def process_dependencies(
         ) or operator != target_operator
 
         if needs_update:
-            new_dep = f"{pkg_name}{extras}{target_operator}{locked_version}"
+            new_dep = f"{pkg_name}{extras}{target_operator}{locked_version}{marker}"
             updated.append(new_dep)
             updated_count += 1
             print(

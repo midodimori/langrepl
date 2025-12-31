@@ -80,11 +80,21 @@ def process_dependencies(
             operator = first_spec.operator or operator
             old_version = first_spec.version
 
-        if old_version and parse(locked_version) != parse(old_version):
-            new_dep = f"{pkg_name}{extras}{operator}{locked_version}"
+        # Use ~= (compatible release, patch only) for all dependencies
+        target_operator = "~="
+
+        # Update if version changed OR if operator needs to be normalized to ~=
+        needs_update = (
+            old_version and parse(locked_version) != parse(old_version)
+        ) or operator != target_operator
+
+        if needs_update:
+            new_dep = f"{pkg_name}{extras}{target_operator}{locked_version}"
             updated.append(new_dep)
             updated_count += 1
-            print(f"  ✓ {pkg_name}: {req.specifier} → {operator}{locked_version}")
+            print(
+                f"  ✓ {pkg_name}: {req.specifier} → {target_operator}{locked_version}"
+            )
         else:
             updated.append(dep)
             print(f"  = {pkg_name}: {req.specifier} (no change)")

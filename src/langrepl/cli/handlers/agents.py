@@ -60,6 +60,10 @@ class AgentHandler:
                     agent=selected_agent_name,
                     model=selected_agent_config.llm.alias,
                 )
+                logger.info(
+                    f"Switched to Agent: {selected_agent_name}, "
+                    f"Model: {selected_agent_config.llm.alias}"
+                )
 
                 # Mark this agent as the new default
                 await initializer.update_default_agent(

@@ -18,6 +18,9 @@ from langrepl.cli.handlers import (
     ToolsHandler,
 )
 from langrepl.cli.theme import console
+from langrepl.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class CommandDispatcher:
@@ -126,6 +129,7 @@ class CommandDispatcher:
             current_output_tokens=None,
             total_cost=None,
         )
+        logger.info(f"Thread ID: {new_thread_id}")
         console.clear()
 
     async def cmd_exit(self, args: list[str]) -> None:

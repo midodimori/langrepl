@@ -102,6 +102,7 @@ class Session:
 
     async def _main_loop(self) -> None:
         """Main interactive loop."""
+        logger.info("Session started")
         self.running = True
 
         while self.running:
@@ -126,7 +127,9 @@ class Session:
             except Exception as e:
                 console.print_error(f"Error processing input: {e}")
                 console.print("")
-                logger.debug("Input processing error")
+                logger.debug("Input processing error", exc_info=True)
+
+        logger.info("Session ended")
 
     async def send(self, message: str) -> int:
         """Send a single message in one-shot mode (non-interactive)."""

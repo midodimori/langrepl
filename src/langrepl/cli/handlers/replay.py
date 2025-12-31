@@ -83,7 +83,7 @@ class ReplayHandler:
                                     total_cost=channel_values.get("total_cost"),
                                 )
                 except Exception as e:
-                    logger.error(f"Failed to delete checkpoints: {e}")
+                    logger.debug("Checkpoint deletion failed", exc_info=True)
                     console.print_error(
                         f"Warning: Could not rewind conversation history: {e}"
                     )

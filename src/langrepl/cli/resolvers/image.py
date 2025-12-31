@@ -7,6 +7,7 @@ from typing import Any
 from prompt_toolkit.completion import Completion
 
 from langrepl.cli.resolvers.base import RefType, Resolver
+from langrepl.core.logging import get_logger
 from langrepl.utils.bash import execute_bash_command
 from langrepl.utils.image import (
     SUPPORTED_IMAGE_EXTENSIONS,
@@ -17,6 +18,8 @@ from langrepl.utils.image import (
     read_image_as_base64,
 )
 from langrepl.utils.path import resolve_path
+
+logger = get_logger(__name__)
 
 
 class ImageResolver(Resolver):
@@ -100,6 +103,7 @@ class ImageResolver(Resolver):
                 return str(resolved)
             return ref
         except Exception:
+            logger.debug("Failed to resolve image reference", exc_info=True)
             return ref
 
     async def complete(self, fragment: str, ctx: dict, limit: int) -> list[Completion]:
@@ -137,7 +141,7 @@ class ImageResolver(Resolver):
                 )
 
         except Exception:
-            pass
+            logger.debug("Image completion failed", exc_info=True)
 
         return completions
 

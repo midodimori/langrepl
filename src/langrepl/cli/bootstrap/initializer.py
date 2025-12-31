@@ -30,12 +30,15 @@ from langrepl.core.constants import (
     CONFIG_MCP_CACHE_DIR,
     CONFIG_SKILLS_DIR,
 )
+from langrepl.core.logging import get_logger
 from langrepl.core.settings import settings
 from langrepl.llms.factory import LLMFactory
 from langrepl.mcp.factory import MCPFactory
 from langrepl.sandboxes.factory import SandboxFactory
 from langrepl.skills.factory import SkillFactory
 from langrepl.tools.factory import ToolFactory
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from langchain_core.tools import BaseTool
@@ -254,6 +257,7 @@ class Initializer:
                         }
 
                     except Exception:
+                        logger.debug("Thread checkpoint parse failed", exc_info=True)
                         continue
 
                 # Sort threads by timestamp (latest first)
@@ -261,6 +265,7 @@ class Initializer:
                 thread_list.sort(key=lambda t: t.get("timestamp", 0), reverse=True)
                 return thread_list
             except Exception:
+                logger.debug("Get threads failed", exc_info=True)
                 return []
 
 

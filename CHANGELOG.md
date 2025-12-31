@@ -2,6 +2,20 @@
 
 <!-- version list -->
 
+## v1.10.4 (2025-12-31)
+
+### Chores
+
+- Add spinner when cleaning resources
+  ([`1b27bb8`](https://github.com/midodimori/langrepl/commit/1b27bb89c4f94a6557eb73d73423973cf99c41c3))
+
+### Features
+
+- Improve CLI logging with verbose mode and file rotation (#70)
+  ([#70](https://github.com/midodimori/langrepl/pull/70),
+  [`09bec53`](https://github.com/midodimori/langrepl/commit/09bec53d1c12b3a8f5e52f5713752402b42b22ca))
+
+
 ## v1.10.3 (2025-12-30)
 
 ### Bug Fixes

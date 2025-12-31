@@ -50,3 +50,8 @@ updates:
     labels:
       - "dependencies"
       - "github-actions"
+    groups:
+      # Group all GitHub Actions updates into one PR
+      github-actions:
+        patterns:
+          - "*"

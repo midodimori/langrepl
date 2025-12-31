@@ -1,0 +1,52 @@
+version: 2
+updates:
+  # Python dependencies via uv
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "python"
+    groups:
+      # LangChain ecosystem - group together, review carefully
+      langchain:
+        patterns:
+          - "langchain*"
+          - "langgraph*"
+          - "langsmith*"
+      # Group other production deps (minor/patch) into one PR
+      production-deps:
+        applies-to: version-updates
+        dependency-type: production
+        exclude-patterns:
+          - "langchain*"
+          - "langgraph*"
+          - "langsmith*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group dev deps separately
+      dev-deps:
+        applies-to: version-updates
+        dependency-type: development
+        update-types:
+          - "minor"
+          - "patch"
+      # Major updates (non-langchain) get individual PRs
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "github-actions"

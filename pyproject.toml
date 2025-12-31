@@ -98,6 +98,11 @@ module = [
 ]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = "langrepl.mcp.factory"
+# TypedDict union from langchain-mcp-adapters makes dynamic dict building awkward
+disable_error_code = ["assignment", "index", "typeddict-unknown-key", "arg-type"]
+
 
 [tool.pytest.ini_options]
 # Add project root (resources) and src to the Python path so tests can import langrepl and bundled resources

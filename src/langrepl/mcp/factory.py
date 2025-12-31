@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from langchain_mcp_adapters.sessions import Connection
 
+from langrepl.configs.mcp import MCPTransport
 from langrepl.core.constants import TOOL_CATEGORY_MCP
 from langrepl.core.logging import get_logger
 from langrepl.core.settings import settings
@@ -96,7 +97,7 @@ class MCPFactory:
 
             server_dict: Connection | None = None
 
-            if server.transport == "stdio":
+            if server.transport == MCPTransport.STDIO:
                 if server.command:
                     command = server.command
                     args = server.args or []
@@ -125,23 +126,37 @@ class MCPFactory:
                         "args": args,
                         "env": env,
                     }
-            elif server.transport == "streamable_http":
+            elif server.transport.is_http:
                 if server.url:
                     if sandbox_backend:
                         logger.warning(
-                            f"MCP server '{name}': HTTP cannot be sandboxed, "
-                            "use 'sandbox: null' to bypass"
+                            f"MCP server '{name}': {server.transport} cannot be "
+                            "sandboxed, use 'sandbox: null' to bypass"
                         )
                         continue
                     server_dict = {
-                        "transport": "streamable_http",
+                        "transport": server.transport.value,
                         "url": server.url,
                         "headers": server.headers,
                     }
+                    if server.timeout is not None:
+                        server_dict["timeout"] = server.timeout
+                    if server.sse_read_timeout is not None:
+                        server_dict["sse_read_timeout"] = server.sse_read_timeout
 
             if server_dict is None:
                 continue
 
+            if server.transport == MCPTransport.STDIO:
+                logger.debug(
+                    f"MCP server '{name}': transport={server.transport.value}, "
+                    f"command={server.command} {' '.join(server.args or [])}"
+                )
+            else:
+                logger.debug(
+                    f"MCP server '{name}': transport={server.transport.value}, "
+                    f"url={server.url}"
+                )
             server_config[name] = server_dict
 
             if server.repair_command:

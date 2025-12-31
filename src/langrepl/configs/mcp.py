@@ -3,14 +3,29 @@
 from __future__ import annotations
 
 import json
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, cast
 
 import aiofiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from langrepl.configs.base import VersionedConfig
 from langrepl.utils.render import render_templates
+
+
+class MCPTransport(StrEnum):
+    """MCP transport types."""
+
+    STDIO = "stdio"
+    SSE = "sse"
+    HTTP = "http"
+    WEBSOCKET = "websocket"
+
+    @property
+    def is_http(self) -> bool:
+        """HTTP-based transports that cannot be sandboxed."""
+        return self in {MCPTransport.SSE, MCPTransport.HTTP, MCPTransport.WEBSOCKET}
 
 
 class MCPServerConfig(VersionedConfig):
@@ -24,7 +39,9 @@ class MCPServerConfig(VersionedConfig):
     args: list[str] = Field(
         default_factory=list, description="Arguments for the server command"
     )
-    transport: str = Field(default="stdio", description="Transport protocol")
+    transport: MCPTransport = Field(
+        default=MCPTransport.STDIO, description="Transport protocol"
+    )
     env: dict[str, str] = Field(
         default_factory=dict, description="Environment variables"
     )
@@ -39,6 +56,20 @@ class MCPServerConfig(VersionedConfig):
         default=False,
         description="Keep server connection alive between tool calls",
     )
+    timeout: float | None = Field(
+        default=None, description="Connection timeout in seconds"
+    )
+    sse_read_timeout: float | None = Field(
+        default=None, description="SSE read timeout in seconds"
+    )
+
+    @field_validator("transport", mode="before")
+    @classmethod
+    def normalize_transport(cls, v: str) -> str:
+        """Normalize http transport aliases to canonical 'http'."""
+        if v in {"streamable_http", "streamable-http"}:
+            return "http"
+        return v
 
 
 class MCPConfig(BaseModel):

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
@@ -145,14 +145,22 @@ class Initializer:
         ) as checkpointer:
             yield checkpointer
 
-    @asynccontextmanager
-    async def get_graph(
+    async def create_graph(
         self,
         agent: str | None,
         model: str | None,
         working_dir: Path,
-    ) -> AsyncIterator[CompiledStateGraph]:
-        """Get compiled graph for agent."""
+    ) -> tuple[CompiledStateGraph, Callable[[], Awaitable[None]]]:
+        """Create graph and return cleanup function. Core method for both modes.
+
+        Args:
+            agent: Agent name or None for default
+            model: Model name or None for agent default
+            working_dir: Working directory path
+
+        Returns:
+            (graph, cleanup_fn) - Call cleanup_fn when done.
+        """
         registry = self.get_registry(working_dir)
 
         with timer("Load configs"):
@@ -189,28 +197,43 @@ class Initializer:
                 sandbox_bindings=sandbox_bindings,
             )
 
-        async with checkpointer_ctx as checkpointer:
-            with timer("Create and compile graph"):
-                compiled_graph = await self.agent_factory.create(
-                    config=agent_config,
-                    state_schema=AgentState,
-                    context_schema=AgentContext,
-                    checkpointer=checkpointer,
-                    mcp_client=mcp_client,
-                    llm_config=llm_config,
-                    skills_dir=working_dir / CONFIG_SKILLS_DIR,
-                    sandbox_bindings=sandbox_bindings,
-                )
+        checkpointer = await checkpointer_ctx.__aenter__()
 
-            self.cached_llm_tools = getattr(compiled_graph, "_llm_tools", [])
-            self.cached_tools_in_catalog = getattr(
-                compiled_graph, "_tools_in_catalog", []
+        with timer("Create and compile graph"):
+            graph = await self.agent_factory.create(
+                config=agent_config,
+                state_schema=AgentState,
+                context_schema=AgentContext,
+                checkpointer=checkpointer,
+                mcp_client=mcp_client,
+                llm_config=llm_config,
+                skills_dir=working_dir / CONFIG_SKILLS_DIR,
+                sandbox_bindings=sandbox_bindings,
             )
-            self.cached_agent_skills = getattr(compiled_graph, "_agent_skills", [])
-            try:
-                yield compiled_graph
-            finally:
-                await mcp_client.close()
+
+        self.cached_llm_tools = getattr(graph, "_llm_tools", [])
+        self.cached_tools_in_catalog = getattr(graph, "_tools_in_catalog", [])
+        self.cached_agent_skills = getattr(graph, "_agent_skills", [])
+
+        async def cleanup() -> None:
+            await mcp_client.close()
+            await checkpointer_ctx.__aexit__(None, None, None)
+
+        return graph, cleanup
+
+    @asynccontextmanager
+    async def get_graph(
+        self,
+        agent: str | None,
+        model: str | None,
+        working_dir: Path,
+    ) -> AsyncIterator[CompiledStateGraph]:
+        """Context manager wrapper around create_graph with auto-cleanup."""
+        graph, cleanup = await self.create_graph(agent, model, working_dir)
+        try:
+            yield graph
+        finally:
+            await cleanup()
 
     async def get_threads(self, agent: str, working_dir: Path) -> list[dict]:
         """Get all conversation threads with metadata.

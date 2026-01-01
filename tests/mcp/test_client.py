@@ -265,3 +265,138 @@ class TestMCPClientTools:
         assert len(tools) == 1
         assert tools[0].metadata is not None
         assert tools[0].metadata.get("timeout") == 30.0
+
+    @pytest.mark.asyncio
+    async def test_cached_stateful_server_warms_up_session(self, create_mock_tool):
+        """Cached stateful servers should warm up sessions during tools()."""
+        from langrepl.mcp.client import ServerMeta
+
+        mock_tool = create_mock_tool("tool1")
+
+        client = MCPClient(
+            connections={"server1": Mock()},
+            enable_approval=False,
+            server_metadata={"server1": ServerMeta(stateful=True)},
+        )
+        client._cache.load = MagicMock(  # type: ignore[method-assign]
+            return_value=[ToolSchema.from_tool(mock_tool)]
+        )
+        client._sessions.get = AsyncMock(return_value=Mock())  # type: ignore[method-assign]
+
+        await client.tools()
+
+        client._sessions.get.assert_awaited_once_with("server1")
+
+    @pytest.mark.asyncio
+    async def test_cached_non_stateful_server_skips_warmup(self, create_mock_tool):
+        """Non-stateful cached servers should NOT warm up sessions."""
+        from langrepl.mcp.client import ServerMeta
+
+        mock_tool = create_mock_tool("tool1")
+
+        client = MCPClient(
+            connections={"server1": Mock()},
+            enable_approval=False,
+            server_metadata={"server1": ServerMeta(stateful=False)},
+        )
+        client._cache.load = MagicMock(  # type: ignore[method-assign]
+            return_value=[ToolSchema.from_tool(mock_tool)]
+        )
+        client._sessions.get = AsyncMock()  # type: ignore[method-assign]
+
+        await client.tools()
+
+        client._sessions.get.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_warmup_failure_does_not_block_tools(self, create_mock_tool):
+        """Failed warmup should log warning but still return tools."""
+        from langrepl.mcp.client import ServerMeta
+
+        mock_tool = create_mock_tool("tool1")
+
+        client = MCPClient(
+            connections={"server1": Mock()},
+            enable_approval=False,
+            server_metadata={"server1": ServerMeta(stateful=True)},
+        )
+        client._cache.load = MagicMock(  # type: ignore[method-assign]
+            return_value=[ToolSchema.from_tool(mock_tool)]
+        )
+        client._sessions.get = AsyncMock(  # type: ignore[method-assign]
+            side_effect=RuntimeError("Connection failed")
+        )
+
+        tools = await client.tools()
+
+        assert len(tools) == 1
+        assert tools[0].name == "tool1"
+
+    @pytest.mark.asyncio
+    async def test_multiple_stateful_servers_warmed_in_parallel(self, create_mock_tool):
+        """Multiple stateful servers should be warmed up concurrently."""
+        import asyncio
+        import time
+
+        from langrepl.mcp.client import ServerMeta
+
+        mock_tool = create_mock_tool("tool1")
+
+        client = MCPClient(
+            connections={"server1": Mock(), "server2": Mock()},
+            enable_approval=False,
+            server_metadata={
+                "server1": ServerMeta(stateful=True),
+                "server2": ServerMeta(stateful=True),
+            },
+        )
+        client._cache.load = MagicMock(  # type: ignore[method-assign]
+            return_value=[ToolSchema.from_tool(mock_tool)]
+        )
+
+        warmup_times: list[tuple[str, float]] = []
+
+        async def track_warmup(server: str) -> Mock:
+            warmup_times.append((server, time.time()))
+            await asyncio.sleep(0.01)
+            return Mock()
+
+        client._sessions.get = AsyncMock(side_effect=track_warmup)  # type: ignore[method-assign]
+
+        start = time.time()
+        await client.tools()
+        duration = time.time() - start
+
+        # Should complete in ~0.01s (parallel), not ~0.02s (sequential)
+        assert duration < 0.015
+        assert len(warmup_times) == 2
+
+    @pytest.mark.asyncio
+    async def test_non_cached_servers_skip_warmup(self, create_mock_tool):
+        """Servers without cache should not trigger warmup (init in _load_server)."""
+        from langrepl.mcp.client import ServerMeta
+
+        mock_tool = create_mock_tool("tool1")
+
+        client = MCPClient(
+            connections={"server1": Mock()},
+            enable_approval=False,
+            server_metadata={"server1": ServerMeta(stateful=True)},
+        )
+        client._cache.load = MagicMock(return_value=None)  # type: ignore[method-assign]
+
+        async def mock_load_server(server_name: str):
+            from langrepl.mcp.tool import MCPTool
+
+            schema = ToolSchema.from_tool(mock_tool)
+            proxy = MCPTool(server_name, schema, AsyncMock())
+            proxy._loaded = mock_tool
+            return [proxy]
+
+        client._load_server = AsyncMock(side_effect=mock_load_server)  # type: ignore[method-assign]
+        client._sessions.get = AsyncMock()  # type: ignore[method-assign]
+
+        await client.tools()
+
+        # Warmup should NOT be called (server loaded via _load_server instead)
+        client._sessions.get.assert_not_awaited()

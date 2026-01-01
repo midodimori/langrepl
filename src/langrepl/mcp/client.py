@@ -98,13 +98,38 @@ class MCPClient(MultiServerMCPClient):
     async def _load_all(self) -> list[BaseTool]:
         tools: list[BaseTool] = []
         pending: list[str] = []
+        cached_stateful: list[str] = []
 
         for server in self.connections:
             cached = self._cache.load(server)
             if cached:
                 tools.extend(self._wrap_cached(server, cached))
+                # Track cached stateful servers for warmup
+                meta = self._server_metadata.get(server)
+                if meta and meta.stateful:
+                    cached_stateful.append(server)
             else:
                 pending.append(server)
+
+        # Warm up sessions for cached stateful servers in parallel
+        if cached_stateful:
+            logger.debug(
+                "Warming up sessions for %d stateful servers", len(cached_stateful)
+            )
+            warmup_results: list[Any] = await asyncio.gather(
+                *(self._sessions.get(s) for s in cached_stateful),
+                return_exceptions=True,
+            )
+            for warmup_server, warmup_result in zip(
+                cached_stateful, warmup_results, strict=True
+            ):
+                if isinstance(warmup_result, BaseException):
+                    logger.warning(
+                        "Failed to warm up session for %s: %s. "
+                        "Session will initialize on first tool invocation.",
+                        warmup_server,
+                        warmup_result,
+                    )
 
         if pending:
             results = await asyncio.gather(

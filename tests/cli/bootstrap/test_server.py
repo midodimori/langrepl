@@ -11,7 +11,6 @@ from langrepl.cli.bootstrap.server import (
     _upsert_assistant,
     _wait_for_server_ready,
     generate_langgraph_json,
-    get_graph,
     handle_server_command,
 )
 from langrepl.core.constants import CONFIG_LANGGRAPH_FILE_NAME
@@ -108,6 +107,9 @@ class TestGenerateLanggraphJson:
             config["graphs"]["agent"]
             == "src/langrepl/cli/bootstrap/server.py:get_graph"
         )
+        assert "http" in config
+        assert "app" in config["http"]
+        assert config["http"]["app"] == "src/langrepl/cli/bootstrap/server.py:app"
 
     def test_generate_langgraph_json_includes_env_when_exists(self, temp_dir):
         """Test that .env is included in config when it exists."""
@@ -148,50 +150,30 @@ class TestGetGraph:
     """Tests for get_graph function."""
 
     @pytest.mark.asyncio
-    async def test_get_graph_reads_env_variables(
-        self, temp_dir, monkeypatch, patch_get_graph, mock_graph
-    ):
-        """Test that get_graph reads environment variables."""
-        monkeypatch.setenv("LANGREPL_AGENT", "test-agent")
-        monkeypatch.setenv("LANGREPL_MODEL", "test-model")
-        monkeypatch.setenv("LANGREPL_WORKING_DIR", str(temp_dir))
+    async def test_get_graph_returns_from_app_state(self, mock_graph):
+        """Test that get_graph returns graph from app.state."""
+        from langrepl.cli.bootstrap.server import get_graph
+        from langrepl.cli.bootstrap.webapp import app
+
+        # Simulate lifespan having initialized the graph
+        app.state.graph = mock_graph
 
         result = await get_graph()
 
         assert result == mock_graph
 
     @pytest.mark.asyncio
-    async def test_get_graph_requires_working_dir(self, monkeypatch):
-        """Test that get_graph raises ValueError when LANGREPL_WORKING_DIR is missing."""
-        monkeypatch.delenv("LANGREPL_WORKING_DIR", raising=False)
+    async def test_get_graph_raises_if_not_initialized(self):
+        """Test that get_graph raises RuntimeError if graph not initialized."""
+        from langrepl.cli.bootstrap.server import get_graph
+        from langrepl.cli.bootstrap.webapp import app
 
-        with pytest.raises(ValueError, match="LANGREPL_WORKING_DIR"):
+        # Clear app.state to simulate lifespan not having run
+        if hasattr(app.state, "graph"):
+            delattr(app.state, "graph")
+
+        with pytest.raises(RuntimeError, match="Graph not initialized"):
             await get_graph()
-
-    @pytest.mark.asyncio
-    async def test_get_graph_handles_missing_agent(
-        self, temp_dir, monkeypatch, patch_get_graph, mock_graph
-    ):
-        """Test that get_graph handles missing LANGREPL_AGENT."""
-        monkeypatch.delenv("LANGREPL_AGENT", raising=False)
-        monkeypatch.setenv("LANGREPL_WORKING_DIR", str(temp_dir))
-
-        result = await get_graph()
-
-        assert result == mock_graph
-
-    @pytest.mark.asyncio
-    async def test_get_graph_handles_missing_model(
-        self, temp_dir, monkeypatch, patch_get_graph, mock_graph
-    ):
-        """Test that get_graph handles missing LANGREPL_MODEL."""
-        monkeypatch.setenv("LANGREPL_AGENT", "test-agent")
-        monkeypatch.delenv("LANGREPL_MODEL", raising=False)
-        monkeypatch.setenv("LANGREPL_WORKING_DIR", str(temp_dir))
-
-        result = await get_graph()
-
-        assert result == mock_graph
 
 
 class TestWaitForServerReady:

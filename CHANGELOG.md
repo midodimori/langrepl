@@ -2,6 +2,46 @@
 
 <!-- version list -->
 
+## v1.10.5 (2026-01-01)
+
+### Bug Fixes
+
+- Preserve environment markers in sync_versions.py
+  ([`b96c0b2`](https://github.com/midodimori/langrepl/commit/b96c0b294a5f5d93601e7f4a3ace5b3a10dff6b1))
+
+### Chores
+
+- Add Dependabot
+  ([`4641c18`](https://github.com/midodimori/langrepl/commit/4641c18796e5215edbd0306170ff4bed59d82519))
+
+- Add Dependabot config for automated dependency updates
+  ([`87982dc`](https://github.com/midodimori/langrepl/commit/87982dcc8f9a28e2a71b911bf69c723e0e3f8050))
+
+- Use ~= version constraints for patch-only updates
+  ([`8f53fce`](https://github.com/midodimori/langrepl/commit/8f53fceccc97381393ee6911cc8bece9344bc49a))
+
+- **deps**: Bump actions/setup-python from 5 to 6 (#71)
+  ([#71](https://github.com/midodimori/langrepl/pull/71),
+  [`f604abc`](https://github.com/midodimori/langrepl/commit/f604abc14da41a4631cbc230f754f40e28c0789f))
+
+- **deps**: Bump pre-commit from 4.5.0 to 4.5.1 in the dev-deps group (#76)
+  ([#76](https://github.com/midodimori/langrepl/pull/76),
+  [`75e4105`](https://github.com/midodimori/langrepl/commit/75e410553d73b837b8cfdb76ab57e0aa709a7a54))
+
+- **deps**: Bump the github-actions group with 2 updates (#77)
+  ([#77](https://github.com/midodimori/langrepl/pull/77),
+  [`ec2284a`](https://github.com/midodimori/langrepl/commit/ec2284ad00812014e4b103059c2843d592b95da1))
+
+### Refactoring
+
+- Mcp (#79) ([#79](https://github.com/midodimori/langrepl/pull/79),
+  [`cc6f682`](https://github.com/midodimori/langrepl/commit/cc6f682390c39abc64dfa1a940c83e9ab153697a))
+
+- **mcp**: Use enum for transport types (#78)
+  ([#78](https://github.com/midodimori/langrepl/pull/78),
+  [`a9998c7`](https://github.com/midodimori/langrepl/commit/a9998c740593eb72265e0089a0a184ae48517d51))
+
+
 ## v1.10.4 (2025-12-31)
 
 ### Chores

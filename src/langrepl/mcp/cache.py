@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -24,16 +25,20 @@ class MCPCache:
     def _path(self, server: str) -> Path | None:
         return self._dir / f"{server}.json" if self._dir else None
 
-    def load(self, server: str) -> list[ToolSchema] | None:
+    async def load(self, server: str) -> list[ToolSchema] | None:
         """Load cached schemas if hash matches."""
         from langrepl.tools.schema import ToolSchema
 
         path = self._path(server)
-        if not path or not path.exists():
+        if not path:
+            return None
+
+        if not await asyncio.to_thread(path.exists):
             return None
 
         try:
-            data = json.loads(path.read_text())
+            content = await asyncio.to_thread(path.read_text)
+            data = json.loads(content)
             cache_hash = None
             tools_data = data
 
@@ -50,18 +55,28 @@ class MCPCache:
             logger.warning("Failed to load cache for %s: %s", server, e)
             return None
 
-    def save(self, server: str, schemas: list[ToolSchema]) -> None:
+    async def save(self, server: str, schemas: list[ToolSchema]) -> None:
         """Save schemas to disk with hash."""
         path = self._path(server)
         if not path:
             return
 
         try:
-            path.parent.mkdir(parents=True, exist_ok=True)
+            await asyncio.to_thread(path.parent.mkdir, parents=True, exist_ok=True)
             data = {
                 "hash": self._hashes.get(server),
                 "tools": [s.model_dump() for s in schemas],
             }
-            path.write_text(json.dumps(data, ensure_ascii=True, indent=2))
+            content = json.dumps(data, ensure_ascii=True, indent=2)
+
+            # Atomic write using temp file
+            temp_file = path.with_suffix(".tmp")
+            try:
+                await asyncio.to_thread(temp_file.write_text, content)
+                await asyncio.to_thread(temp_file.replace, path)
+            except Exception:
+                if await asyncio.to_thread(temp_file.exists):
+                    await asyncio.to_thread(temp_file.unlink)
+                raise
         except Exception as e:
             logger.warning("Failed to save cache for %s: %s", server, e)

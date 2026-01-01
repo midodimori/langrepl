@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from typing import Any, cast
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -149,7 +149,7 @@ class TestMCPClientTools:
             return [proxy]
 
         client._load_server = AsyncMock(side_effect=load_server)  # type: ignore[method-assign]
-        client._cache.load = MagicMock(return_value=None)  # type: ignore[method-assign]
+        client._cache.load = AsyncMock(return_value=None)  # type: ignore[method-assign]
 
         tools = await client.tools()
 
@@ -167,7 +167,7 @@ class TestMCPClientTools:
             enable_approval=False,
         )
         client._load_server = AsyncMock(return_value=[mock_tool])  # type: ignore[method-assign]
-        client._cache.load = MagicMock(  # type: ignore[method-assign]
+        client._cache.load = AsyncMock(  # type: ignore[method-assign]
             return_value=[ToolSchema.from_tool(mock_tool)]
         )
 
@@ -239,7 +239,7 @@ class TestMCPClientTools:
             proxy._loaded = mock_tool
             return [proxy]
 
-        client._cache.load = MagicMock(return_value=None)  # type: ignore[method-assign]
+        client._cache.load = AsyncMock(return_value=None)  # type: ignore[method-assign]
         client._load_server = AsyncMock(side_effect=load_server)  # type: ignore[method-assign]
 
         tools = await client.tools()
@@ -278,7 +278,7 @@ class TestMCPClientTools:
             enable_approval=False,
             server_metadata={"server1": ServerMeta(stateful=True)},
         )
-        client._cache.load = MagicMock(  # type: ignore[method-assign]
+        client._cache.load = AsyncMock(  # type: ignore[method-assign]
             return_value=[ToolSchema.from_tool(mock_tool)]
         )
         client._sessions.get = AsyncMock(return_value=Mock())  # type: ignore[method-assign]
@@ -299,7 +299,7 @@ class TestMCPClientTools:
             enable_approval=False,
             server_metadata={"server1": ServerMeta(stateful=False)},
         )
-        client._cache.load = MagicMock(  # type: ignore[method-assign]
+        client._cache.load = AsyncMock(  # type: ignore[method-assign]
             return_value=[ToolSchema.from_tool(mock_tool)]
         )
         client._sessions.get = AsyncMock()  # type: ignore[method-assign]
@@ -320,7 +320,7 @@ class TestMCPClientTools:
             enable_approval=False,
             server_metadata={"server1": ServerMeta(stateful=True)},
         )
-        client._cache.load = MagicMock(  # type: ignore[method-assign]
+        client._cache.load = AsyncMock(  # type: ignore[method-assign]
             return_value=[ToolSchema.from_tool(mock_tool)]
         )
         client._sessions.get = AsyncMock(  # type: ignore[method-assign]
@@ -350,7 +350,7 @@ class TestMCPClientTools:
                 "server2": ServerMeta(stateful=True),
             },
         )
-        client._cache.load = MagicMock(  # type: ignore[method-assign]
+        client._cache.load = AsyncMock(  # type: ignore[method-assign]
             return_value=[ToolSchema.from_tool(mock_tool)]
         )
 
@@ -383,7 +383,7 @@ class TestMCPClientTools:
             enable_approval=False,
             server_metadata={"server1": ServerMeta(stateful=True)},
         )
-        client._cache.load = MagicMock(return_value=None)  # type: ignore[method-assign]
+        client._cache.load = AsyncMock(return_value=None)  # type: ignore[method-assign]
 
         async def mock_load_server(server_name: str):
             from langrepl.mcp.tool import MCPTool

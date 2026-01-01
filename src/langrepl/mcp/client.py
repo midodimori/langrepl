@@ -101,7 +101,7 @@ class MCPClient(MultiServerMCPClient):
         cached_stateful: list[str] = []
 
         for server in self.connections:
-            cached = self._cache.load(server)
+            cached = await self._cache.load(server)
             if cached:
                 tools.extend(self._wrap_cached(server, cached))
                 # Track cached stateful servers for warmup
@@ -170,7 +170,7 @@ class MCPClient(MultiServerMCPClient):
 
         if registered:
             schemas = [ToolSchema.from_tool(t) for t in registered]
-            self._cache.save(server, schemas)
+            await self._cache.save(server, schemas)
             logger.info("MCP server '%s': loaded %d tools", server, len(registered))
 
         return [self._wrap_loaded(server, t) for t in registered]

@@ -309,7 +309,7 @@ async def handle_server_command(args) -> int:
 
         process = subprocess.Popen(
             [str(langgraph_bin), "dev", "--config", str(config_path)],
-            cwd=LANGREPL_ROOT,
+            cwd=working_dir,
             env=env,
         )
 

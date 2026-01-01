@@ -18,10 +18,11 @@ https://github.com/user-attachments/assets/f9573310-29dc-4c67-aa1b-cc6b6ab051a2
   - [From PyPI](#from-pypi)
   - [From GitHub](#from-github)
   - [From Source](#from-source)
-  - [Configure API Keys](#configure-api-keys)
-  - [Tracing](#tracing)
+  - [Environment Variables](#environment-variables)
+  - [CLI Flags](#cli-flags)
 - [Quick Start](#quick-start)
   - [Interactive Chat Mode](#interactive-chat-mode)
+  - [One-Shot Mode](#one-shot-mode)
   - [LangGraph Server Mode](#langgraph-server-mode)
 - [Interactive Commands](#interactive-commands)
   - [Conversation Management](#conversation-management)
@@ -137,29 +138,160 @@ uv tool install --editable .
 
 Then run from any directory (same as above).
 
-### Configure API Keys
+### Environment Variables
 
-Set API keys via `.env`:
+Configure langrepl using environment variables via `.env` file or shell exports.
 
+**Using `.env` file** (recommended):
 ```bash
+# Create .env in your working directory
 LLM__OPENAI_API_KEY=your_openai_api_key_here
-LLM__ANTHROPIC_API_KEY=your_anthropic_api_key_here
-LLM__GOOGLE_API_KEY=your_google_api_key_here
-LLM__DEEPSEEK_API_KEY=your_deepseek_api_key_here
-LLM__ZHIPUAI_API_KEY=your_zhipuai_api_key_here
+LANGCHAIN_TRACING_V2=true
 ```
 
-### Tracing
+**Using shell exports**:
+```bash
+export LLM__OPENAI_API_KEY=your_openai_api_key_here
+export LANGCHAIN_TRACING_V2=true
+```
 
-#### LangSmith
-
-Add to `.env`:
+#### LLM Provider API Keys
 
 ```bash
+# OpenAI
+LLM__OPENAI_API_KEY=your_openai_api_key_here
+
+# Anthropic
+LLM__ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# Google
+LLM__GOOGLE_API_KEY=your_google_api_key_here
+
+# DeepSeek
+LLM__DEEPSEEK_API_KEY=your_deepseek_api_key_here
+
+# Zhipu AI
+LLM__ZHIPUAI_API_KEY=your_zhipuai_api_key_here
+
+# AWS Bedrock (optional, falls back to AWS CLI credentials)
+LLM__AWS_ACCESS_KEY_ID=your_aws_access_key_id
+LLM__AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
+LLM__AWS_SESSION_TOKEN=your_aws_session_token  # Optional
+
+# Local model base URLs
+LLM__OLLAMA_BASE_URL=http://localhost:11434      # Default
+LLM__LMSTUDIO_BASE_URL=http://localhost:1234/v1  # Default
+```
+
+#### Tracing
+
+**LangSmith** (recommended for debugging):
+```bash
 LANGCHAIN_TRACING_V2=true
-LANGCHAIN_ENDPOINT="https://api.smith.langchain.com"
-LANGCHAIN_API_KEY="your_langsmith_api_key"
-LANGCHAIN_PROJECT="your_project_name"
+LANGCHAIN_API_KEY=your_langsmith_api_key
+LANGCHAIN_PROJECT=your_project_name              # Optional
+LANGCHAIN_ENDPOINT=https://api.smith.langchain.com  # Default
+```
+
+#### Proxy Settings
+
+```bash
+LLM__HTTP_PROXY=http://proxy.example.com:8080
+LLM__HTTPS_PROXY=https://proxy.example.com:8443
+```
+
+#### Tool Settings
+
+```bash
+TOOL_SETTINGS__MAX_COLUMNS=1500      # Grep max columns (default: 1500)
+TOOL_SETTINGS__CONTEXT_LINES=2       # Grep context lines (default: 2)
+TOOL_SETTINGS__SEARCH_LIMIT=25       # Grep search limit (default: 25)
+```
+
+#### CLI Settings
+
+```bash
+CLI__THEME=dracula                   # UI theme (default: dracula)
+CLI__PROMPT_STYLE="❯ "               # Prompt style (default: "❯ ")
+CLI__ENABLE_WORD_WRAP=true           # Word wrap (default: true)
+CLI__EDITOR=nano                     # Editor for /memory (default: nano)
+CLI__MAX_AUTOCOMPLETE_SUGGESTIONS=10 # Autocomplete limit (default: 10)
+```
+
+#### Server Settings
+
+```bash
+SERVER__LANGGRAPH_SERVER_URL=http://localhost:2024  # Default
+```
+
+#### Other Settings
+
+```bash
+LOG_LEVEL=INFO                       # Log level (default: INFO)
+SUPPRESS_GRPC_WARNINGS=true          # Suppress gRPC warnings (default: true)
+```
+
+### CLI Flags
+
+```bash
+langrepl [OPTIONS] [MESSAGE]
+```
+
+#### Positional Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `message` | Message to send in one-shot mode. Omit for interactive mode. |
+
+#### Options
+
+| Flag | Long Form | Description | Default |
+|------|-----------|-------------|---------|
+| `-h` | `--help` | Show help message and exit | - |
+| `-w` | `--working-dir` | Working directory for the session | Current directory |
+| `-a` | `--agent` | Agent to use for the session | Default agent from config |
+| `-m` | `--model` | LLM model to use (overrides agent's default) | Agent's default model |
+| `-r` | `--resume` | Resume the last conversation thread | false |
+| `-t` | `--timer` | Enable performance timing for startup phases | false |
+| `-s` | `--server` | Run in LangGraph server mode | false |
+| `-am` | `--approval-mode` | Tool approval mode: `semi-active`, `active`, `aggressive` | From config |
+| `-v` | `--verbose` | Enable verbose logging to console and `.langrepl/logs/app.log` | false |
+
+#### Examples
+
+```bash
+# Interactive mode with default settings
+langrepl
+
+# One-shot mode
+langrepl "What is the capital of France?"
+
+# Specify working directory
+langrepl -w /path/to/project
+
+# Use specific agent
+langrepl -a claude-style-coder
+
+# Override agent's model
+langrepl -a general -m gpt-4o
+
+# Resume last conversation
+langrepl -r
+
+# Resume with new message
+langrepl -r "Continue from where we left off"
+
+# Set approval mode
+langrepl -am aggressive
+
+# LangGraph server mode
+langrepl -s -a general
+
+# Verbose logging
+langrepl -v
+
+# Combine flags
+langrepl -w /my/project -a code-reviewer -am active -v
 ```
 
 ## Quick Start

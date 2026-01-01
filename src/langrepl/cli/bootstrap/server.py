@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 import httpx
 
 from langrepl.cli.bootstrap.initializer import initializer
+from langrepl.cli.bootstrap.webapp import app
 from langrepl.cli.theme import console
 from langrepl.core.constants import CONFIG_LANGGRAPH_FILE_NAME
 from langrepl.core.logging import get_logger
@@ -30,35 +31,24 @@ async def get_graph() -> CompiledStateGraph:
     """Get compiled graph for LangGraph Server.
 
     This function is referenced in langgraph.json and called by the LangGraph CLI.
-    It reads agent and model from environment variables set by the CLI wrapper.
+    The graph is initialized via the FastAPI lifespan handler in webapp.py
+    and stored in app.state.
 
     Note: langgraph dev uses in-memory checkpointing by design. Your configured
     checkpointer is ignored. Threads are ephemeral and shared across all dev
     server instances. Use regular CLI mode (lg) for persistent threads.
 
-    Environment Variables:
-        LANGREPL_AGENT: Agent name (required)
-        LANGREPL_MODEL: Model name (optional)
-        LANGREPL_WORKING_DIR: Working directory path (required)
-
     Returns:
-        CompiledStateGraph: The compiled graph ready for server execution
+        CompiledStateGraph: The compiled graph from app.state
     """
-    agent = os.getenv("LANGREPL_AGENT")
-    model = os.getenv("LANGREPL_MODEL")
-    working_dir_str = os.getenv("LANGREPL_WORKING_DIR")
-
-    if not working_dir_str:
-        raise ValueError("LANGREPL_WORKING_DIR environment variable is required")
-
-    working_dir = Path(working_dir_str)
-
-    async with initializer.get_graph(agent, model, working_dir) as graph:
-        return graph
+    # Graph is already initialized by webapp.py lifespan
+    if not hasattr(app.state, "graph"):
+        raise RuntimeError("Graph not initialized. Ensure webapp.py lifespan has run.")
+    return app.state.graph
 
 
 def generate_langgraph_json(working_dir: Path) -> None:
-    """Generate langgraph.json configuration file.
+    """Generate langgraph.json configuration file with custom lifespan.
 
     Args:
         working_dir: Working directory where config will be created
@@ -68,6 +58,7 @@ def generate_langgraph_json(working_dir: Path) -> None:
         "dependencies": [str(LANGREPL_ROOT)],
         # Path is relative to dependency root (project root). Keep src/ prefix for editable installs.
         "graphs": {"agent": "src/langrepl/cli/bootstrap/server.py:get_graph"},
+        "http": {"app": "src/langrepl/cli/bootstrap/server.py:app"},
     }
 
     # Add env reference if .env file exists

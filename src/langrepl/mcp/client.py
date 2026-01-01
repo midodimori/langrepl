@@ -1,20 +1,22 @@
+"""MCP client - orchestrates caching, sessions, loading, and registry."""
+
 from __future__ import annotations
 
 import asyncio
-import json
+from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.sessions import Connection
-from langchain_mcp_adapters.tools import load_mcp_tools
-from mcp import ClientSession
-from mcp.shared.exceptions import McpError
 
 from langrepl.core.logging import get_logger
-from langrepl.mcp.tool import LazyMCPTool
+from langrepl.mcp.cache import MCPCache
+from langrepl.mcp.loader import MCPLoader
+from langrepl.mcp.registry import MCPRegistry
+from langrepl.mcp.session import MCPSessions
+from langrepl.mcp.tool import MCPTool
 from langrepl.tools.schema import ToolSchema
-from langrepl.utils.bash import execute_bash_command
 
 if TYPE_CHECKING:
     from langchain_core.tools import BaseTool
@@ -22,387 +24,180 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
+@dataclass
+class RepairConfig:
+    """Repair configuration for a server."""
+
+    command: list[str]
+    timeout: int
+
+
+@dataclass
+class ServerMeta:
+    """Per-server metadata for MCP client."""
+
+    hash: str | None = None
+    stateful: bool = False
+    invoke_timeout: float | None = None
+    repair: RepairConfig | None = None
+
+
 class MCPClient(MultiServerMCPClient):
+    """MCP client with caching, sessions, and tool management."""
+
     def __init__(
         self,
         connections: dict[str, Connection] | None = None,
         tool_filters: dict[str, dict] | None = None,
-        repair_commands: dict[str, list[str]] | None = None,
         enable_approval: bool = True,
         cache_dir: Path | None = None,
-        server_hashes: dict[str, str] | None = None,
-        stateful_servers: set[str] | None = None,
+        server_metadata: dict[str, ServerMeta] | None = None,
     ) -> None:
-        self._tool_filters = tool_filters or {}
-        self._repair_commands = repair_commands or {}
+        super().__init__(connections)
+        self._server_metadata = server_metadata or {}
         self._enable_approval = enable_approval
-        self._cache_dir = cache_dir
-        self._server_hashes = server_hashes or {}
+        server_hashes = {k: v.hash for k, v in self._server_metadata.items() if v.hash}
+        repairs = {k: v.repair for k, v in self._server_metadata.items() if v.repair}
+        self._cache = MCPCache(cache_dir, server_hashes)
+        self._registry = MCPRegistry(tool_filters)
+        self._sessions = MCPSessions(self.session)
+        self._loader = MCPLoader(
+            lambda s: self.get_tools(server_name=s),
+            self._sessions.get,
+            self._sessions.close,
+            repairs,
+        )
         self._tools_cache: list[BaseTool] | None = None
-        self._module_map: dict[str, str] = {}
-        self._live_tools: dict[str, dict[str, BaseTool]] = {}
+        self._live: dict[str, dict[str, BaseTool]] = {}
         self._init_lock = asyncio.Lock()
         self._server_locks: dict[str, asyncio.Lock] = {}
-        self._stateful_servers: set[str] = stateful_servers or set()
-        self._session_contexts: dict[str, ClientSession] = {}
-        self._session_tasks: dict[str, tuple[asyncio.Task[None], asyncio.Event]] = {}
-        self._session_locks: dict[str, asyncio.Lock] = {}
-        super().__init__(connections)
 
-    def _is_mcp_error(self, exc: Exception) -> bool:
-        if isinstance(exc, McpError):
-            return True
-        if isinstance(exc, ExceptionGroup):
-            return any(self._is_mcp_error(e) for e in exc.exceptions)
-        return False
+    def _build_metadata(
+        self, server: str, source: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Build tool metadata with timeout and approval config."""
+        metadata: dict[str, Any] = dict(source) if source else {}
+        meta = self._server_metadata.get(server)
+        if meta and meta.invoke_timeout is not None:
+            metadata["timeout"] = meta.invoke_timeout
+        if self._enable_approval:
+            metadata["approval_config"] = {"name_only": True, "always_approve": False}
+        return metadata
 
-    def _is_tool_allowed(self, tool_name: str, server_name: str) -> bool:
-        filters = self._tool_filters.get(server_name)
-        if not filters:
-            return True
-
-        include, exclude = filters.get("include", []), filters.get("exclude", [])
-        if include and exclude:
-            raise ValueError(
-                f"Cannot specify both include and exclude for server {server_name}"
-            )
-
-        if include:
-            return tool_name in include
-        if exclude:
-            return tool_name not in exclude
-        return True
-
-    def _filter_tools(self, tools: list[BaseTool], server_name: str) -> list[BaseTool]:
-        return [tool for tool in tools if self._is_tool_allowed(tool.name, server_name)]
-
-    @staticmethod
-    async def _run_repair_command(command: list[str]) -> None:
-        await execute_bash_command(command, timeout=300)
-
-    def _get_cache_path(self, server_name: str) -> Path | None:
-        if not self._cache_dir:
-            return None
-        return self._cache_dir / f"{server_name}.json"
-
-    def _load_cached_schemas(self, server_name: str) -> list[ToolSchema] | None:
-        path = self._get_cache_path(server_name)
-        if not path or not path.exists():
-            return None
-
-        try:
-            data = json.loads(path.read_text())
-            cache_hash = None
-            tools_data = data
-
-            if isinstance(data, dict):
-                cache_hash = data.get("hash")
-                tools_data = data.get("tools", [])
-
-            expected_hash = self._server_hashes.get(server_name)
-            if expected_hash and cache_hash != expected_hash:
-                return None
-
-            return [ToolSchema.model_validate(item) for item in tools_data]
-        except Exception as exc:
-            logger.warning(
-                "Failed to load cached schemas for %s: %s",
-                server_name,
-                exc,
-                exc_info=exc,
-            )
-            return None
-
-    def _save_cached_schemas(
-        self, server_name: str, tool_schemas: list[ToolSchema]
-    ) -> None:
-        path = self._get_cache_path(server_name)
-        if not path:
-            return
-
-        try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            data = {
-                "hash": self._server_hashes.get(server_name),
-                "tools": [ts.model_dump() for ts in tool_schemas],
-            }
-            path.write_text(json.dumps(data, ensure_ascii=True, indent=2))
-        except Exception as exc:
-            logger.warning(
-                "Failed to save cached schemas for %s: %s",
-                server_name,
-                exc,
-                exc_info=exc,
-            )
-
-    async def _get_server_tools(self, server_name: str) -> list[BaseTool]:
-        try:
-            tools = await self.get_tools(server_name=server_name)
-            return self._filter_tools(tools, server_name)
-        except Exception as e:
-            if self._is_mcp_error(e) and server_name in self._repair_commands:
-                await self._run_repair_command(self._repair_commands[server_name])
-                tools = await self.get_tools(server_name=server_name)
-                return self._filter_tools(tools, server_name)
-            else:
-                logger.error(
-                    f"Error getting tools from server {server_name}: {e}",
-                    exc_info=True,
-                )
-                return []
-
-    async def _session_runner(
-        self,
-        server_name: str,
-        ready_event: asyncio.Event,
-        stop_event: asyncio.Event,
-        error_holder: list[BaseException | None],
-    ) -> None:
-        """Run a session in its own task to maintain proper cancel scope."""
-        try:
-            async with self.session(server_name) as session:
-                self._session_contexts[server_name] = session
-                ready_event.set()
-                await stop_event.wait()
-        except BaseException as e:
-            error_holder[0] = e
-            ready_event.set()
-            raise
-        finally:
-            self._session_contexts.pop(server_name, None)
-
-    async def _get_or_create_session(self, server_name: str) -> ClientSession:
-        """Get existing session or create new one for stateful servers."""
-        if server_name in self._session_contexts:
-            return self._session_contexts[server_name]
-
-        lock = self._session_locks.setdefault(server_name, asyncio.Lock())
-        async with lock:
-            if server_name in self._session_contexts:
-                return self._session_contexts[server_name]
-
-            ready_event = asyncio.Event()
-            stop_event = asyncio.Event()
-            error_holder: list[BaseException | None] = [None]
-            task = asyncio.create_task(
-                self._session_runner(server_name, ready_event, stop_event, error_holder)
-            )
-            self._session_tasks[server_name] = (task, stop_event)
-            await ready_event.wait()
-            if error_holder[0] is not None:
-                self._session_tasks.pop(server_name, None)
-                raise error_holder[0]
-            session = self._session_contexts[server_name]
-        return session
-
-    async def _close_session(self, server_name: str) -> None:
-        """Close a single stateful session."""
-        if server_name in self._session_tasks:
-            task, stop_event = self._session_tasks.pop(server_name)
-            stop_event.set()
-            try:
-                await asyncio.wait_for(task, timeout=5.0)
-            except TimeoutError:
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
-            except Exception:
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
-        self._session_contexts.pop(server_name, None)
-
-    async def _get_stateful_server_tools(self, server_name: str) -> list[BaseTool]:
-        """Get tools from a stateful server using a persistent session."""
-        try:
-            session = await self._get_or_create_session(server_name)
-            tools = await load_mcp_tools(session)
-            return self._filter_tools(tools, server_name)
-        except Exception as e:
-            if self._is_mcp_error(e) and server_name in self._repair_commands:
-                # Close failed session and retry
-                await self._close_session(server_name)
-                await self._run_repair_command(self._repair_commands[server_name])
-                session = await self._get_or_create_session(server_name)
-                tools = await load_mcp_tools(session)
-                return self._filter_tools(tools, server_name)
-            else:
-                logger.error(
-                    f"Error getting tools from stateful server {server_name}: {e}",
-                    exc_info=True,
-                )
-                return []
-
-    async def _close_session_task(
-        self, name: str, task: asyncio.Task[None], stop_event: asyncio.Event
-    ) -> None:
-        """Close a single session task."""
-        stop_event.set()
-        try:
-            await asyncio.wait_for(task, timeout=5.0)
-        except TimeoutError:
-            logger.warning(f"Timeout closing session for {name}, cancelling")
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-        except Exception as e:
-            logger.warning(f"Error closing session for {name}: {e}")
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-
-    async def close_sessions(self) -> None:
-        """Close all active stateful sessions in parallel."""
-        if self._session_tasks:
-            await asyncio.gather(
-                *(
-                    self._close_session_task(name, task, stop_event)
-                    for name, (task, stop_event) in self._session_tasks.items()
-                )
-            )
-        self._session_tasks.clear()
-        self._session_contexts.clear()
-
-    def _apply_metadata(self, tool: BaseTool) -> None:
-        if not self._enable_approval:
-            return
-        tool.metadata = tool.metadata or {}
-        tool.metadata["approval_config"] = {
-            "name_only": True,
-            "always_approve": False,
-        }
-
-    def _register_tool(self, tool_name: str, server_name: str) -> bool:
-        existing = self._module_map.get(tool_name)
-        if existing and existing != server_name:
-            logger.warning(
-                "Skipping MCP tool %s from %s; already provided by %s",
-                tool_name,
-                server_name,
-                existing,
-            )
-            return False
-        self._module_map.setdefault(tool_name, server_name)
-        return True
-
-    def _prepare_server_tools(
-        self, server_name: str, tools: list[BaseTool]
-    ) -> list[BaseTool]:
-        prepared = []
-        for tool in tools:
-            self._apply_metadata(tool)
-            if self._register_tool(tool.name, server_name):
-                prepared.append(tool)
-
-        self._live_tools[server_name] = {tool.name: tool for tool in prepared}
-        return prepared
-
-    async def _load_live_tool(
-        self, server_name: str, tool_name: str
-    ) -> BaseTool | None:
-        if (
-            server_name in self._live_tools
-            and tool_name in self._live_tools[server_name]
-        ):
-            return self._live_tools[server_name][tool_name]
-
-        lock = self._server_locks.setdefault(server_name, asyncio.Lock())
-
-        async with lock:
-            if server_name in self._live_tools:
-                return self._live_tools[server_name].get(tool_name)
-
-            if server_name in self._stateful_servers:
-                tools = await self._get_stateful_server_tools(server_name)
-            else:
-                tools = await self._get_server_tools(server_name)
-            self._prepare_server_tools(server_name, tools)
-            return self._live_tools[server_name].get(tool_name)
-
-    async def _load_and_cache_server(self, server_name: str) -> list[BaseTool]:
-        if server_name in self._stateful_servers:
-            tools = await self._get_stateful_server_tools(server_name)
-        else:
-            tools = await self._get_server_tools(server_name)
-        prepared = self._prepare_server_tools(server_name, tools)
-
-        logger.info(f"MCP server '{server_name}': loaded {len(prepared)} tools")
-        if prepared:
-            tool_schemas = [ToolSchema.from_tool(t) for t in prepared]
-            self._save_cached_schemas(server_name, tool_schemas)
-        return prepared
-
-    async def get_mcp_tools(self) -> list[BaseTool]:
+    async def tools(self) -> list[BaseTool]:
+        """Get all MCP tools (lazy-loaded proxies)."""
         if self._tools_cache is not None:
             return self._tools_cache
 
         async with self._init_lock:
             if self._tools_cache is not None:
                 return self._tools_cache
-
-            tools: list[BaseTool] = []
-            pending_servers: list[str] = []
-
-            for server_name in self.connections.keys():
-                cached = self._load_cached_schemas(server_name)
-                if not cached:
-                    pending_servers.append(server_name)
-                    continue
-
-                for tool_schema in cached:
-                    if not self._is_tool_allowed(tool_schema.name, server_name):
-                        continue
-                    if not self._register_tool(tool_schema.name, server_name):
-                        continue
-                    lazy_tool = LazyMCPTool(
-                        server_name,
-                        tool_schema,
-                        self._load_live_tool,
-                    )
-                    self._apply_metadata(lazy_tool)
-                    tools.append(lazy_tool)
-
-            if pending_servers:
-                results = await asyncio.gather(
-                    *[self._load_and_cache_server(s) for s in pending_servers],
-                    return_exceptions=True,
-                )
-
-                for server_name, server_result in zip(
-                    pending_servers, results, strict=True
-                ):
-                    if isinstance(server_result, ValueError):
-                        raise server_result
-                    if isinstance(server_result, Exception):
-                        logger.error(
-                            "Failed to load MCP server %s: %s",
-                            server_name,
-                            server_result,
-                            exc_info=server_result,
-                        )
-                        continue
-                    if isinstance(server_result, list):
-                        for tool in server_result:
-                            tool_schema = ToolSchema.from_tool(tool)
-                            lazy_tool = LazyMCPTool(
-                                server_name,
-                                tool_schema,
-                                self._load_live_tool,
-                            )
-                            lazy_tool._loaded = tool
-                            self._apply_metadata(lazy_tool)
-                            tools.append(lazy_tool)
-
-            self._tools_cache = tools
+            self._tools_cache = await self._load_all()
             return self._tools_cache
 
-    def get_mcp_module_map(self) -> dict[str, str]:
-        return self._module_map
+    async def _load_all(self) -> list[BaseTool]:
+        tools: list[BaseTool] = []
+        pending: list[str] = []
+        cached_stateful: list[str] = []
+
+        for server in self.connections:
+            cached = await self._cache.load(server)
+            if cached:
+                tools.extend(self._wrap_cached(server, cached))
+                # Track cached stateful servers for warmup
+                meta = self._server_metadata.get(server)
+                if meta and meta.stateful:
+                    cached_stateful.append(server)
+            else:
+                pending.append(server)
+
+        # Warm up sessions for cached stateful servers in parallel
+        if cached_stateful:
+            logger.debug(
+                "Warming up sessions for %d stateful servers", len(cached_stateful)
+            )
+            warmup_results: list[Any] = await asyncio.gather(
+                *(self._sessions.get(s) for s in cached_stateful),
+                return_exceptions=True,
+            )
+            for warmup_server, warmup_result in zip(
+                cached_stateful, warmup_results, strict=True
+            ):
+                if isinstance(warmup_result, BaseException):
+                    logger.warning(
+                        "Failed to warm up session for %s: %s. "
+                        "Session will initialize on first tool invocation.",
+                        warmup_server,
+                        warmup_result,
+                    )
+
+        if pending:
+            results = await asyncio.gather(
+                *(self._load_server(s) for s in pending),
+                return_exceptions=True,
+            )
+            for server, result in zip(pending, results, strict=True):
+                if isinstance(result, ValueError):
+                    raise result
+                if isinstance(result, BaseException):
+                    logger.error("Failed to load %s: %s", server, result)
+                else:
+                    tools.extend(result)
+
+        return tools
+
+    def _wrap_cached(self, server: str, schemas: list[ToolSchema]) -> list[BaseTool]:
+        tools: list[BaseTool] = []
+        for schema in schemas:
+            if not self._registry.allowed(schema.name, server):
+                continue
+            if not self._registry.register(schema.name, server):
+                continue
+            metadata = self._build_metadata(server)
+            tools.append(MCPTool(server, schema, self._load_live, metadata))
+        return tools
+
+    async def _load_server(self, server: str) -> list[BaseTool]:
+        meta = self._server_metadata.get(server)
+        if meta and meta.stateful:
+            raw = await self._loader.stateful(server)
+        else:
+            raw = await self._loader.stateless(server)
+
+        filtered = [t for t in raw if self._registry.allowed(t.name, server)]
+        registered = [t for t in filtered if self._registry.register(t.name, server)]
+        self._live[server] = {t.name: t for t in registered}
+
+        if registered:
+            schemas = [ToolSchema.from_tool(t) for t in registered]
+            await self._cache.save(server, schemas)
+            logger.info("MCP server '%s': loaded %d tools", server, len(registered))
+
+        return [self._wrap_loaded(server, t) for t in registered]
+
+    def _wrap_loaded(self, server: str, tool: BaseTool) -> MCPTool:
+        schema = ToolSchema.from_tool(tool)
+        metadata = self._build_metadata(server, tool.metadata)
+        proxy = MCPTool(server, schema, self._load_live, metadata)
+        proxy._loaded = tool
+        return proxy
+
+    async def _load_live(self, server: str, name: str) -> BaseTool | None:
+        if server in self._live:
+            return self._live[server].get(name)
+
+        lock = self._server_locks.setdefault(server, asyncio.Lock())
+        async with lock:
+            if server in self._live:
+                return self._live[server].get(name)
+            await self._load_server(server)
+            return self._live.get(server, {}).get(name)
+
+    async def close(self) -> None:
+        """Close all stateful sessions."""
+        await self._sessions.close_all()
+
+    @property
+    def module_map(self) -> dict[str, str]:
+        """Tool name to server name mapping."""
+        return self._registry.module_map

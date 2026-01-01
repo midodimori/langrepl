@@ -72,6 +72,7 @@ dependencies = [
     'mdformat~=1.0.0',
     'pyseccomp~=0.1.2; sys_platform == "linux"',
     'pathspec~=0.12.1',
+    "fastapi>=0.128.0",
 ]
 
 [project.urls]

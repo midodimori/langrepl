@@ -10,7 +10,7 @@ from langrepl.configs.mcp import MCPTransport
 from langrepl.core.constants import TOOL_CATEGORY_MCP
 from langrepl.core.logging import get_logger
 from langrepl.core.settings import settings
-from langrepl.mcp.client import MCPClient
+from langrepl.mcp.client import MCPClient, RepairConfig, ServerMeta
 from langrepl.sandboxes.backends.base import SandboxBinding
 from langrepl.utils.patterns import matches_patterns, mcp_server_matcher
 
@@ -44,7 +44,9 @@ class MCPFactory:
             "include": tuple(server.include or []),
             "exclude": tuple(server.exclude or []),
             "repair_command": tuple(server.repair_command or []),
+            "repair_timeout": server.repair_timeout,
             "stateful": server.stateful,
+            "invoke_timeout": server.invoke_timeout,
         }
         return hashlib.sha256(repr(signature).encode("utf-8")).hexdigest()
 
@@ -69,10 +71,8 @@ class MCPFactory:
             return self._client
 
         server_config: dict[str, Connection] = {}
-        tool_filters = {}
-        repair_commands = {}
-        server_hashes = {}
-        stateful_servers: set[str] = set()
+        tool_filters: dict[str, dict] = {}
+        server_metadata: dict[str, ServerMeta] = {}
 
         for name, server in config.servers.items():
             if not server.enabled:
@@ -121,7 +121,7 @@ class MCPFactory:
                             continue
 
                     server_dict = {
-                        "transport": "stdio",
+                        "transport": server.transport.value,
                         "command": command,
                         "args": args,
                         "env": env,
@@ -159,28 +159,29 @@ class MCPFactory:
                 )
             server_config[name] = server_dict
 
-            if server.repair_command:
-                repair_commands[name] = server.repair_command
-
             if server.include or server.exclude:
                 tool_filters[name] = {
                     "include": server.include,
                     "exclude": server.exclude,
                 }
 
-            server_hashes[name] = self._compute_server_hash(server)
+            repair = None
+            if server.repair_command:
+                repair = RepairConfig(server.repair_command, server.repair_timeout)
 
-            if server.stateful:
-                stateful_servers.add(name)
+            server_metadata[name] = ServerMeta(
+                hash=self._compute_server_hash(server),
+                stateful=server.stateful,
+                invoke_timeout=server.invoke_timeout,
+                repair=repair,
+            )
 
         self._client = MCPClient(
             server_config,
             tool_filters,
-            repair_commands=repair_commands,
             enable_approval=self.enable_approval,
             cache_dir=cache_dir,
-            server_hashes=server_hashes,
-            stateful_servers=stateful_servers,
+            server_metadata=server_metadata,
         )
         self._config_hash = config_hash
         return self._client

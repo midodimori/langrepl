@@ -1,3 +1,5 @@
+"""Lazy MCP tool proxy."""
+
 from __future__ import annotations
 
 import asyncio
@@ -17,51 +19,58 @@ from langrepl.tools.schema import ToolSchema
 logger = get_logger(__name__)
 
 
-class LazyMCPTool(BaseTool):
-    """Proxy MCP tool that hydrates on first invocation."""
+class MCPTool(BaseTool):
+    """Lazy MCP tool that hydrates on first invocation."""
 
     def __init__(
         self,
-        server_name: str,
-        tool_schema: ToolSchema,
+        server: str,
+        schema: ToolSchema,
         loader: Callable[[str, str], Awaitable[BaseTool | None]],
-    ):
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__(
-            name=tool_schema.name,
-            description=tool_schema.description,
-            args_schema=tool_schema.parameters,
+            name=schema.name,
+            description=schema.description,
+            args_schema=schema.parameters,
+            metadata=metadata,
         )
-        self._server_name = server_name
+        self._server = server
         self._loader = loader
-        self._tool_schema = tool_schema
+        self._schema = schema
         self._loaded: BaseTool | None = None
-        self._load_lock: asyncio.Lock = asyncio.Lock()
+        self._lock: asyncio.Lock | None = None  # Lazy - created in current event loop
 
-    async def _ensure_tool(self) -> BaseTool:
+    async def _ensure(self) -> BaseTool:
         if self._loaded:
             return self._loaded
-        async with self._load_lock:
-            if not self._loaded:
-                tool = await self._loader(self._server_name, self.name)
-                if not tool:
-                    raise RuntimeError(
-                        f"Failed to load MCP tool {self.name} from {self._server_name}"
-                    )
-                self._loaded = tool
+
+        # Create lock lazily in current event loop
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+
+        async with self._lock:
+            if self._loaded:
+                return self._loaded
+            tool = await self._loader(self._server, self.name)
+            if not tool:
+                raise RuntimeError(
+                    f"Failed to load MCP tool {self.name} from {self._server}"
+                )
+            self._loaded = tool
+
         return self._loaded
 
-    def _validate_payload(self, payload: Any) -> None:
-        schema = self._tool_schema.parameters
+    def _validate(self, payload: Any) -> None:
+        schema = self._schema.parameters
         if not schema:
             return
         try:
             jsonschema.validate(instance=payload, schema=schema)
-        except jsonschema.ValidationError as exc:
-            raise ToolException(
-                f"Invalid input for tool {self.name}: {exc.message}"
-            ) from exc
-        except jsonschema.SchemaError as exc:
-            logger.warning("Invalid JSON schema for tool %s: %s", self.name, exc)
+        except jsonschema.ValidationError as e:
+            raise ToolException(f"Invalid input for {self.name}: {e.message}") from e
+        except jsonschema.SchemaError as e:
+            logger.warning("Invalid schema for %s: %s", self.name, e)
 
     async def _arun(
         self,
@@ -69,17 +78,29 @@ class LazyMCPTool(BaseTool):
         run_manager: AsyncCallbackManagerForToolRun | None = None,
         **kwargs: Any,
     ) -> Any:
-        tool = await self._ensure_tool()
+        tool = await self._ensure()
+
         payload = dict(kwargs)
         payload.pop("run_manager", None)
+
         if payload:
-            self._validate_payload(payload)
-            return await tool.ainvoke(payload)
+            self._validate(payload)
+            return await self._invoke(tool, payload)
         if args:
-            self._validate_payload(args[0])
-            return await tool.ainvoke(args[0])
-        self._validate_payload({})
-        return await tool.ainvoke({})
+            self._validate(args[0])
+            return await self._invoke(tool, args[0])
+
+        self._validate({})
+        return await self._invoke(tool, {})
+
+    async def _invoke(self, tool: BaseTool, payload: Any) -> Any:
+        timeout = (self.metadata or {}).get("timeout")
+        if timeout is None:
+            return await tool.ainvoke(payload)
+        try:
+            return await asyncio.wait_for(tool.ainvoke(payload), timeout=timeout)
+        except TimeoutError as e:
+            raise ToolException(f"Tool {self.name} timed out after {timeout}s") from e
 
     def _run(
         self,
@@ -90,7 +111,6 @@ class LazyMCPTool(BaseTool):
         try:
             asyncio.get_running_loop()
         except RuntimeError:
+            # No running loop - safe to create new one (lock created there)
             return asyncio.run(self._arun(*args, **kwargs))
-        raise RuntimeError(
-            "LazyMCPTool._run cannot be called while an event loop is running; use _arun instead."
-        )
+        raise RuntimeError("MCPTool._run cannot be called with running loop; use _arun")

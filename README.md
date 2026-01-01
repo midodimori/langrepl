@@ -572,13 +572,16 @@ skills/
       "stateful": false,
       "include": ["tool1"],
       "exclude": [],
-      "repair_command": "rm -rf .some_cache"
+      "repair_command": ["rm", "-rf", ".some_cache"],
+      "repair_timeout": 30,
+      "invoke_timeout": 60.0
     },
     "remote-server": {
       "url": "http://localhost:8080/mcp",
       "transport": "http",
       "timeout": 30,
-      "sse_read_timeout": 300
+      "sse_read_timeout": 300,
+      "invoke_timeout": 60.0
     }
   }
 }
@@ -587,7 +590,9 @@ skills/
 - `transport`: `stdio` (local command), `http` (HTTP/streamable), `sse` (Server-Sent Events), `websocket`. Aliases `streamable_http` and `streamable-http` map to `http`.
 - `timeout`, `sse_read_timeout`: Connection and SSE read timeouts in seconds (for HTTP-based transports)
 - `stateful`: Keep connection alive between tool calls (default: `false`). Use for servers that need persistent state.
-- `repair_command`: Runs if server fails, then run this command before retrying
+- `repair_command`: Command array to run if server fails (default: none). Auto-retries after repair.
+- `repair_timeout`: Repair command timeout in seconds (default: `30` when `repair_command` is set)
+- `invoke_timeout`: Tool invocation timeout in seconds (default: none)
 - Suppress stderr: `"command": "sh", "args": ["-c", "npx pkg 2>/dev/null"]`
 - Reference: `mcp:my-server:tool1`
 - Examples: [useful-mcp-servers.json](examples/useful-mcp-servers.json)

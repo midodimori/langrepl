@@ -210,7 +210,7 @@ class Initializer:
             try:
                 yield compiled_graph
             finally:
-                await mcp_client.close_sessions()
+                await mcp_client.close()
 
     async def get_threads(self, agent: str, working_dir: Path) -> list[dict]:
         """Get all conversation threads with metadata.

@@ -374,10 +374,10 @@ class AgentFactory:
 
         tool_resources = ToolResources(
             impl=self._build_tool_dict(self.tool_factory.get_impl_tools()),
-            mcp=self._build_tool_dict(await mcp_client.get_mcp_tools()),
+            mcp=self._build_tool_dict(await mcp_client.tools()),
             internal=self._build_tool_dict(self.tool_factory.get_internal_tools()),
             impl_module_map=self.tool_factory.get_impl_module_map(),
-            mcp_module_map=mcp_client.get_mcp_module_map(),
+            mcp_module_map=mcp_client.module_map,
             internal_module_map=self.tool_factory.get_internal_module_map(),
         )
 

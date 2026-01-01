@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import aiofiles
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from langrepl.configs.base import VersionedConfig
 from langrepl.utils.render import render_templates
@@ -52,6 +52,9 @@ class MCPServerConfig(VersionedConfig):
         default=None,
         description="Command list to run if server initialization fails",
     )
+    repair_timeout: int | None = Field(
+        default=None, description="Repair command timeout in seconds"
+    )
     stateful: bool = Field(
         default=False,
         description="Keep server connection alive between tool calls",
@@ -62,6 +65,9 @@ class MCPServerConfig(VersionedConfig):
     sse_read_timeout: float | None = Field(
         default=None, description="SSE read timeout in seconds"
     )
+    invoke_timeout: float | None = Field(
+        default=None, description="Tool invocation timeout in seconds"
+    )
 
     @field_validator("transport", mode="before")
     @classmethod
@@ -70,6 +76,13 @@ class MCPServerConfig(VersionedConfig):
         if v in {"streamable_http", "streamable-http"}:
             return "http"
         return v
+
+    @model_validator(mode="after")
+    def validate_repair_timeout(self) -> MCPServerConfig:
+        """Set default repair_timeout when repair_command is set."""
+        if self.repair_command and self.repair_timeout is None:
+            self.repair_timeout = 30
+        return self
 
 
 class MCPConfig(BaseModel):

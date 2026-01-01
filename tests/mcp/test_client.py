@@ -9,9 +9,9 @@ from langrepl.mcp.client import MCPClient
 from langrepl.tools.schema import ToolSchema
 
 
-class TestMCPClientGetTools:
+class TestMCPClientTools:
     @pytest.mark.asyncio
-    async def test_get_tools_without_filters(self, create_mock_tool):
+    async def test_tools_without_filters(self, create_mock_tool):
         mock_tool1 = create_mock_tool("tool1")
         mock_tool2 = create_mock_tool("tool2")
 
@@ -21,12 +21,12 @@ class TestMCPClientGetTools:
         )
         cast(Any, client).get_tools = AsyncMock(return_value=[mock_tool1, mock_tool2])
 
-        tools = await client.get_mcp_tools()
+        tools = await client.tools()
 
         assert len(tools) == 2
 
     @pytest.mark.asyncio
-    async def test_get_tools_with_include_filter(self, create_mock_tool):
+    async def test_tools_with_include_filter(self, create_mock_tool):
         mock_tool1 = create_mock_tool("tool1")
         mock_tool2 = create_mock_tool("tool2")
 
@@ -39,13 +39,13 @@ class TestMCPClientGetTools:
         )
         cast(Any, client).get_tools = AsyncMock(return_value=[mock_tool1, mock_tool2])
 
-        tools = await client.get_mcp_tools()
+        tools = await client.tools()
 
         assert len(tools) == 1
         assert tools[0].name == "tool1"
 
     @pytest.mark.asyncio
-    async def test_get_tools_with_exclude_filter(self, create_mock_tool):
+    async def test_tools_with_exclude_filter(self, create_mock_tool):
         mock_tool1 = create_mock_tool("tool1")
         mock_tool2 = create_mock_tool("tool2")
 
@@ -58,7 +58,7 @@ class TestMCPClientGetTools:
         )
         cast(Any, client).get_tools = AsyncMock(return_value=[mock_tool1, mock_tool2])
 
-        tools = await client.get_mcp_tools()
+        tools = await client.tools()
 
         assert len(tools) == 1
         assert tools[0].name == "tool1"
@@ -76,9 +76,8 @@ class TestMCPClientGetTools:
         )
         cast(Any, client).get_tools = AsyncMock(return_value=[mock_tool])
 
-        tools = await client.get_mcp_tools()
-
-        assert tools == []
+        with pytest.raises(ValueError, match="Both include/exclude"):
+            await client.tools()
 
     @pytest.mark.asyncio
     async def test_multiple_servers(self, create_mock_tool):
@@ -97,7 +96,7 @@ class TestMCPClientGetTools:
         )
         cast(Any, client).get_tools = AsyncMock(side_effect=get_tools_side_effect)
 
-        tools = await client.get_mcp_tools()
+        tools = await client.tools()
 
         assert len(tools) == 2
 
@@ -109,7 +108,7 @@ class TestMCPClientGetTools:
         )
         cast(Any, client).get_tools = AsyncMock(side_effect=Exception("Server error"))
 
-        tools = await client.get_mcp_tools()
+        tools = await client.tools()
 
         assert len(tools) == 0
 
@@ -123,7 +122,7 @@ class TestMCPClientGetTools:
         )
         cast(Any, client).get_tools = AsyncMock(return_value=[mock_tool])
 
-        tools = await client.get_mcp_tools()
+        tools = await client.tools()
 
         assert len(tools) == 1
         assert tools[0].metadata is not None
@@ -140,18 +139,24 @@ class TestMCPClientGetTools:
             enable_approval=False,
         )
 
-        async def load_and_cache_server(server_name: str):
-            return [mock_tool]
+        async def load_server(server_name: str):
+            from langrepl.mcp.tool import MCPTool
+            from langrepl.tools.schema import ToolSchema
 
-        client._load_and_cache_server = AsyncMock(side_effect=load_and_cache_server)  # type: ignore[method-assign]
-        client._load_cached_schemas = MagicMock(return_value=None)  # type: ignore[method-assign]
+            schema = ToolSchema.from_tool(mock_tool)
+            proxy = MCPTool(server_name, schema, AsyncMock())
+            proxy._loaded = mock_tool
+            return [proxy]
 
-        tools = await client.get_mcp_tools()
+        client._load_server = AsyncMock(side_effect=load_server)  # type: ignore[method-assign]
+        client._cache.load = MagicMock(return_value=None)  # type: ignore[method-assign]
+
+        tools = await client.tools()
 
         assert len(tools) == 1
         assert tools[0].name == "tool1"
         assert tools[0]._loaded == mock_tool  # type: ignore[attr-defined]
-        client._load_and_cache_server.assert_awaited_once()
+        client._load_server.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_cache_used_when_available(self, create_mock_tool):
@@ -161,15 +166,15 @@ class TestMCPClientGetTools:
             connections={"server1": Mock()},
             enable_approval=False,
         )
-        client._load_and_cache_server = AsyncMock(return_value=[mock_tool])  # type: ignore[method-assign]
-        client._load_cached_schemas = MagicMock(  # type: ignore[method-assign]
+        client._load_server = AsyncMock(return_value=[mock_tool])  # type: ignore[method-assign]
+        client._cache.load = MagicMock(  # type: ignore[method-assign]
             return_value=[ToolSchema.from_tool(mock_tool)]
         )
 
-        tools = await client.get_mcp_tools()
+        tools = await client.tools()
 
         assert tools
-        client._load_and_cache_server.assert_not_awaited()
+        client._load_server.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_cache_invalidated_on_hash_mismatch(
@@ -177,17 +182,25 @@ class TestMCPClientGetTools:
     ):
         mock_tool = create_mock_tool("tool1")
 
+        from langrepl.mcp.client import ServerMeta
+
         client = MCPClient(
             connections={"server1": Mock()},
             enable_approval=False,
-            server_hashes={"server1": "new_hash"},
             cache_dir=tmp_path,
+            server_metadata={"server1": ServerMeta(hash="new_hash")},
         )
 
-        async def load_and_cache_server(server_name: str):
-            return [mock_tool]
+        async def load_server(server_name: str):
+            from langrepl.mcp.tool import MCPTool
+            from langrepl.tools.schema import ToolSchema
 
-        client._load_and_cache_server = AsyncMock(side_effect=load_and_cache_server)  # type: ignore[method-assign]
+            schema = ToolSchema.from_tool(mock_tool)
+            proxy = MCPTool(server_name, schema, AsyncMock())
+            proxy._loaded = mock_tool
+            return [proxy]
+
+        client._load_server = AsyncMock(side_effect=load_server)  # type: ignore[method-assign]
 
         cache_path = tmp_path / "server1.json"
         cache_path.parent.mkdir(parents=True, exist_ok=True)
@@ -200,11 +213,11 @@ class TestMCPClientGetTools:
             )
         )
 
-        tools = await client.get_mcp_tools()
+        tools = await client.tools()
 
         assert len(tools) == 1
         assert tools[0].name == "tool1"
-        client._load_and_cache_server.assert_awaited_once()
+        client._load_server.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_server_failure_does_not_block_others(self, create_mock_tool):
@@ -214,16 +227,41 @@ class TestMCPClientGetTools:
             connections={"server1": Mock(), "server2": Mock()},
             enable_approval=False,
         )
-        client._load_cached_schemas = MagicMock(return_value=None)  # type: ignore[method-assign]
-        client._load_and_cache_server = AsyncMock(  # type: ignore[method-assign]
-            side_effect=[RuntimeError("boom"), [mock_tool]]
-        )
 
-        tools = await client.get_mcp_tools()
+        async def load_server(server_name: str):
+            if server_name == "server1":
+                raise RuntimeError("boom")
+            from langrepl.mcp.tool import MCPTool
+            from langrepl.tools.schema import ToolSchema
+
+            schema = ToolSchema.from_tool(mock_tool)
+            proxy = MCPTool(server_name, schema, AsyncMock())
+            proxy._loaded = mock_tool
+            return [proxy]
+
+        client._cache.load = MagicMock(return_value=None)  # type: ignore[method-assign]
+        client._load_server = AsyncMock(side_effect=load_server)  # type: ignore[method-assign]
+
+        tools = await client.tools()
 
         assert len(tools) == 1
         assert tools[0].name == "tool_ok"
-        assert client._load_and_cache_server.await_args_list[0].args[0] in (
-            "server1",
-            "server2",
+
+    @pytest.mark.asyncio
+    async def test_invoke_timeout_set_in_metadata(self, create_mock_tool):
+        from langrepl.mcp.client import ServerMeta
+
+        mock_tool = create_mock_tool("tool1")
+
+        client = MCPClient(
+            connections={"server1": Mock()},
+            enable_approval=False,
+            server_metadata={"server1": ServerMeta(invoke_timeout=30.0)},
         )
+        cast(Any, client).get_tools = AsyncMock(return_value=[mock_tool])
+
+        tools = await client.tools()
+
+        assert len(tools) == 1
+        assert tools[0].metadata is not None
+        assert tools[0].metadata.get("timeout") == 30.0

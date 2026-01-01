@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.10.6 (2026-01-01)
+
+### Features
+
+- Change langgraph server dir to working dir instead of cli's root
+  ([`8d1e9e4`](https://github.com/midodimori/langrepl/commit/8d1e9e4f6cef247842b0298c54b6735b7d311739))
+
+
 ## v1.10.5 (2026-01-01)
 
 ### Bug Fixes

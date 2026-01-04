@@ -2,6 +2,20 @@
 
 <!-- version list -->
 
+## v1.10.7 (2026-01-04)
+
+### Documentation
+
+- Update
+  ([`3cc24cf`](https://github.com/midodimori/langrepl/commit/3cc24cf65004fed765dcee772cfd45a3f9f168b2))
+
+### Features
+
+- Add OAuth user redirect flow for remote MCP servers (#80)
+  ([#80](https://github.com/midodimori/langrepl/pull/80),
+  [`72efa60`](https://github.com/midodimori/langrepl/commit/72efa6012c818263c8e22b50daee1478e48cf7b4))
+
+
 ## v1.10.6 (2026-01-01)
 
 ### Features

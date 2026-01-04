@@ -28,6 +28,7 @@ from langrepl.configs import (
 from langrepl.core.constants import (
     CONFIG_CHECKPOINTS_URL_FILE_NAME,
     CONFIG_MCP_CACHE_DIR,
+    CONFIG_MCP_OAUTH_DIR,
     CONFIG_SKILLS_DIR,
 )
 from langrepl.core.logging import get_logger
@@ -194,6 +195,7 @@ class Initializer:
             mcp_client = await self.mcp_factory.create(
                 config=mcp_config,
                 cache_dir=working_dir / CONFIG_MCP_CACHE_DIR,
+                oauth_dir=working_dir / CONFIG_MCP_OAUTH_DIR,
                 sandbox_bindings=sandbox_bindings,
             )
 

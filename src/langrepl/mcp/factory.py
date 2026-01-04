@@ -11,6 +11,7 @@ from langrepl.core.constants import TOOL_CATEGORY_MCP
 from langrepl.core.logging import get_logger
 from langrepl.core.settings import settings
 from langrepl.mcp.client import MCPClient, RepairConfig, ServerMeta
+from langrepl.mcp.oauth import create_oauth_provider
 from langrepl.sandboxes.backends.base import SandboxBinding
 from langrepl.utils.patterns import matches_patterns, mcp_server_matcher
 
@@ -64,6 +65,7 @@ class MCPFactory:
         self,
         config: MCPConfig,
         cache_dir: Path | None = None,
+        oauth_dir: Path | None = None,
         sandbox_bindings: list[SandboxBinding] | None = None,
     ) -> MCPClient:
         config_hash = self._get_config_hash(config, cache_dir)
@@ -134,10 +136,20 @@ class MCPFactory:
                             "sandboxed, use 'sandbox: null' to bypass"
                         )
                         continue
+
+                    auth = None
+                    if oauth_dir is not None:
+                        auth = await create_oauth_provider(
+                            server_name=name,
+                            server_url=server.url,
+                            oauth_dir=oauth_dir,
+                        )
+
                     server_dict = {
                         "transport": server.transport.value,
                         "url": server.url,
                         "headers": server.headers,
+                        "auth": auth,
                     }
                     if server.timeout is not None:
                         server_dict["timeout"] = server.timeout

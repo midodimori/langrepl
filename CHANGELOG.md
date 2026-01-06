@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.10.8 (2026-01-06)
+
+### Bug Fixes
+
+- Render correctly subagent messages when having > 1 subagent (#83)
+  ([#83](https://github.com/midodimori/langrepl/pull/83),
+  [`fd4d421`](https://github.com/midodimori/langrepl/commit/fd4d4213a7e5fa458527b3de23c37cebc313ee85))
+
+
 ## v1.10.7 (2026-01-04)
 
 ### Documentation

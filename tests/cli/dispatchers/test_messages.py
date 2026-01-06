@@ -181,9 +181,11 @@ class TestMessageDispatcher:
         chunk = {"agent": {"messages": [message]}}
         rendered_messages: set[str] = set()
 
-        await dispatcher._process_update_chunk(chunk, rendered_messages)
+        await dispatcher._process_update_chunk(chunk, (), rendered_messages)
 
-        mock_session.renderer.render_message.assert_called_once_with(message)
+        mock_session.renderer.render_message.assert_called_once_with(
+            message, indent_level=0
+        )
         assert "msg1_ai" in rendered_messages
 
     @pytest.mark.asyncio
@@ -196,9 +198,11 @@ class TestMessageDispatcher:
         chunk = {"agent": {"messages": [message]}}
         rendered_messages: set[str] = set()
 
-        await dispatcher._process_update_chunk(chunk, rendered_messages)
+        await dispatcher._process_update_chunk(chunk, (), rendered_messages)
 
-        mock_session.renderer.render_message.assert_called_once_with(message)
+        mock_session.renderer.render_message.assert_called_once_with(
+            message, indent_level=0
+        )
         assert "msg1_tool" in rendered_messages
 
     @pytest.mark.asyncio
@@ -226,7 +230,9 @@ class TestMessageDispatcher:
                 "langrepl.cli.dispatchers.messages.console.console.status",
                 return_value=nullcontext(status_obj),
             ),
-            patch.object(dispatcher, "_finalize_streaming", MagicMock()) as finalize,
+            patch.object(
+                dispatcher, "_finalize_all_streaming", MagicMock()
+            ) as finalize,
         ):
             await dispatcher._stream_response(
                 input_data={"messages": [HumanMessage(content="hi")]},
@@ -248,7 +254,7 @@ class TestMessageDispatcher:
         chunk = {"agent": {"messages": [message]}}
         rendered_messages: set[str] = set()
 
-        await dispatcher._process_update_chunk(chunk, rendered_messages)
+        await dispatcher._process_update_chunk(chunk, (), rendered_messages)
 
         mock_session.renderer.render_message.assert_not_called()
         assert "msg1_human" in rendered_messages
@@ -268,7 +274,7 @@ class TestMessageDispatcher:
         chunk = {"agent": {"messages": [message]}}
         rendered_messages: set[str] = {"msg1_ai"}  # Already rendered
 
-        await dispatcher._process_update_chunk(chunk, rendered_messages)
+        await dispatcher._process_update_chunk(chunk, (), rendered_messages)
 
         mock_session.renderer.render_message.assert_not_called()
 
@@ -295,7 +301,7 @@ class TestMessageDispatcher:
         }
         rendered_messages: set[str] = set()
 
-        await dispatcher._process_update_chunk(chunk, rendered_messages)
+        await dispatcher._process_update_chunk(chunk, (), rendered_messages)
 
         mock_session.update_context.assert_called_once_with(
             current_input_tokens=100, current_output_tokens=50, total_cost=0.01
@@ -323,7 +329,7 @@ class TestMessageDispatcher:
         }
         rendered_messages: set[str] = set()
 
-        await dispatcher._process_update_chunk(chunk, rendered_messages)
+        await dispatcher._process_update_chunk(chunk, (), rendered_messages)
 
         mock_auto_compress.assert_called_once()
 
@@ -336,7 +342,7 @@ class TestMessageDispatcher:
         chunk: dict = {"agent": {}}
         rendered_messages: set[str] = set()
 
-        await dispatcher._process_update_chunk(chunk, rendered_messages)
+        await dispatcher._process_update_chunk(chunk, (), rendered_messages)
 
         mock_session.renderer.render_message.assert_not_called()
 

@@ -104,12 +104,7 @@ class MessageDispatcher:
         self._pending_compression = False
         current_input: dict[str, Any] | Command = input_data
         rendered_messages: set[str] = set()
-        streaming_state: dict[str, Any] = {
-            "active": False,
-            "message_id": None,
-            "preview_lines": [""],
-            "chunks": [],
-        }
+        streaming_states: dict[tuple, dict[str, Any]] = {}
 
         self.session.current_stream_task = asyncio.current_task()
 
@@ -132,7 +127,9 @@ class MessageDispatcher:
                         ):
                             interrupts = self._extract_interrupts(chunk)
                             if interrupts:
-                                self._clear_preview(streaming_state)
+                                # Clear all active streaming states on interrupt
+                                for state in streaming_states.values():
+                                    self._clear_preview(state)
                                 status.stop()
                                 resume_value = await self.interrupt_handler.handle(
                                     interrupts
@@ -151,28 +148,34 @@ class MessageDispatcher:
                                 interrupted = True
                                 break
 
-                            _namespace, mode, data = chunk
+                            namespace, mode, data = chunk
+
                             if mode == "messages":
                                 await self._process_message_chunk(
-                                    data, streaming_state, status, rendered_messages
+                                    data,
+                                    namespace,
+                                    streaming_states,
+                                    status,
+                                    rendered_messages,
                                 )
                             elif mode == "updates":
                                 self._finalize_streaming(
-                                    streaming_state,
+                                    namespace,
+                                    streaming_states,
                                     status,
                                     rendered_messages,
                                     stop_status=False,
                                 )
                                 await self._process_update_chunk(
-                                    data, rendered_messages
+                                    data, namespace, rendered_messages
                                 )
 
                 except (asyncio.CancelledError, KeyboardInterrupt):
                     if status:
                         status.stop()
                     self.session.prompt.reset_interrupt_state()
-                    self._finalize_streaming(
-                        streaming_state,
+                    self._finalize_all_streaming(
+                        streaming_states,
                         status,
                         rendered_messages,
                         stop_status=True,
@@ -183,8 +186,8 @@ class MessageDispatcher:
                     break
 
                 if not interrupted:
-                    self._finalize_streaming(
-                        streaming_state,
+                    self._finalize_all_streaming(
+                        streaming_states,
                         status,
                         rendered_messages,
                         stop_status=True,
@@ -226,15 +229,32 @@ class MessageDispatcher:
         ).hexdigest()[:8]
         return stable_key
 
+    def _get_streaming_state(
+        self, namespace: tuple, streaming_states: dict[tuple, dict[str, Any]]
+    ) -> dict[str, Any]:
+        """Get or create streaming state for namespace."""
+        if namespace not in streaming_states:
+            streaming_states[namespace] = {
+                "active": False,
+                "message_id": None,
+                "preview_lines": [""],
+                "chunks": [],
+                "namespace": namespace,
+            }
+        return streaming_states[namespace]
+
     async def _process_message_chunk(
         self,
         data: tuple[AnyMessage, dict],
-        streaming_state: dict,
+        namespace: tuple,
+        streaming_states: dict[tuple, dict[str, Any]],
         status,
         rendered_messages: set[str],
     ) -> None:
         """Process message chunk for token-by-token streaming preview."""
-        message_chunk, _metadata = data
+        message_chunk, metadata = data
+
+        streaming_state = self._get_streaming_state(namespace, streaming_states)
 
         if isinstance(message_chunk, AIMessageChunk):
             message_id = self._get_stable_message_id(message_chunk)
@@ -244,7 +264,8 @@ class MessageDispatcher:
                 or streaming_state["message_id"] != message_id
             ):
                 self._finalize_streaming(
-                    streaming_state,
+                    namespace,
+                    streaming_states,
                     None,
                     rendered_messages,
                     stop_status=False,
@@ -270,15 +291,19 @@ class MessageDispatcher:
                             "preview_lines"
                         ][-4:]
 
-                window_preview = "\n".join(streaming_state["preview_lines"][-3:])
+                indent_level = len(namespace)
+                indent = "  " * indent_level
 
                 spinner_text = render(
-                    f"[{theme.spinner_color}]Randomizing...[/{theme.spinner_color}]"
+                    f"[{theme.spinner_color}]{indent}Randomizing...[/{theme.spinner_color}]"
                 )
-                status.update(Group(spinner_text, Text(window_preview, style="dim")))
+                preview_text = "\n".join(
+                    f"{indent}{line}" for line in streaming_state["preview_lines"][-3:]
+                )
+                status.update(Group(spinner_text, Text(preview_text, style="dim")))
 
     async def _process_update_chunk(
-        self, data: dict, rendered_messages: set[str]
+        self, data: dict, namespace: tuple, rendered_messages: set[str]
     ) -> None:
         """Process update chunk for tools/state (batch mode)."""
         for _node_name, node_data in data.items():
@@ -299,7 +324,10 @@ class MessageDispatcher:
                 rendered_messages.add(message_id)
 
                 if isinstance(last_message, (AIMessage, ToolMessage)):
-                    self.session.renderer.render_message(last_message)
+                    indent_level = len(namespace)
+                    self.session.renderer.render_message(
+                        last_message, indent_level=indent_level
+                    )
 
     @staticmethod
     def _extract_chunk_content(chunk: AIMessageChunk) -> str:
@@ -327,24 +355,48 @@ class MessageDispatcher:
 
     def _finalize_streaming(
         self,
-        streaming_state: dict,
+        namespace: tuple,
+        streaming_states: dict[tuple, dict[str, Any]],
         status,
         rendered_messages: set[str],
         *,
         stop_status: bool = True,
     ) -> None:
         """Finalize active streaming message and render final version."""
+        streaming_state = self._get_streaming_state(namespace, streaming_states)
+
         if streaming_state["active"]:
             if stop_status and status:
                 status.stop()
 
             if streaming_state["chunks"]:
                 final_message = self._merge_chunks(streaming_state["chunks"])
-                self.session.renderer.render_assistant_message(final_message)
+                indent_level = len(namespace)
+                self.session.renderer.render_assistant_message(
+                    final_message, indent_level=indent_level
+                )
                 message_id = f"{streaming_state['message_id']}_{final_message.type}"
                 rendered_messages.add(message_id)
 
             self._clear_preview(streaming_state)
+
+    def _finalize_all_streaming(
+        self,
+        streaming_states: dict[tuple, dict[str, Any]],
+        status,
+        rendered_messages: set[str],
+        *,
+        stop_status: bool = True,
+    ) -> None:
+        """Finalize all active streaming messages."""
+        for namespace in streaming_states:
+            self._finalize_streaming(
+                namespace,
+                streaming_states,
+                status,
+                rendered_messages,
+                stop_status=stop_status,
+            )
 
     @staticmethod
     def _merge_chunks(chunks: list[AIMessageChunk]) -> AIMessage:

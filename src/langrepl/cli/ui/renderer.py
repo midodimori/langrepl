@@ -107,16 +107,22 @@ class PrefixedMarkdown:
         content: str,
         prefix_style: str = "success",
         code_theme: str = "dracula",
+        indent_level: int = 0,
     ):
         self.prefix = prefix
         self.prefix_style = prefix_style
         self.content = content
         self.code_theme = code_theme
+        self.indent_level = indent_level
 
     def __rich_console__(self, console: Console, options: ConsoleOptions):
         """Render markdown with prefix on first line and indent all subsequent lines."""
+        # Calculate base indentation for subagents
+        base_indent_str = "  " * self.indent_level
+        base_indent_width = len(base_indent_str)
+
         # Calculate indentation width using visual cell width
-        indent_width = cell_len(self.prefix)
+        indent_width = cell_len(self.prefix) + base_indent_width
 
         # Adjust rendering width to account for prefix/indent
         adjusted_options = options.update_width(options.max_width - indent_width)
@@ -130,9 +136,12 @@ class PrefixedMarkdown:
 
         # Get prefix style from console theme
         prefix_style = console.get_style(self.prefix_style)
+
+        # Create base indent and prefix segment for first line
+        base_indent_segment = Segment(base_indent_str)
         prefix_segment = Segment(self.prefix, prefix_style)
 
-        # Create indentation segment
+        # Create full indentation segment for subsequent lines
         indent = " " * indent_width
         indent_segment = Segment(indent)
 
@@ -149,12 +158,13 @@ class PrefixedMarkdown:
             lines = segment.text.split("\n")
 
             for i, line in enumerate(lines):
-                # Add prefix to first line content
+                # Add base indent + prefix to first line content
                 if not prefix_added and line:
+                    yield base_indent_segment
                     yield prefix_segment
                     prefix_added = True
                     at_line_start = False
-                # Add indentation to subsequent lines
+                # Add full indentation to subsequent lines
                 elif at_line_start and line:
                     yield indent_segment
                     at_line_start = False
@@ -170,6 +180,7 @@ class PrefixedMarkdown:
 
         # Handle case where no content was found
         if not prefix_added:
+            yield base_indent_segment
             yield prefix_segment
 
 
@@ -283,13 +294,16 @@ class Renderer:
         return texts, thinking_blocks
 
     @staticmethod
-    def _format_tool_call(tool_call: dict[str, Any]) -> Text:
+    def _format_tool_call(tool_call: dict[str, Any], indent_level: int = 0) -> Text:
         """Format a single tool call with improved readability."""
         tool_name = tool_call.get("name", UNKNOWN)
         tool_args = cast(dict[str, Any], tool_call.get("args", {}))
 
+        base_indent = "  " * indent_level
+
         # Build the text with formatting
         result = Text()
+        result.append(base_indent)
         result.append("⚙ ", style="indicator")
         result.append(tool_name, style="bold")
         result.append("\n")
@@ -301,14 +315,14 @@ class Renderer:
                 if len(value_str) > 200:
                     value_str = value_str[:200] + "..."
 
-                result.append(f"  {k} : ")
+                result.append(f"{base_indent}  {k} : ")
                 result.append(value_str)
                 result.append("\n")
 
         return result
 
     @staticmethod
-    def render_assistant_message(message: AIMessage) -> None:
+    def render_assistant_message(message: AIMessage, indent_level: int = 0) -> None:
         """Render an assistant message with optional tool calls."""
         if not message.content and not message.tool_calls:
             return
@@ -321,13 +335,16 @@ class Renderer:
             # Only tool calls, no content
             if tool_calls:
                 for i, tool_call in enumerate(tool_calls):
-                    console.print(Renderer._format_tool_call(tool_call))
+                    console.print(
+                        Renderer._format_tool_call(tool_call, indent_level=indent_level)
+                    )
                     if i < len(tool_calls) - 1:
                         console.print("")
             return
 
         if is_error:
-            console.print(Text(cast(str, content), style="error"))
+            indent = "  " * indent_level
+            console.print(Text(f"{indent}{cast(str, content)}", style="error"))
             return
 
         # Extract thinking from all sources
@@ -368,9 +385,18 @@ class Renderer:
 
             content = wrap_html_in_code_blocks(content)
         if content:
+            if indent_level > 0:
+                prefix = "◇ "
+            else:
+                prefix = "◆︎ "
+
             parts.append(
                 PrefixedMarkdown(
-                    "◆︎ ", content, prefix_style="indicator", code_theme="dracula"
+                    prefix,
+                    content,
+                    prefix_style="indicator",
+                    code_theme="dracula",
+                    indent_level=indent_level,
                 )
             )
 
@@ -383,12 +409,14 @@ class Renderer:
             if parts:
                 console.print(NewLine())
             for tool_call in tool_calls:
-                console.print(Renderer._format_tool_call(tool_call))
+                console.print(
+                    Renderer._format_tool_call(tool_call, indent_level=indent_level)
+                )
         elif parts:
             console.print("")
 
     @staticmethod
-    def render_tool_message(message: ToolMessage) -> None:
+    def render_tool_message(message: ToolMessage, indent_level: int = 0) -> None:
         """Render a tool execution message with Rich markup support."""
         content = getattr(message, "short_content", None) or message.text
 
@@ -401,12 +429,13 @@ class Renderer:
             or getattr(message, "status", None) == "error"
         )
 
+        base_indent = "  " * indent_level
         formatted_lines = []
         for i, line in enumerate(content.split("\n")):
             if i == 0:
-                formatted_lines.append(f"  ㄴ{line}")
+                formatted_lines.append(f"{base_indent}  ㄴ{line}")
             else:
-                formatted_lines.append(f"    {line}")
+                formatted_lines.append(f"{base_indent}    {line}")
 
         formatted_content = "\n".join(formatted_lines)
 
@@ -532,13 +561,13 @@ class Renderer:
             console.print("")
 
     @staticmethod
-    def render_message(message: AnyMessage) -> None:
+    def render_message(message: AnyMessage, indent_level: int = 0) -> None:
         """Render any message."""
         if isinstance(message, HumanMessage):
             Renderer.render_user_message(message)
 
         elif isinstance(message, AIMessage):
-            Renderer.render_assistant_message(message)
+            Renderer.render_assistant_message(message, indent_level=indent_level)
 
         elif isinstance(message, ToolMessage):
-            Renderer.render_tool_message(message)
+            Renderer.render_tool_message(message, indent_level=indent_level)

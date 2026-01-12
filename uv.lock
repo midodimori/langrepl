@@ -1062,11 +1062,11 @@ wheels = [
 
 [[package]]
 name = "json-repair"
-version = "0.54.3"
+version = "0.55.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b5/86/48b12ac02032f121ac7e5f11a32143edca6c1e3d19ffc54d6fb9ca0aafd0/json_repair-0.54.3.tar.gz", hash = "sha256:e50feec9725e52ac91f12184609754684ac1656119dfbd31de09bdaf9a1d8bf6", size = 38626, upload-time = "2025-12-15T09:41:58.594Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/96/74/0f39677fa7c0127129c3f1a37c94d05c30a968ba3047200e54dea375b09a/json_repair-0.55.0.tar.gz", hash = "sha256:9fafb47d92582ef4bdd3520656bdb0fcb37b46cf6aa99c1926b7895abc0a3a4b", size = 38828, upload-time = "2026-01-01T20:29:02.684Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e9/08/abe317237add63c3e62f18a981bccf92112b431835b43d844aedaf61f4a0/json_repair-0.54.3-py3-none-any.whl", hash = "sha256:4cdc132ee27d4780576f71bf27a113877046224a808bfc17392e079cb344fb81", size = 29357, upload-time = "2025-12-15T09:41:57.436Z" },
+    { url = "https://files.pythonhosted.org/packages/bc/00/d7d6b6b3257f9b1f997a558b6f7087b8af7c0a2f525f4fbd864c267a88ab/json_repair-0.55.0-py3-none-any.whl", hash = "sha256:bcf4880f5e6ad21a0f70ab034e3d1d398c2ae9698dc5717d7015afbac77b8ed7", size = 29570, upload-time = "2026-01-01T20:29:01.042Z" },
 ]
 
 [[package]]
@@ -1092,7 +1092,7 @@ wheels = [
 
 [[package]]
 name = "jsonschema"
-version = "4.25.1"
+version = "4.26.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
@@ -1100,9 +1100,9 @@ dependencies = [
     { name = "referencing" },
     { name = "rpds-py" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/74/69/f7185de793a29082a9f3c7728268ffb31cb5095131a9c139a74078e27336/jsonschema-4.25.1.tar.gz", hash = "sha256:e4a9655ce0da0c0b67a085847e00a3a51449e1157f4f75e9fb5aa545e122eb85", size = 357342, upload-time = "2025-08-18T17:03:50.038Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b3/fc/e067678238fa451312d4c62bf6e6cf5ec56375422aee02f9cb5f909b3047/jsonschema-4.26.0.tar.gz", hash = "sha256:0c26707e2efad8aa1bfc5b7ce170f3fccc2e4918ff85989ba9ffa9facb2be326", size = 366583, upload-time = "2026-01-07T13:41:07.246Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bf/9c/8c95d856233c1f82500c2450b8c68576b4cf1c871db3afac5c34ff84e6fd/jsonschema-4.25.1-py3-none-any.whl", hash = "sha256:3fba0169e345c7175110351d456342c364814cfcf3b964ba4587f22915230a63", size = 90040, upload-time = "2025-08-18T17:03:48.373Z" },
+    { url = "https://files.pythonhosted.org/packages/69/90/f63fb5873511e014207a475e2bb4e8b2e570d655b00ac19a9a0ca0a385ee/jsonschema-4.26.0-py3-none-any.whl", hash = "sha256:d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce", size = 90630, upload-time = "2026-01-07T13:41:05.306Z" },
 ]
 
 [[package]]
@@ -1536,8 +1536,8 @@ requires-dist = [
     { name = "aiosqlite", specifier = "~=0.22.1" },
     { name = "fastapi", specifier = ">=0.128.0" },
     { name = "greenlet", specifier = "~=3.3.0" },
-    { name = "json-repair", specifier = "~=0.54.3" },
-    { name = "jsonschema", specifier = "~=4.25.1" },
+    { name = "json-repair", specifier = ">=0.54.3,<0.56.0" },
+    { name = "jsonschema", specifier = ">=4.25.1,<4.27.0" },
     { name = "langchain", specifier = "~=1.2.0" },
     { name = "langchain-anthropic", specifier = "~=1.3.0" },
     { name = "langchain-aws", specifier = "~=1.1.1" },
@@ -1566,7 +1566,7 @@ requires-dist = [
     { name = "rich", specifier = "~=14.2.0" },
     { name = "trafilatura", specifier = "~=2.0.0" },
     { name = "types-aiofiles", specifier = "~=25.1.0.20251011" },
-    { name = "types-jsonschema", specifier = "~=4.25.1.20251009" },
+    { name = "types-jsonschema", specifier = ">=4.25.1.20251009,<4.26.1.0" },
     { name = "types-pyyaml", specifier = "~=6.0.12.20250915" },
 ]
 
@@ -3159,14 +3159,14 @@ wheels = [
 
 [[package]]
 name = "types-jsonschema"
-version = "4.25.1.20251009"
+version = "4.26.0.20260109"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "referencing" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ef/da/5b901088da5f710690b422137e8ae74197fb1ca471e4aa84dd3ef0d6e295/types_jsonschema-4.25.1.20251009.tar.gz", hash = "sha256:75d0f5c5dd18dc23b664437a0c1a625743e8d2e665ceaf3aecb29841f3a5f97f", size = 15661, upload-time = "2025-10-09T02:54:36.963Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/04/03/a1509b0c13fc7a1fca1494c84bde8cce8a5c0582b6255b9640ebd3034017/types_jsonschema-4.26.0.20260109.tar.gz", hash = "sha256:340fe91e6ea517900d6ababb6262a86c176473b5bf8455b96e85a89e3cfb5daa", size = 15886, upload-time = "2026-01-09T03:21:45.464Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/6a/e5146754c0dfc272f176db9c245bc43cc19030262d891a5a85d472797e60/types_jsonschema-4.25.1.20251009-py3-none-any.whl", hash = "sha256:f30b329037b78e7a60146b1146feb0b6fb0b71628637584409bada83968dad3e", size = 15925, upload-time = "2025-10-09T02:54:35.847Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/d6/3db3134f35f1e4bf9a13517d759c1ae64086eddb8ad0047caee140021e64/types_jsonschema-4.26.0.20260109-py3-none-any.whl", hash = "sha256:e0276640d228732fb75d883905d607359b24a4ff745ba7f9a5f50e6fda891926", size = 15923, upload-time = "2026-01-09T03:21:43.828Z" },
 ]
 
 [[package]]

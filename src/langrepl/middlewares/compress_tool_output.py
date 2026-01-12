@@ -38,9 +38,9 @@ class CompressToolOutputMiddleware(AgentMiddleware[AgentState, AgentContext]):
         """Compress tool message if it exceeds token limit."""
 
         # Skip compression for errors
-        if getattr(tool_msg, "status", None) == "error" or getattr(
-            tool_msg, "is_error", False
-        ):
+        if getattr(
+            tool_msg, "status", None
+        ) == "error" or tool_msg.additional_kwargs.get("is_error", False):
 
             return tool_msg
 
@@ -88,7 +88,7 @@ class CompressToolOutputMiddleware(AgentMiddleware[AgentState, AgentContext]):
                 name=tool_msg.name,
                 content=ref_content,
                 tool_call_id=tool_msg.tool_call_id,
-                short_content=short_ref_content,
+                additional_kwargs={"short_content": short_ref_content},
             )
 
             # Return Command to update both messages and files

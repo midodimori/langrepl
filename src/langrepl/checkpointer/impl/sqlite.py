@@ -222,7 +222,7 @@ class IndexedAsyncSqliteSaver(AsyncSqliteSaver, BaseCheckpointer):
             if msg.type == "human":
                 human_messages.append(
                     HumanMessageEntry(
-                        text=getattr(msg, "short_content", None) or msg.text,
+                        text=msg.additional_kwargs.get("short_content") or msg.text,
                         reference_mapping=msg.additional_kwargs.get(
                             "reference_mapping", {}
                         ),
@@ -349,7 +349,9 @@ class IndexedAsyncSqliteSaver(AsyncSqliteSaver, BaseCheckpointer):
     def _get_message_preview(msg: AnyMessage) -> str:
         """Get truncated message preview."""
         try:
-            text = getattr(msg, "short_content", None) or getattr(msg, "text", "")
+            text = msg.additional_kwargs.get("short_content") or getattr(
+                msg, "text", ""
+            )
             if isinstance(text, list):
                 text = " ".join(str(item) for item in text)
             text = str(text).replace("\n", " ")

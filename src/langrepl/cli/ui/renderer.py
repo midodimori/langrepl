@@ -219,7 +219,7 @@ class Renderer:
     @staticmethod
     def render_user_message(message: HumanMessage) -> None:
         """Render user message."""
-        content = getattr(message, "short_content", None) or message.text
+        content = message.additional_kwargs.get("short_content") or message.text
 
         # Calculate the visual width of the prompt prefix
         prompt_prefix = settings.cli.prompt_style
@@ -329,7 +329,7 @@ class Renderer:
 
         content: str | list[str | dict] = message.content
         tool_calls = [dict(tc) for tc in message.tool_calls]
-        is_error = getattr(message, "is_error", False)
+        is_error = message.additional_kwargs.get("is_error", False)
 
         if not content:
             # Only tool calls, no content
@@ -418,16 +418,19 @@ class Renderer:
     @staticmethod
     def render_tool_message(message: ToolMessage, indent_level: int = 0) -> None:
         """Render a tool execution message with Rich markup support."""
-        content = getattr(message, "short_content", None) or message.text
+        content = message.additional_kwargs.get("short_content") or message.text
 
         # Skip rendering if content is empty or None
         if not content or (isinstance(content, str) and not content.strip()):
             return
 
         is_error = (
-            getattr(message, "is_error", False)
+            message.additional_kwargs.get("is_error", False)
             or getattr(message, "status", None) == "error"
         )
+
+        # Check if the message contains Rich markup (from additional_kwargs)
+        has_rich_markup = message.additional_kwargs.get("has_rich_markup", False)
 
         base_indent = "  " * indent_level
         formatted_lines = []
@@ -441,8 +444,11 @@ class Renderer:
 
         if is_error:
             console.print(Text(formatted_content, style="error"))
+        elif has_rich_markup:
+            console.print(formatted_content, markup=True)
         else:
-            console.print(formatted_content)
+            # Use Text object to prevent Rich from interpreting brackets as markup
+            console.print(Text(formatted_content))
 
         console.print("")
 

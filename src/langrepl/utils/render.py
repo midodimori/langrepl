@@ -43,7 +43,7 @@ def format_tool_response(data: Any) -> tuple[str, str | None]:
     if isinstance(data, ToolMessage):
         # Extract both content and short_content from ToolMessage
         content = data.text
-        short_content = getattr(data, "short_content", None)
+        short_content = data.additional_kwargs.get("short_content")
         return content, short_content
 
     if isinstance(data, str):
@@ -102,6 +102,7 @@ def create_tool_message(
     is_error: bool | None = None,
     return_direct: bool | None = None,
     short_content: str | None = None,
+    has_rich_markup: bool | None = None,
 ) -> ToolMessage:
     """Create a ToolMessage from a tool execution result with proper formatting.
 
@@ -111,21 +112,34 @@ def create_tool_message(
         result: Tool result (can be string, AIMessage, ToolMessage, or any object)
         tool_name: Name of the tool
         tool_call_id: ID of the tool call
-        is_error: Override is_error flag (if None, extracted from result via getattr)
-        return_direct: Override return_direct flag (if None, extracted from result via getattr)
+        is_error: Override is_error flag (if None, extracted from result)
+        return_direct: Override return_direct flag (if None, extracted from result)
         short_content: Override short_content (if None, generated from result)
+        has_rich_markup: Override has_rich_markup flag (if None, extracted from result)
 
     Returns:
         Properly formatted ToolMessage with content and short_content
     """
+    # Extract additional_kwargs from result if it's a ToolMessage
+    result_kwargs = {}
+    if hasattr(result, "additional_kwargs") and isinstance(
+        result.additional_kwargs, dict
+    ):
+        result_kwargs = result.additional_kwargs
+
     # Extract metadata from result if not explicitly provided
     final_is_error = (
-        is_error if is_error is not None else getattr(result, "is_error", False)
+        is_error if is_error is not None else result_kwargs.get("is_error", False)
     )
     final_return_direct = (
         return_direct
         if return_direct is not None
-        else getattr(result, "return_direct", False)
+        else result_kwargs.get("return_direct", False)
+    )
+    final_has_rich_markup = (
+        has_rich_markup
+        if has_rich_markup is not None
+        else result_kwargs.get("has_rich_markup", False)
     )
 
     # Handle AIMessage specially, let format_tool_response handle everything else
@@ -141,14 +155,21 @@ def create_tool_message(
         # For errors, use full content; otherwise truncate
         final_short_content = content if final_is_error else truncate_text(content, 200)
 
+    # Build additional_kwargs with non-official attributes
+    additional_kwargs = {
+        "short_content": final_short_content,
+        "is_error": final_is_error,
+        "return_direct": final_return_direct,
+        "has_rich_markup": final_has_rich_markup,
+    }
+
     return ToolMessage(
         id=str(uuid.uuid4()),
         name=tool_name,
         content=content,
         tool_call_id=tool_call_id,
-        short_content=final_short_content,
-        is_error=final_is_error,
-        return_direct=final_return_direct,
+        status="error" if final_is_error else "success",
+        additional_kwargs=additional_kwargs,
     )
 
 

@@ -49,7 +49,7 @@ async def list_memory_files(
         name=list_memory_files.name,
         content=content,
         tool_call_id=runtime.tool_call_id,
-        short_content=short_content,
+        additional_kwargs={"short_content": short_content},
     )
 
 
@@ -104,7 +104,7 @@ async def read_memory_file(
         name=read_memory_file.name,
         content=content_with_summary,
         tool_call_id=runtime.tool_call_id,
-        short_content=short_content,
+        additional_kwargs={"short_content": short_content},
     )
 
 
@@ -142,7 +142,10 @@ async def write_memory_file(
                     name=write_memory_file.name,
                     content=f"Memory file written: {file_path}",
                     tool_call_id=runtime.tool_call_id,
-                    short_content=short_content,
+                    additional_kwargs={
+                        "short_content": short_content,
+                        "has_rich_markup": True,
+                    },
                 )
             ],
         }
@@ -214,7 +217,7 @@ async def edit_memory_file(
                     name=edit_memory_file.name,
                     content=f"Memory file edited: {file_path}",
                     tool_call_id=runtime.tool_call_id,
-                    short_content=short_content,
+                    additional_kwargs={"short_content": short_content},
                 )
             ],
         }

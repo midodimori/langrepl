@@ -58,8 +58,10 @@ class MessageDispatcher:
 
             human_message = HumanMessage(
                 content=message_content,
-                short_content=content,
-                additional_kwargs={"reference_mapping": reference_mapping},
+                additional_kwargs={
+                    "short_content": content,
+                    "reference_mapping": reference_mapping,
+                },
             )
             ctx = self.session.context
             now = datetime.now(timezone.utc).astimezone()

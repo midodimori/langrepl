@@ -54,7 +54,10 @@ class TestMessageDispatcher:
 
         call_args = mock_stream_response.call_args[0]
         input_data = call_args[0]
-        assert input_data["messages"][0].short_content == "original"
+        assert (
+            input_data["messages"][0].additional_kwargs.get("short_content")
+            == "original"
+        )
 
     @pytest.mark.asyncio
     @patch.object(MessageDispatcher, "_stream_response", new_callable=AsyncMock)

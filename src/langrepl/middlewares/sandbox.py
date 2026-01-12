@@ -139,4 +139,5 @@ class SandboxMiddleware(AgentMiddleware[AgentState, AgentContext]):
             tool_call_id=str(tool_call["id"]),
             is_error=False,
             short_content=result.get("short_content"),
+            has_rich_markup=result.get("has_rich_markup"),
         )

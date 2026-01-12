@@ -59,7 +59,7 @@ async def fetch_web_content(
         name=fetch_web_content.name,
         content=content,
         tool_call_id=runtime.tool_call_id,
-        short_content=short_content,
+        additional_kwargs={"short_content": short_content},
     )
 
 

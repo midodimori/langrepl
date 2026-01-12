@@ -31,7 +31,7 @@ class ReturnDirectMiddleware(AgentMiddleware[AgentState, AgentContext]):
         # Check recent tool messages for return_direct
         for msg in reversed(messages):
             if isinstance(msg, ToolMessage):
-                if getattr(msg, "return_direct", False):
+                if msg.additional_kwargs.get("return_direct", False):
                     return {"jump_to": "end"}
             elif not isinstance(msg, ToolMessage):
                 break

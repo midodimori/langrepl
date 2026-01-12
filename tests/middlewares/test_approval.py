@@ -239,7 +239,7 @@ class TestApprovalMiddleware:
                 result = await middleware.awrap_tool_call(request, handler)
 
             assert isinstance(result, ToolMessage)
-            assert getattr(result, "is_error", False) is True
+            assert result.additional_kwargs.get("is_error", False) is True
             content = result.text
             assert "denied" in content.lower()
             handler.assert_not_called()
@@ -265,7 +265,7 @@ class TestApprovalMiddleware:
         result = await middleware.awrap_tool_call(request, handler)
 
         assert isinstance(result, ToolMessage)
-        assert getattr(result, "is_error", False) is True
+        assert result.additional_kwargs.get("is_error", False) is True
         content = result.text
         assert "Test error" in content
 

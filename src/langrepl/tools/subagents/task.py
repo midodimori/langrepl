@@ -115,20 +115,18 @@ def create_task_tool(
         )
 
         is_error = (
-            getattr(final_message, "is_error", False)
+            final_message.additional_kwargs.get("is_error", False)
             or getattr(final_message, "status", None) == "error"
         )
 
         status = "completed" if not is_error else "failed"
         short_content = (
-            getattr(final_message, "short_content", None)
+            final_message.additional_kwargs.get("short_content")
             if not is_error
             else final_message.text
         )
-        setattr(
-            final_message,
-            "short_content",
-            (f"Task {status}: {short_content}" if short_content else f"Task {status}"),
+        final_message.additional_kwargs["short_content"] = (
+            f"Task {status}: {short_content}" if short_content else f"Task {status}"
         )
 
         return Command(

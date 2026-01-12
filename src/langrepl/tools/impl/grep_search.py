@@ -122,7 +122,7 @@ async def grep_search(
         name=grep_search.name,
         content=_format_results(all_results),
         tool_call_id=runtime.tool_call_id,
-        short_content=short_content,
+        additional_kwargs={"short_content": short_content},
     )
 
 

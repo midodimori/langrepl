@@ -269,9 +269,9 @@ class Initializer:
                             continue
 
                         last_msg = messages[-1]
-                        msg_text = getattr(last_msg, "short_content", None) or getattr(
-                            last_msg, "text", "No content"
-                        )
+                        msg_text = last_msg.additional_kwargs.get(
+                            "short_content"
+                        ) or getattr(last_msg, "text", "No content")
                         if isinstance(msg_text, list):
                             msg_text = " ".join(str(item) for item in msg_text)
 

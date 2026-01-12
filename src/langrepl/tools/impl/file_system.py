@@ -156,7 +156,7 @@ async def read_file(
         name=read_file.name,
         content=content_with_summary,
         tool_call_id=runtime.tool_call_id,
-        short_content=short_content,
+        additional_kwargs={"short_content": short_content},
     )
 
 
@@ -199,7 +199,7 @@ async def write_file(
         name=write_file.name,
         content=f"File written: {path}",
         tool_call_id=runtime.tool_call_id,
-        short_content=short_content,
+        additional_kwargs={"short_content": short_content, "has_rich_markup": True},
     )
 
 
@@ -287,7 +287,7 @@ async def edit_file(
         name=edit_file.name,
         content=f"File edited: {path}",
         tool_call_id=runtime.tool_call_id,
-        short_content=short_content,
+        additional_kwargs={"short_content": short_content},
     )
 
 
@@ -466,7 +466,7 @@ async def insert_at_line(
         name=insert_at_line.name,
         content=f"Inserted {inserted_line_count} line(s) at line {line_number} in {path}",
         tool_call_id=runtime.tool_call_id,
-        short_content=short_content,
+        additional_kwargs={"short_content": short_content},
     )
 
 

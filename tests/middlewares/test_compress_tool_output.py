@@ -14,13 +14,20 @@ from langrepl.middlewares.compress_tool_output import CompressToolOutputMiddlewa
 from langrepl.tools.internal.memory import read_memory_file
 
 
+def _simple_token_ids(text: str) -> list[int]:
+    """Simple tokenizer that estimates ~4 chars per token."""
+    return list(range(len(text) // 4))
+
+
 class TestCompressToolOutputMiddleware:
     """Tests for CompressToolOutputMiddleware class."""
 
     @pytest.mark.asyncio
     async def test_compresses_large_output(self, create_mock_tool, temp_dir):
         """Test that large tool output is compressed and stored in files."""
-        model = FakeListChatModel(responses=["test"])
+        model = FakeListChatModel(
+            responses=["test"], custom_get_token_ids=_simple_token_ids
+        )
         middleware = CompressToolOutputMiddleware(model)
 
         # Create large content that exceeds token limit
@@ -66,7 +73,9 @@ class TestCompressToolOutputMiddleware:
     @pytest.mark.asyncio
     async def test_does_not_compress_small_output(self, create_mock_tool, temp_dir):
         """Test that small output is not compressed."""
-        model = FakeListChatModel(responses=["test"])
+        model = FakeListChatModel(
+            responses=["test"], custom_get_token_ids=_simple_token_ids
+        )
         middleware = CompressToolOutputMiddleware(model)
 
         small_content = "small output"
@@ -98,7 +107,9 @@ class TestCompressToolOutputMiddleware:
     @pytest.mark.asyncio
     async def test_skips_compression_for_errors(self, create_mock_tool, temp_dir):
         """Test that error messages are not compressed."""
-        model = FakeListChatModel(responses=["test"])
+        model = FakeListChatModel(
+            responses=["test"], custom_get_token_ids=_simple_token_ids
+        )
         middleware = CompressToolOutputMiddleware(model)
 
         error_content = "Error: " + ("x" * 10000)
@@ -132,7 +143,9 @@ class TestCompressToolOutputMiddleware:
     @pytest.mark.asyncio
     async def test_skips_compression_for_read_memory_file(self, temp_dir):
         """Test that read_memory_file output is not compressed."""
-        model = FakeListChatModel(responses=["test"])
+        model = FakeListChatModel(
+            responses=["test"], custom_get_token_ids=_simple_token_ids
+        )
         middleware = CompressToolOutputMiddleware(model)
 
         large_content = "x" * 10000
@@ -165,7 +178,9 @@ class TestCompressToolOutputMiddleware:
         self, create_mock_tool, temp_dir
     ):
         """Test that Commands from handler are passed through."""
-        model = FakeListChatModel(responses=["test"])
+        model = FakeListChatModel(
+            responses=["test"], custom_get_token_ids=_simple_token_ids
+        )
         middleware = CompressToolOutputMiddleware(model)
 
         create_mock_tool("test_tool")
@@ -189,7 +204,9 @@ class TestCompressToolOutputMiddleware:
     @pytest.mark.asyncio
     async def test_handles_missing_max_tokens_config(self, create_mock_tool, temp_dir):
         """Test that middleware works when max_tokens is not configured."""
-        model = FakeListChatModel(responses=["test"])
+        model = FakeListChatModel(
+            responses=["test"], custom_get_token_ids=_simple_token_ids
+        )
         middleware = CompressToolOutputMiddleware(model)
 
         large_content = "x" * 10000
@@ -221,7 +238,9 @@ class TestCompressToolOutputMiddleware:
     @pytest.mark.asyncio
     async def test_handles_empty_content(self, create_mock_tool, temp_dir):
         """Test that middleware handles empty content."""
-        model = FakeListChatModel(responses=["test"])
+        model = FakeListChatModel(
+            responses=["test"], custom_get_token_ids=_simple_token_ids
+        )
         middleware = CompressToolOutputMiddleware(model)
 
         create_mock_tool("test_tool")

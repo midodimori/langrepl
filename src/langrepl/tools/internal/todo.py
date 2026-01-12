@@ -84,7 +84,10 @@ def write_todos(
                     name=write_todos.name,
                     content=f"Updated todo list to {todos}",
                     tool_call_id=runtime.tool_call_id,
-                    short_content=formatted_todos,
+                    additional_kwargs={
+                        "short_content": formatted_todos,
+                        "has_rich_markup": True,
+                    },
                 )
             ],
         }

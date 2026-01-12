@@ -231,5 +231,5 @@ class TestSandboxMiddleware:
 
         assert isinstance(result, ToolMessage)
         assert result.content == "Long detailed output..."
-        # short_content is passed to create_tool_message
-        assert hasattr(result, "short_content") or "OK" in str(result)
+        # short_content is passed to create_tool_message and stored in additional_kwargs
+        assert result.additional_kwargs.get("short_content") == "OK"

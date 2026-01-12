@@ -161,7 +161,7 @@ class MemoryCheckpointer(MemorySaver, BaseCheckpointer):
             if msg.type == "human":
                 human_messages.append(
                     HumanMessageEntry(
-                        text=getattr(msg, "short_content", None) or msg.text,
+                        text=msg.additional_kwargs.get("short_content") or msg.text,
                         reference_mapping=msg.additional_kwargs.get(
                             "reference_mapping", {}
                         ),

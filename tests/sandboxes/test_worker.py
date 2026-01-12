@@ -30,11 +30,12 @@ class TestSerializeResult:
             name="test_tool",
             tool_call_id="call-123",
             status="success",
+            additional_kwargs={
+                "short_content": "Success",
+                "is_error": False,
+                "return_direct": False,
+            },
         )
-        # Add optional attributes via setattr (these are dynamic)
-        setattr(message, "short_content", "Success")
-        setattr(message, "is_error", False)
-        setattr(message, "return_direct", False)
 
         result = serialize_result(message)
 

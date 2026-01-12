@@ -21,7 +21,7 @@ class TestReturnDirectMiddleware:
             name="test_tool",
             content="result",
             tool_call_id="call_1",
-            return_direct=True,
+            additional_kwargs={"return_direct": True},
         )
 
         state: AgentState = {
@@ -94,7 +94,7 @@ class TestReturnDirectMiddleware:
             content="old result",
             tool_call_id="call_old",
             id="msg_3",
-            return_direct=True,
+            additional_kwargs={"return_direct": True},
         )
 
         state: AgentState = {
@@ -176,7 +176,7 @@ class TestReturnDirectMiddleware:
             content="result2",
             tool_call_id="call_2",
             id="msg_4",
-            return_direct=True,
+            additional_kwargs={"return_direct": True},
         )
 
         state: AgentState = {

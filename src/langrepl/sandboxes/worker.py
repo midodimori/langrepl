@@ -31,8 +31,13 @@ def serialize_result(result: Any) -> dict:
             "name": result.name,
             "status": result.status,
             **{
-                k: getattr(result, k, None)
-                for k in ("short_content", "is_error", "return_direct")
+                k: result.additional_kwargs.get(k)
+                for k in (
+                    "short_content",
+                    "is_error",
+                    "return_direct",
+                    "has_rich_markup",
+                )
             },
         }
     return {"success": True, "content": str(result)}

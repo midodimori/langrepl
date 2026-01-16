@@ -48,3 +48,19 @@
     output_tokens_per_second: 266.67
     check_every_n_seconds: 0.05
     max_bucket_size: 100
+
+- version: 1.0.0
+  model: eu.anthropic.claude-opus-4-5-20251101-v1:0
+  alias: opus-4.5-bedrock
+  provider: bedrock
+  max_tokens: 10000
+  temperature: 0.1
+  context_window: 200000
+  input_cost_per_mtok: 5.0
+  output_cost_per_mtok: 25.0
+  rate_config:
+    requests_per_second: 16.67
+    input_tokens_per_second: 1333.33
+    output_tokens_per_second: 266.67
+    check_every_n_seconds: 0.05
+    max_bucket_size: 100

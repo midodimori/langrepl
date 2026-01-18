@@ -10,6 +10,7 @@ from langrepl.cli.handlers.models import ModelHandler
 from langrepl.cli.handlers.replay import ReplayHandler
 from langrepl.cli.handlers.resume import ResumeHandler
 from langrepl.cli.handlers.skills import SkillsHandler
+from langrepl.cli.handlers.todo import TodoHandler
 from langrepl.cli.handlers.tools import ToolsHandler
 
 __all__ = [
@@ -23,5 +24,6 @@ __all__ = [
     "ReplayHandler",
     "ResumeHandler",
     "SkillsHandler",
+    "TodoHandler",
     "ToolsHandler",
 ]

@@ -2,6 +2,29 @@
 
 <!-- version list -->
 
+## v1.10.10 (2026-01-18)
+
+### Bug Fixes
+
+- Ci
+  ([`e23813a`](https://github.com/midodimori/langrepl/commit/e23813a0d8b4cd6b1964ba6f7126bc0082f2b8b0))
+
+### Chores
+
+- **deps**: Bump aiohttp from 3.13.2 to 3.13.3 (#92)
+  ([#92](https://github.com/midodimori/langrepl/pull/92),
+  [`c222c22`](https://github.com/midodimori/langrepl/commit/c222c22bb9dc510ec5334b5dbe5aedef0e0d3bbd))
+
+- **deps**: Bump urllib3 from 2.6.2 to 2.6.3 (#91)
+  ([#91](https://github.com/midodimori/langrepl/pull/91),
+  [`473513a`](https://github.com/midodimori/langrepl/commit/473513a81d32c2d6a5e28a3ef0eb145c814cde7f))
+
+### Features
+
+- Add /todo command (#93) ([#93](https://github.com/midodimori/langrepl/pull/93),
+  [`68a3fdf`](https://github.com/midodimori/langrepl/commit/68a3fdf8bd5344a66f4ea347e005345204ae6949))
+
+
 ## v1.10.9 (2026-01-18)
 
 ### Chores

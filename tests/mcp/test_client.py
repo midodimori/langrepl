@@ -363,13 +363,17 @@ class TestMCPClientTools:
 
         client._sessions.get = AsyncMock(side_effect=track_warmup)  # type: ignore[method-assign]
 
-        start = time.time()
         await client.tools()
-        duration = time.time() - start
 
-        # Should complete in ~0.01s (parallel), not ~0.02s (sequential)
-        assert duration < 0.015
+        # Verify both servers warmed up
         assert len(warmup_times) == 2
+
+        # Verify parallel execution: both should start within a small window
+        # (not sequentially with 0.01s between starts)
+        _, time1 = warmup_times[0]
+        _, time2 = warmup_times[1]
+        time_diff = abs(time2 - time1)
+        assert time_diff < 0.005  # Started nearly simultaneously (parallel)
 
     @pytest.mark.asyncio
     async def test_non_cached_servers_skip_warmup(self, create_mock_tool):

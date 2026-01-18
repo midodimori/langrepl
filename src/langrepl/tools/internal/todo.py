@@ -15,7 +15,12 @@ from langrepl.agents.state import AgentState, Todo
 from langrepl.cli.theme import theme
 
 
-def format_todos(todos: list[Todo], max_items: int = 5) -> str:
+def format_todos(
+    todos: list[Todo],
+    max_items: int = 10,
+    max_completed: int = 2,
+    show_completed_indicator: bool = True,
+) -> str:
     """Render todos as Rich markup with status indicators and summaries."""
 
     if not todos:
@@ -27,22 +32,44 @@ def format_todos(todos: list[Todo], max_items: int = 5) -> str:
         "completed": ("✓", theme.success_color),
     }
 
-    priority = {"completed": 0, "in_progress": 1, "pending": 2}
-    sorted_todos = sorted(
-        todos,
-        key=lambda todo: priority.get(todo.get("status", "pending"), 3),
+    completed = [t for t in todos if t.get("status") == "completed"]
+    active = [t for t in todos if t.get("status") in ("in_progress", "pending")]
+
+    priority = {"in_progress": 0, "pending": 1}
+    active_sorted = sorted(
+        active,
+        key=lambda todo: priority.get(todo.get("status", "pending"), 2),
     )
 
     lines: list[str] = []
-    for todo in sorted_todos[:max_items]:
+    items_shown = 0
+
+    if show_completed_indicator and len(completed) > max_completed:
+        hidden_count = len(completed) - max_completed
+        lines.append(f"[{theme.muted_text}]+{hidden_count} more completed[/]")
+
+    completed_to_show = completed[-max_completed:]
+    for todo in completed_to_show:
+        if items_shown >= max_items:
+            break
+        icon, color = status_meta["completed"]
+        content = escape(todo.get("content", "").strip())
+        lines.append(f"[{color}]{icon} {content}[/]")
+        items_shown += 1
+
+    active_shown = 0
+    for todo in active_sorted:
+        if items_shown >= max_items:
+            remaining = len(active_sorted) - active_shown
+            if remaining > 0:
+                lines.append(f"[{theme.muted_text}]+{remaining} more[/]")
+            break
         status = todo.get("status", "pending")
         icon, color = status_meta.get(status, ("•", theme.secondary_text))
         content = escape(todo.get("content", "").strip())
         lines.append(f"[{color}]{icon} {content}[/]")
-
-    remaining = len(todos) - max_items
-    if remaining > 0:
-        lines.append(f"[{theme.muted_text}]+{remaining} more[/]")
+        items_shown += 1
+        active_shown += 1
 
     return "\n".join(lines)
 

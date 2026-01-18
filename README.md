@@ -421,6 +421,18 @@ Lists all skills available to the current agent with interactive selector. Skill
 ### Utilities
 
 <details>
+<summary><code>/todo [N]</code> - View current todo list</summary>
+
+Shows the current todo list. Specify optional number to limit displayed items (default: 10).
+
+```bash
+/todo       # Show max 10 items
+/todo 20    # Show max 20 items
+```
+
+</details>
+
+<details>
 <summary><code>/graph [--browser]</code> - Visualize agent graph</summary>
 
 Renders in terminal (ASCII) or opens in browser with `--browser` flag.

@@ -15,6 +15,7 @@ from langrepl.cli.handlers import (
     ReplayHandler,
     ResumeHandler,
     SkillsHandler,
+    TodoHandler,
     ToolsHandler,
 )
 from langrepl.cli.theme import console
@@ -40,6 +41,7 @@ class CommandDispatcher:
         self.replay_handler = ReplayHandler(session)
         self.compression_handler = CompressionHandler(session)
         self.graph_handler = GraphHandler(session)
+        self.todo_handler = TodoHandler(session)
 
     def _register_commands(self) -> dict[str, Callable]:
         """Register all available commands."""
@@ -58,6 +60,7 @@ class CommandDispatcher:
             "/resume": self.cmd_resume,
             "/replay": self.cmd_replay,
             "/compress": self.cmd_compress,
+            "/todo": self.cmd_todo,
         }
 
     async def dispatch(self, command_line: str) -> None:
@@ -158,3 +161,15 @@ class CommandDispatcher:
             return
 
         await self.graph_handler.handle(open_browser="--browser" in args)
+
+    async def cmd_todo(self, args: list[str]) -> None:
+        """Show current todo list."""
+        max_items = 10
+        if args:
+            try:
+                max_items = int(args[0])
+            except ValueError:
+                console.print_error(f"Invalid number: {args[0]}")
+                console.print("")
+                return
+        await self.todo_handler.handle(max_items)

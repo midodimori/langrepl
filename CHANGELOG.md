@@ -2,6 +2,35 @@
 
 <!-- version list -->
 
+## v1.10.9 (2026-01-18)
+
+### Chores
+
+- Add configuration for Claude Opus model in bedrock.yml (#89)
+  ([#89](https://github.com/midodimori/langrepl/pull/89),
+  [`76fdb1b`](https://github.com/midodimori/langrepl/commit/76fdb1bb387790a0a38b55994b637ca17a423517))
+
+- **deps**: Bump filelock from 3.20.1 to 3.20.3 (#88)
+  ([#88](https://github.com/midodimori/langrepl/pull/88),
+  [`741586e`](https://github.com/midodimori/langrepl/commit/741586e00ef1c1afffdf7e234d1aa43dcb1ad582))
+
+- **deps**: Bump pyasn1 from 0.6.1 to 0.6.2 (#90)
+  ([#90](https://github.com/midodimori/langrepl/pull/90),
+  [`f327e21`](https://github.com/midodimori/langrepl/commit/f327e216aff011f531bf347318e8788e20f04cee))
+
+- **deps**: Bump the langchain group across 1 directory with 5 updates (#84)
+  ([#84](https://github.com/midodimori/langrepl/pull/84),
+  [`e806825`](https://github.com/midodimori/langrepl/commit/e80682537ab7079852a4bcc8a6859d9e81b49d66))
+
+- **deps**: Bump the production-deps group across 1 directory with 3 updates (#85)
+  ([#85](https://github.com/midodimori/langrepl/pull/85),
+  [`55cdaf6`](https://github.com/midodimori/langrepl/commit/55cdaf6e58236f1e339f9a227d8339f6b8786516))
+
+- **deps**: Bump virtualenv from 20.35.4 to 20.36.1 (#87)
+  ([#87](https://github.com/midodimori/langrepl/pull/87),
+  [`10f25e4`](https://github.com/midodimori/langrepl/commit/10f25e48bf87c26da950f9124e2b91dcbc8c8f81))
+
+
 ## v1.10.8 (2026-01-06)
 
 ### Bug Fixes

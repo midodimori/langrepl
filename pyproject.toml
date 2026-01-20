@@ -71,7 +71,7 @@ dependencies = [
     'markdown-it-py~=4.0.0',
     'mdformat~=1.0.0',
     'pyseccomp~=0.1.2; sys_platform == "linux"',
-    'pathspec~=0.12.1',
+    'pathspec>=0.12.1,<1.1.0',
     "fastapi>=0.128.0",
 ]
 

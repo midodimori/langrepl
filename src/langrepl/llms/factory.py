@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from urllib.parse import urlparse
 
 import httpx
 from botocore.config import Config
@@ -13,14 +14,14 @@ from langrepl.utils.rate_limiter import TokenBucketLimiter
 if TYPE_CHECKING:
     from langchain_core.language_models.chat_models import BaseChatModel
 
+_LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
+
 
 class LLMFactory:
     def __init__(self, llm_settings: LLMSettings):
         self.llm_settings = llm_settings
         self._proxy_dict = self._get_proxy_dict()
-        self._bedrock_config = self._create_bedrock_config()
-        self._ollama_kwargs = self._get_ollama_kwargs()
-        self.http_client, self.http_async_client = self._create_http_clients()
+        self._proxy = self._proxy_dict.get("https") or self._proxy_dict.get("http")
         self._llm_cache: dict[int, BaseChatModel] = {}
 
     def _get_proxy_dict(self):
@@ -28,39 +29,21 @@ class LLMFactory:
         https_proxy = self.llm_settings.https_proxy.get_secret_value()
         return {k: v for k, v in [("http", http_proxy), ("https", https_proxy)] if v}
 
-    def _create_http_clients(self):
-        if not self._proxy_dict:
+    @staticmethod
+    def _is_local_url(url: str) -> bool:
+        return urlparse(url).hostname in _LOCAL_HOSTS
+
+    def _get_http_clients(self, base_url: str | None = None):
+        if not self._proxy or (base_url and self._is_local_url(base_url)):
             return None, None
+        return httpx.Client(proxy=self._proxy), httpx.AsyncClient(proxy=self._proxy)
 
-        if (
-            len(self._proxy_dict) == 2
-            and self._proxy_dict["http"] != self._proxy_dict["https"]
-        ):
-            sync_mounts = {
-                f"{k}://": httpx.HTTPTransport(proxy=v)
-                for k, v in self._proxy_dict.items()
-            }
-            async_mounts = {
-                f"{k}://": httpx.AsyncHTTPTransport(proxy=v)
-                for k, v in self._proxy_dict.items()
-            }
-            return httpx.Client(mounts=sync_mounts), httpx.AsyncClient(
-                mounts=async_mounts
-            )
-
-        proxy = self._proxy_dict.get("https") or self._proxy_dict.get("http")
-        return httpx.Client(proxy=proxy), httpx.AsyncClient(proxy=proxy)
-
-    def _get_ollama_kwargs(self):
-        if not self._proxy_dict:
+    def _get_ollama_kwargs(self, base_url: str):
+        if not self._proxy or self._is_local_url(base_url):
             return {}
-        return {
-            "client_kwargs": {
-                "proxies": {f"{k}://": v for k, v in self._proxy_dict.items()}
-            }
-        }
+        return {"client_kwargs": {"proxy": self._proxy}}
 
-    def _create_bedrock_config(self):
+    def _get_bedrock_config(self):
         return Config(proxies=self._proxy_dict) if self._proxy_dict else None
 
     @staticmethod
@@ -101,6 +84,7 @@ class LLMFactory:
         if config.provider == LLMProvider.OPENAI:
             from langchain_openai import ChatOpenAI
 
+            http_client, http_async_client = self._get_http_clients()
             kwargs = {
                 "api_key": self.llm_settings.openai_api_key,
                 "model": config.model,
@@ -108,8 +92,8 @@ class LLMFactory:
                 "temperature": config.temperature,
                 "streaming": config.streaming,
                 "rate_limiter": limiter,
-                "http_client": self.http_client,
-                "http_async_client": self.http_async_client,
+                "http_client": http_client,
+                "http_async_client": http_async_client,
             }
 
             if config.extended_reasoning:
@@ -154,28 +138,31 @@ class LLMFactory:
         elif config.provider == LLMProvider.OLLAMA:
             from langchain_ollama import ChatOllama
 
+            base_url = self.llm_settings.ollama_base_url
             llm = ChatOllama(
-                base_url=self.llm_settings.ollama_base_url,
+                base_url=base_url,
                 model=config.model,
                 num_predict=config.max_tokens,
                 temperature=config.temperature,
                 disable_streaming=not config.streaming,
                 rate_limiter=limiter,
-                **self._ollama_kwargs,
+                **self._get_ollama_kwargs(base_url),
             )
         elif config.provider == LLMProvider.LMSTUDIO:
             from langchain_openai import ChatOpenAI
 
+            base_url = self.llm_settings.lmstudio_base_url
+            http_client, http_async_client = self._get_http_clients(base_url)
             llm = ChatOpenAI(
-                base_url=self.llm_settings.lmstudio_base_url,
+                base_url=base_url,
                 model=config.model,
                 max_completion_tokens=config.max_tokens,
                 temperature=config.temperature,
                 streaming=config.streaming,
                 api_key=SecretStr("SOME_KEY"),
                 rate_limiter=limiter,
-                http_client=self.http_client,
-                http_async_client=self.http_async_client,
+                http_client=http_client,
+                http_async_client=http_async_client,
             )
         elif config.provider == LLMProvider.BEDROCK:
             from langchain_aws import ChatBedrock
@@ -189,7 +176,7 @@ class LLMFactory:
                 "temperature": config.temperature,
                 "streaming": config.streaming,
                 "rate_limiter": limiter,
-                "config": self._bedrock_config,
+                "config": self._get_bedrock_config(),
             }
 
             if config.extended_reasoning:
@@ -199,6 +186,7 @@ class LLMFactory:
         elif config.provider == LLMProvider.DEEPSEEK:
             from langchain_deepseek import ChatDeepSeek
 
+            http_client, http_async_client = self._get_http_clients()
             llm = ChatDeepSeek(
                 api_key=self.llm_settings.deepseek_api_key,
                 model=config.model,
@@ -206,8 +194,8 @@ class LLMFactory:
                 temperature=config.temperature,
                 streaming=config.streaming,
                 rate_limiter=limiter,
-                http_client=self.http_client,
-                http_async_client=self.http_async_client,
+                http_client=http_client,
+                http_async_client=http_async_client,
             )
         elif config.provider == LLMProvider.ZHIPUAI:
             from langrepl.llms.wrappers.zhipuai import ChatZhipuAI

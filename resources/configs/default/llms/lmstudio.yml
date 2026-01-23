@@ -1,7 +1,26 @@
+# Lightweight coding + tool calling (8GB RAM)
 - version: 1.0.0
-  model: deepseek/deepseek-r1-0528-qwen3-8b
-  alias: deepseek-r1-local
+  model: qwen/qwen2.5-coder-3b-instruct
+  alias: qwen-2.5-coder-3b-instruct
+  provider: lmstudio
+  max_tokens: 4096
+  temperature: 0.1
+  context_window: 32000
+
+# Coding model (16GB RAM)
+- version: 1.0.0
+  model: deepseek-ai/deepseek-coder-v2-lite-instruct
+  alias: deepseek-coder-v2-lite-instruct
   provider: lmstudio
   max_tokens: 8192
   temperature: 0.1
-  context_window: 64000
+  context_window: 128000
+
+# Mistral coding specialist (24GB RAM)
+- version: 1.0.0
+  model: mistralai/codestral-22b-v0.1
+  alias: codestral-22b-v0.1
+  provider: lmstudio
+  max_tokens: 8192
+  temperature: 0.1
+  context_window: 32000

@@ -58,6 +58,13 @@ def configure_logging(show_logs: bool = False, working_dir: Path = Path.cwd()) -
         module="pydantic.v1.main",
     )
 
+    # Suppress GPT-2 tokenizer fallback warning for Ollama models
+    warnings.filterwarnings(
+        "ignore",
+        message="Using fallback GPT-2 tokenizer",
+        category=UserWarning,
+    )
+
     if show_logs:
         # Pretty console logging with RichHandler (shows file:line automatically)
         console_handler = RichHandler(

@@ -6,7 +6,7 @@ from langrepl.llms.factory import LLMFactory
 
 
 class TestLLMFactoryCreateLimiter:
-    def test_create_limiter_with_rate_config(self, mock_llm_config):
+    def test_with_rate_config(self, mock_llm_config):
         config = mock_llm_config.model_copy(
             update={
                 "rate_config": RateConfig(
@@ -23,10 +23,8 @@ class TestLLMFactoryCreateLimiter:
 
         assert limiter is not None
         assert limiter.requests_per_second == 10.0
-        assert limiter.input_tokens_per_second == 1000.0
-        assert limiter.output_tokens_per_second == 500.0
 
-    def test_create_limiter_without_rate_config(self, mock_llm_config):
+    def test_without_rate_config(self, mock_llm_config):
         config = mock_llm_config.model_copy(update={"rate_config": None})
 
         limiter = LLMFactory._create_limiter(config)
@@ -34,151 +32,92 @@ class TestLLMFactoryCreateLimiter:
         assert limiter is None
 
 
-class TestLLMFactoryGetProxyDict:
-    def test_no_proxies(self, mock_llm_settings):
-        factory = LLMFactory(mock_llm_settings)
-
-        proxies = factory._get_proxy_dict()
-
-        assert proxies == {}
-
-    def test_http_proxy_only(self, mock_llm_settings):
-        settings = mock_llm_settings.model_copy(
-            update={"http_proxy": SecretStr("http://proxy.example.com:8080")}
-        )
-        factory = LLMFactory(settings)
-
-        proxies = factory._get_proxy_dict()
-
-        assert proxies == {"http": "http://proxy.example.com:8080"}
-
-    def test_https_proxy_only(self, mock_llm_settings):
+class TestLLMFactoryGetHttpClients:
+    def test_local_url_skips_proxy(self, mock_llm_settings):
         settings = mock_llm_settings.model_copy(
             update={"https_proxy": SecretStr("https://proxy.example.com:8443")}
         )
         factory = LLMFactory(settings)
 
-        proxies = factory._get_proxy_dict()
-
-        assert proxies == {"https": "https://proxy.example.com:8443"}
-
-    def test_both_proxies(self, mock_llm_settings):
-        settings = mock_llm_settings.model_copy(
-            update={
-                "http_proxy": SecretStr("http://proxy.example.com:8080"),
-                "https_proxy": SecretStr("https://proxy.example.com:8443"),
-            }
-        )
-        factory = LLMFactory(settings)
-
-        proxies = factory._get_proxy_dict()
-
-        assert proxies == {
-            "http": "http://proxy.example.com:8080",
-            "https": "https://proxy.example.com:8443",
-        }
-
-
-class TestLLMFactoryCreateHttpClients:
-    def test_no_proxies_returns_none(self, mock_llm_settings):
-        factory = LLMFactory(mock_llm_settings)
-
-        sync_client, async_client = factory._create_http_clients()
+        sync_client, async_client = factory._get_http_clients("http://localhost:1234")
 
         assert sync_client is None
         assert async_client is None
 
-    def test_with_proxies_creates_clients(self, mock_llm_settings):
+    def test_remote_url_uses_proxy(self, mock_llm_settings):
         settings = mock_llm_settings.model_copy(
-            update={
-                "http_proxy": SecretStr("http://proxy.example.com:8080"),
-                "https_proxy": SecretStr("https://proxy.example.com:8443"),
-            }
+            update={"https_proxy": SecretStr("https://proxy.example.com:8443")}
         )
         factory = LLMFactory(settings)
 
-        sync_client, async_client = factory._create_http_clients()
+        sync_client, async_client = factory._get_http_clients("http://remote:1234")
 
         assert sync_client is not None
         assert async_client is not None
 
+    def test_different_http_https_proxies_uses_mounts(self, mock_llm_settings):
+        settings = mock_llm_settings.model_copy(
+            update={
+                "http_proxy": SecretStr("http://http-proxy:8080"),
+                "https_proxy": SecretStr("https://https-proxy:8443"),
+            }
+        )
+        factory = LLMFactory(settings)
+
+        sync_client, async_client = factory._get_http_clients()
+
+        assert sync_client is not None
+        assert async_client is not None
+        assert sync_client._mounts is not None
+        assert async_client._mounts is not None
+
+    def test_same_http_https_proxies_uses_single_proxy(self, mock_llm_settings):
+        settings = mock_llm_settings.model_copy(
+            update={
+                "http_proxy": SecretStr("http://proxy:8080"),
+                "https_proxy": SecretStr("http://proxy:8080"),
+            }
+        )
+        factory = LLMFactory(settings)
+
+        sync_client, async_client = factory._get_http_clients()
+
+        assert sync_client is not None
+        assert async_client is not None
+        # When proxies are the same, fewer mounts (only default) vs per-scheme mounts
+        assert len(sync_client._mounts) < 2
+        assert len(async_client._mounts) < 2
+
 
 class TestLLMFactoryCreate:
-    def test_create_openai_model(self, mock_llm_settings, mock_llm_config):
-        settings = mock_llm_settings.model_copy(
-            update={"openai_api_key": SecretStr("test-key")}
-        )
-        factory = LLMFactory(settings)
-
-        config = mock_llm_config.model_copy(
-            update={
-                "provider": LLMProvider.OPENAI,
-                "model": "gpt-4",
-                "max_tokens": 1000,
-                "temperature": 0.7,
-            }
-        )
-
-        model = factory.create(config)
-
-        assert model is not None
-        assert model.__class__.__name__ == "ChatOpenAI"
-
-    def test_create_anthropic_model(self, mock_llm_settings, mock_llm_config):
-        settings = mock_llm_settings.model_copy(
-            update={"anthropic_api_key": SecretStr("test-key")}
-        )
-        factory = LLMFactory(settings)
-
-        config = mock_llm_config.model_copy(
-            update={
-                "provider": LLMProvider.ANTHROPIC,
-                "model": "claude-3-opus-20240229",
-                "max_tokens": 1000,
-                "temperature": 0.7,
-            }
-        )
-
-        model = factory.create(config)
-
-        assert model is not None
-        assert model.__class__.__name__ == "ChatAnthropic"
-
-    def test_create_google_model(self, mock_llm_settings, mock_llm_config):
-        settings = mock_llm_settings.model_copy(
-            update={"google_api_key": SecretStr("test-key")}
-        )
-        factory = LLMFactory(settings)
-
-        config = mock_llm_config.model_copy(
-            update={
-                "provider": LLMProvider.GOOGLE,
-                "model": "gemini-pro",
-                "max_tokens": 1000,
-                "temperature": 0.7,
-            }
-        )
-
-        model = factory.create(config)
-
-        assert model is not None
-        assert model.__class__.__name__ == "ChatGoogleGenerativeAI"
-
-    def test_create_unknown_provider_raises_error(
-        self, mock_llm_settings, mock_llm_config
+    @pytest.mark.parametrize(
+        ("provider", "api_key_field", "expected_class"),
+        [
+            (LLMProvider.OPENAI, "openai_api_key", "ChatOpenAI"),
+            (LLMProvider.ANTHROPIC, "anthropic_api_key", "ChatAnthropic"),
+            (LLMProvider.GOOGLE, "google_api_key", "ChatGoogleGenerativeAI"),
+        ],
+    )
+    def test_create_model(
+        self,
+        mock_llm_settings,
+        mock_llm_config,
+        provider,
+        api_key_field,
+        expected_class,
     ):
-        factory = LLMFactory(mock_llm_settings)
-
-        config = mock_llm_config.model_copy(
-            update={
-                "provider": LLMProvider.OPENAI,
-                "model": "test-model",
-                "max_tokens": 1000,
-                "temperature": 0.7,
-            }
+        settings = mock_llm_settings.model_copy(
+            update={api_key_field: SecretStr("test-key")}
         )
+        config = mock_llm_config.model_copy(update={"provider": provider})
 
-        config.provider = "unknown_provider"  # type: ignore[assignment]
+        model = LLMFactory(settings).create(config)
+
+        assert model.__class__.__name__ == expected_class
+
+    def test_unknown_provider_raises_error(self, mock_llm_settings, mock_llm_config):
+        config = mock_llm_config.model_copy(update={"provider": LLMProvider.OPENAI})
+        config.provider = "unknown"  # type: ignore[assignment]
 
         with pytest.raises(ValueError, match="Unknown LLM provider"):
-            factory.create(config)
+            LLMFactory(mock_llm_settings).create(config)

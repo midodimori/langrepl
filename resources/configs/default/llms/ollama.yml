@@ -1,0 +1,26 @@
+# Lightweight coding + tool calling (4GB RAM)
+- version: 1.0.0
+  model: qwen2.5-coder:3b
+  alias: qwen-2.5-coder-3b
+  provider: ollama
+  max_tokens: 4096
+  temperature: 0.1
+  context_window: 32000
+
+# Best coding model (16GB RAM)
+- version: 1.0.0
+  model: qwen2.5-coder:7b
+  alias: qwen-2.5-coder-7b
+  provider: ollama
+  max_tokens: 8192
+  temperature: 0.1
+  context_window: 128000
+
+# State-of-the-art coding MoE (32GB+ RAM)
+- version: 1.0.0
+  model: qwen3-coder:30b
+  alias: qwen-3-coder-30b
+  provider: ollama
+  max_tokens: 8192
+  temperature: 0.1
+  context_window: 256000

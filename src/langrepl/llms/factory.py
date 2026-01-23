@@ -34,13 +34,43 @@ class LLMFactory:
         return urlparse(url).hostname in _LOCAL_HOSTS
 
     def _get_http_clients(self, base_url: str | None = None):
-        if not self._proxy or (base_url and self._is_local_url(base_url)):
+        if not self._proxy_dict or (base_url and self._is_local_url(base_url)):
             return None, None
+
+        # Use per-scheme mounts when http and https proxies differ
+        if (
+            len(self._proxy_dict) == 2
+            and self._proxy_dict["http"] != self._proxy_dict["https"]
+        ):
+            sync_mounts = {
+                f"{k}://": httpx.HTTPTransport(proxy=v)
+                for k, v in self._proxy_dict.items()
+            }
+            async_mounts = {
+                f"{k}://": httpx.AsyncHTTPTransport(proxy=v)
+                for k, v in self._proxy_dict.items()
+            }
+            return httpx.Client(mounts=sync_mounts), httpx.AsyncClient(
+                mounts=async_mounts
+            )
+
         return httpx.Client(proxy=self._proxy), httpx.AsyncClient(proxy=self._proxy)
 
     def _get_ollama_kwargs(self, base_url: str):
-        if not self._proxy or self._is_local_url(base_url):
+        if not self._proxy_dict or self._is_local_url(base_url):
             return {}
+
+        # Use per-scheme proxies when http and https differ
+        if (
+            len(self._proxy_dict) == 2
+            and self._proxy_dict["http"] != self._proxy_dict["https"]
+        ):
+            return {
+                "client_kwargs": {
+                    "proxies": {f"{k}://": v for k, v in self._proxy_dict.items()}
+                }
+            }
+
         return {"client_kwargs": {"proxy": self._proxy}}
 
     def _get_bedrock_config(self):

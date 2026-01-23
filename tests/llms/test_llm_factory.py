@@ -55,6 +55,39 @@ class TestLLMFactoryGetHttpClients:
         assert sync_client is not None
         assert async_client is not None
 
+    def test_different_http_https_proxies_uses_mounts(self, mock_llm_settings):
+        settings = mock_llm_settings.model_copy(
+            update={
+                "http_proxy": SecretStr("http://http-proxy:8080"),
+                "https_proxy": SecretStr("https://https-proxy:8443"),
+            }
+        )
+        factory = LLMFactory(settings)
+
+        sync_client, async_client = factory._get_http_clients()
+
+        assert sync_client is not None
+        assert async_client is not None
+        assert sync_client._mounts is not None
+        assert async_client._mounts is not None
+
+    def test_same_http_https_proxies_uses_single_proxy(self, mock_llm_settings):
+        settings = mock_llm_settings.model_copy(
+            update={
+                "http_proxy": SecretStr("http://proxy:8080"),
+                "https_proxy": SecretStr("http://proxy:8080"),
+            }
+        )
+        factory = LLMFactory(settings)
+
+        sync_client, async_client = factory._get_http_clients()
+
+        assert sync_client is not None
+        assert async_client is not None
+        # When proxies are the same, fewer mounts (only default) vs per-scheme mounts
+        assert len(sync_client._mounts) < 2
+        assert len(async_client._mounts) < 2
+
 
 class TestLLMFactoryCreate:
     @pytest.mark.parametrize(

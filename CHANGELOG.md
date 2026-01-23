@@ -2,6 +2,25 @@
 
 <!-- version list -->
 
+## v1.10.11 (2026-01-23)
+
+### Chores
+
+- **deps**: Bump pathspec from 0.12.1 to 1.0.3 (#95)
+  ([#95](https://github.com/midodimori/langrepl/pull/95),
+  [`ccd5293`](https://github.com/midodimori/langrepl/commit/ccd5293a02e43bd67da80886ca6d98cbe0ed79b6))
+
+- **deps**: Bump the langchain group with 7 updates (#94)
+  ([#94](https://github.com/midodimori/langrepl/pull/94),
+  [`699e824`](https://github.com/midodimori/langrepl/commit/699e824420d3450d39ecd1be5182a75d0e14d56d))
+
+### Features
+
+- Refactor llm-related code + fix some proxy config (#96)
+  ([#96](https://github.com/midodimori/langrepl/pull/96),
+  [`fbeade1`](https://github.com/midodimori/langrepl/commit/fbeade1baa96c06d4c6ca511db61077bfa46b79b))
+
+
 ## v1.10.10 (2026-01-18)
 
 ### Bug Fixes

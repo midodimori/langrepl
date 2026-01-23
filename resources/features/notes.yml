@@ -1,5 +1,7 @@
 features_by_version:
   "1.10.x":
+    - "/model command now shows provider tabs"
+    - "Fix proxy when connecting to local providers"
     - "/todo [N] command to view current todo list"
     - "OAuth user redirect flow for remote MCP servers"
     - "Stateful MCP server connections for persistent state"

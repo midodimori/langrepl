@@ -233,16 +233,23 @@ class TestModelHandler:
         # Should show context model for main agent
         assert mock_session.context.model in formatted_str
 
-    def test_format_model_list_formats_correctly(self, mock_llm_config):
-        """Test that _format_model_list formats models correctly."""
-        formatted = ModelHandler._format_model_list(
-            [mock_llm_config], 0, "test-model", "test-model"
+    def test_format_tabbed_model_list_formats_correctly(
+        self, mock_session, mock_llm_config
+    ):
+        """Test that _format_tabbed_model_list formats models with provider tabs."""
+        handler = ModelHandler(mock_session)
+        providers = handler._group_models_by_provider([mock_llm_config])
+        provider_names = list(providers.keys())
+
+        formatted = handler._format_tabbed_model_list(
+            providers, provider_names, 0, 0, "test-model", "test-model"
         )
 
         assert formatted is not None
-        # Verify the formatted text contains the model name and indicators
+        # Verify the formatted text contains the model name and provider tab
         formatted_str = "".join(str(item[1]) for item in formatted)
         assert mock_llm_config.alias in formatted_str
+        assert mock_llm_config.provider.value in formatted_str
 
     @pytest.mark.asyncio
     @patch("langrepl.cli.handlers.models.initializer.load_agent_config")

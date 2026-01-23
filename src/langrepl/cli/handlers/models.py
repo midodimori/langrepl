@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 from typing import TYPE_CHECKING
 
 from prompt_toolkit.application import Application
@@ -14,7 +15,11 @@ from prompt_toolkit.layout.controls import FormattedTextControl
 
 from langrepl.cli.bootstrap.initializer import initializer
 from langrepl.cli.theme import console, theme
-from langrepl.cli.ui.shared import create_bottom_toolbar, create_prompt_style
+from langrepl.cli.ui.shared import (
+    create_bottom_toolbar,
+    create_instruction,
+    create_prompt_style,
+)
 from langrepl.core.logging import get_logger
 from langrepl.core.settings import settings
 
@@ -209,7 +214,7 @@ class ModelHandler:
     async def _get_model_selection(
         self, models: list[LLMConfig], current_model: str, default_model: str
     ) -> str:
-        """Get model selection from user using interactive list.
+        """Get model selection from user using tabbed provider interface.
 
         Args:
             models: List of model configuration objects
@@ -222,29 +227,57 @@ class ModelHandler:
         if not models:
             return ""
 
-        current_index = 0
+        # Group models by provider
+        providers = self._group_models_by_provider(models)
+        provider_names = list(providers.keys())
+        current_provider_idx = 0
+        current_model_idx = 0
 
-        # Create text control with formatted text
+        # Find initial provider/model based on current model
+        for pi, pname in enumerate(provider_names):
+            for mi, m in enumerate(providers[pname]):
+                if m.alias == current_model:
+                    current_provider_idx, current_model_idx = pi, mi
+                    break
+
         text_control = FormattedTextControl(
-            text=lambda: self._format_model_list(
-                models, current_index, current_model, default_model
+            text=lambda: self._format_tabbed_model_list(
+                providers,
+                provider_names,
+                current_provider_idx,
+                current_model_idx,
+                current_model,
+                default_model,
             ),
             focusable=True,
             show_cursor=False,
         )
 
-        # Create key bindings
         kb = KeyBindings()
+
+        @kb.add(Keys.Tab)
+        def _(event):
+            nonlocal current_provider_idx, current_model_idx
+            current_provider_idx = (current_provider_idx + 1) % len(provider_names)
+            current_model_idx = 0
+
+        @kb.add(Keys.BackTab)
+        def _(event):
+            nonlocal current_provider_idx, current_model_idx
+            current_provider_idx = (current_provider_idx - 1) % len(provider_names)
+            current_model_idx = 0
 
         @kb.add(Keys.Up)
         def _(event):
-            nonlocal current_index
-            current_index = (current_index - 1) % len(models)
+            nonlocal current_model_idx
+            provider = provider_names[current_provider_idx]
+            current_model_idx = (current_model_idx - 1) % len(providers[provider])
 
         @kb.add(Keys.Down)
         def _(event):
-            nonlocal current_index
-            current_index = (current_index + 1) % len(models)
+            nonlocal current_model_idx
+            provider = provider_names[current_provider_idx]
+            current_model_idx = (current_model_idx + 1) % len(providers[provider])
 
         selected = [False]
 
@@ -257,12 +290,12 @@ class ModelHandler:
         def _(event):
             event.app.exit()
 
-        # Create application
         context = self.session.context
         app: Application = Application(
             layout=Layout(
                 HSplit(
                     [
+                        *create_instruction("←: Shift+Tab, →: Tab"),
                         Window(content=text_control),
                         Window(
                             height=1,
@@ -289,12 +322,95 @@ class ModelHandler:
             await app.run_async()
 
             if selected[0]:
-                selected_model = models[current_index].alias
+                provider = provider_names[current_provider_idx]
+                selected_model = providers[provider][current_model_idx].alias
 
         except (KeyboardInterrupt, EOFError):
             pass
 
         return selected_model
+
+    @staticmethod
+    def _group_models_by_provider(
+        models: list[LLMConfig],
+    ) -> dict[str, list[LLMConfig]]:
+        """Group models by their provider."""
+        grouped: dict[str, list[LLMConfig]] = {}
+        for m in models:
+            key = m.provider.value
+            grouped.setdefault(key, []).append(m)
+        return grouped
+
+    def _format_tabbed_model_list(
+        self,
+        providers: dict[str, list[LLMConfig]],
+        provider_names: list[str],
+        selected_provider_idx: int,
+        selected_model_idx: int,
+        current_model: str,
+        default_model: str,
+    ) -> FormattedText:
+        """Format tabbed model list with provider tabs and model entries."""
+        prompt_symbol = settings.cli.prompt_style.strip()
+        term_width = shutil.get_terminal_size().columns
+
+        # Build provider->indicator map
+        current_provider = default_provider = None
+        for pname, pmodels in providers.items():
+            if any(m.alias == current_model for m in pmodels):
+                current_provider = pname
+            if any(m.alias == default_model for m in pmodels):
+                default_provider = pname
+
+        # Tab bar with wrapping
+        lines: list[tuple[str, str]] = []
+        current_line_len = 0
+
+        for i, pname in enumerate(provider_names):
+            is_selected = i == selected_provider_idx
+            prefix = f"{prompt_symbol} " if is_selected else "  "
+            indicator = ""
+            if pname == current_provider:
+                indicator = " ●"
+            elif pname == default_provider:
+                indicator = " ○"
+
+            tab_text = f"{prefix}{pname}{indicator}  "
+            tab_len = len(tab_text)
+
+            # Wrap to next line if exceeds width
+            if current_line_len + tab_len > term_width and current_line_len > 0:
+                lines.append(("", "\n"))
+                current_line_len = 0
+
+            style = theme.selection_color if is_selected else ""
+            lines.append((style, f"{prefix}{pname}"))
+            if pname == current_provider:
+                lines.append((theme.accent_color, " ●"))
+            elif pname == default_provider:
+                lines.append((theme.info_color, " ○"))
+            lines.append(("", "  "))
+            current_line_len += tab_len
+
+        lines.append(("", "\n\n"))
+
+        # Model list for selected provider
+        active_provider = provider_names[selected_provider_idx]
+        for i, model in enumerate(providers[active_provider]):
+            is_selected = i == selected_model_idx
+            is_current = model.alias == current_model
+            is_default = model.alias == default_model
+
+            prefix = f"{prompt_symbol} " if is_selected else "  "
+            style = theme.selection_color if is_selected else ""
+            lines.append((style, f"{prefix}{model.alias}"))
+            if is_current:
+                lines.append((theme.accent_color, " [current]"))
+            if is_default:
+                lines.append((theme.info_color, " [default]"))
+            lines.append(("", "\n"))
+
+        return FormattedText(lines)
 
     def _format_agent_list(
         self,
@@ -331,61 +447,6 @@ class ModelHandler:
                 lines.append(("", f"  {display_text}"))
 
             if i < len(agents) - 1:
-                lines.append(("", "\n"))
-
-        return FormattedText(lines)
-
-    @staticmethod
-    def _format_model_list(
-        models: list[LLMConfig],
-        selected_index: int,
-        current_model: str,
-        default_model: str,
-    ):
-        """Format the model list with highlighting.
-
-        Args:
-            models: List of model configuration objects
-            selected_index: Index of currently selected model
-            current_model: Currently active model name
-            default_model: Default model name from config
-
-        Returns:
-            FormattedText with styled lines
-        """
-        prompt_symbol = settings.cli.prompt_style.strip()
-        lines = []
-        for i, model in enumerate(models):
-            model_name = model.alias
-            provider = model.provider.value
-
-            # Build the base text
-            base_text = f"{model_name} ({provider})"
-
-            # Check for indicators
-            is_current = model_name == current_model
-            is_default = model_name == default_model
-
-            if i == selected_index:
-                # Selected item - highlight the whole line
-                lines.append(
-                    (f"{theme.selection_color}", f"{prompt_symbol} {base_text}")
-                )
-                # Add indicators on the same line with colors
-                if is_current:
-                    lines.append((f"{theme.info_color}", " [current]"))
-                if is_default:
-                    lines.append((f"{theme.accent_color}", " [default]"))
-            else:
-                # Non-selected item
-                lines.append(("", f"  {base_text}"))
-                # Add indicators with colors
-                if is_current:
-                    lines.append((f"{theme.info_color}", " [current]"))
-                if is_default:
-                    lines.append((f"{theme.accent_color}", " [default]"))
-
-            if i < len(models) - 1:
                 lines.append(("", "\n"))
 
         return FormattedText(lines)

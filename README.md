@@ -211,7 +211,7 @@ TOOL_SETTINGS__SEARCH_LIMIT=25       # Grep search limit (default: 25)
 #### CLI Settings
 
 ```bash
-CLI__THEME=dracula                   # UI theme (default: dracula)
+CLI__THEME=tokyo-night               # UI theme (default: none (auto-detect), possible values: tokyo-day, tokyo-night)
 CLI__PROMPT_STYLE="❯ "               # Prompt style (default: "❯ ")
 CLI__ENABLE_WORD_WRAP=true           # Word wrap (default: true)
 CLI__EDITOR=nano                     # Editor for /memory (default: nano)

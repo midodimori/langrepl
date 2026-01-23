@@ -4,8 +4,6 @@ from dotenv import load_dotenv
 from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from langrepl.core.constants import DEFAULT_THEME
-
 try:
     load_dotenv(".env")
 except PermissionError:
@@ -85,7 +83,9 @@ class CLISettings(BaseModel):
     """CLI-specific settings."""
 
     # Appearance settings
-    theme: str = Field(default=DEFAULT_THEME, description="UI theme")
+    theme: str | None = Field(
+        default=None, description="UI theme (auto-detect if None)"
+    )
     prompt_style: str = Field(default="❯ ", description="Prompt style")
 
     # Behavior settings

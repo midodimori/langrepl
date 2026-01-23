@@ -2,7 +2,7 @@ import platform
 from pathlib import Path
 
 UNKNOWN = "unknown"
-DEFAULT_THEME = "tokyo-night"
+
 APP_NAME = "langrepl"
 CONFIG_DIR_NAME = f".{APP_NAME}"
 CONFIG_MCP_FILE_NAME = Path(f"{CONFIG_DIR_NAME}/config.mcp.json")

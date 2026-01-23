@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.10.12 (2026-01-23)
+
+### Features
+
+- **cli**: Auto-detect terminal theme (dark/light) (#97)
+  ([#97](https://github.com/midodimori/langrepl/pull/97),
+  [`1e601bb`](https://github.com/midodimori/langrepl/commit/1e601bb3003d860c438e492023eb61ed8739171b))
+
+
 ## v1.10.11 (2026-01-23)
 
 ### Chores

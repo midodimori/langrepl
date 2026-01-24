@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.10.14 (2026-01-24)
+
+### Bug Fixes
+
+- Address deprecation warnings for pathspec and langchain tokenizer
+  ([`1a25d44`](https://github.com/midodimori/langrepl/commit/1a25d444e76ca57d1c33b945c0f8eef35d8325ab))
+
+### Features
+
+- Add always_ask in approval mode (#99) ([#99](https://github.com/midodimori/langrepl/pull/99),
+  [`dc70fe3`](https://github.com/midodimori/langrepl/commit/dc70fe33f13ed75924b47bfc02635f5d0d016da7))
+
+
 ## v1.10.13 (2026-01-24)
 
 ### Chores

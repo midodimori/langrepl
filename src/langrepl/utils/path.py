@@ -4,7 +4,7 @@ import glob
 import re
 from pathlib import Path
 
-from pathspec.patterns.gitwildmatch import GitWildMatchPattern
+from pathspec.patterns.gitignore.spec import GitIgnoreSpecPattern
 
 
 class SymlinkEscapeError(ValueError):
@@ -103,7 +103,7 @@ def pattern_to_regex(pattern: str, *, posix: bool = False) -> str | None:
     """
     expanded = str(Path(pattern).expanduser())
     is_absolute = expanded.startswith("/")
-    git_pattern = GitWildMatchPattern(expanded)
+    git_pattern = GitIgnoreSpecPattern(expanded)
 
     if not git_pattern.regex:
         return None

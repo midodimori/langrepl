@@ -28,11 +28,12 @@ class TestApprovalMiddleware:
             always_allow=[],
         )
 
-        result = ApprovalMiddleware._check_approval_rules(
+        decision, is_always_ask = ApprovalMiddleware._check_approval_rules(
             config, "test_tool", {"query": "bad"}
         )
 
-        assert result is False
+        assert decision is False
+        assert is_always_ask is False
 
     def test_check_approval_rules_with_always_allow(self):
         """Test that always_allow rules work."""
@@ -41,11 +42,12 @@ class TestApprovalMiddleware:
             always_allow=[ToolApprovalRule(name="test_tool", args={"query": "good"})],
         )
 
-        result = ApprovalMiddleware._check_approval_rules(
+        decision, is_always_ask = ApprovalMiddleware._check_approval_rules(
             config, "test_tool", {"query": "good"}
         )
 
-        assert result is True
+        assert decision is True
+        assert is_always_ask is False
 
     def test_check_approval_rules_with_no_match(self):
         """Test that None is returned when no rules match."""
@@ -54,11 +56,12 @@ class TestApprovalMiddleware:
             always_allow=[],
         )
 
-        result = ApprovalMiddleware._check_approval_rules(
+        decision, is_always_ask = ApprovalMiddleware._check_approval_rules(
             config, "test_tool", {"query": "anything"}
         )
 
-        assert result is None
+        assert decision is None
+        assert is_always_ask is False
 
     def test_check_approval_rules_deny_takes_precedence(self):
         """Test that deny rules take precedence over allow rules."""
@@ -67,9 +70,27 @@ class TestApprovalMiddleware:
             always_allow=[ToolApprovalRule(name="test_tool", args=None)],
         )
 
-        result = ApprovalMiddleware._check_approval_rules(config, "test_tool", {})
+        decision, is_always_ask = ApprovalMiddleware._check_approval_rules(
+            config, "test_tool", {}
+        )
 
-        assert result is False
+        assert decision is False
+        assert is_always_ask is False
+
+    def test_check_approval_rules_with_always_ask(self):
+        """Test that always_ask rules return is_always_ask=True."""
+        config = ToolApprovalConfig(
+            always_deny=[],
+            always_allow=[],
+            always_ask=[ToolApprovalRule(name="test_tool", args={"command": "rm.*"})],
+        )
+
+        decision, is_always_ask = ApprovalMiddleware._check_approval_rules(
+            config, "test_tool", {"command": "rm -rf /"}
+        )
+
+        assert decision is None
+        assert is_always_ask is True
 
     def test_check_approval_mode_bypass_semi_active(self):
         """Test that SEMI_ACTIVE mode never bypasses approval."""
@@ -105,17 +126,43 @@ class TestApprovalMiddleware:
         assert result is False
 
     def test_check_approval_mode_bypass_aggressive(self):
-        """Test that AGGRESSIVE mode always bypasses approval."""
+        """Test that AGGRESSIVE mode bypasses except for always_deny."""
+        # Test with a tool not in always_deny
         config = ToolApprovalConfig(
-            always_deny=[ToolApprovalRule(name="test_tool", args=None)],
+            always_deny=[ToolApprovalRule(name="blocked_tool", args=None)],
             always_allow=[],
         )
 
         result = ApprovalMiddleware._check_approval_mode_bypass(
             ApprovalMode.AGGRESSIVE, config, "test_tool", {}
         )
-
         assert result is True
+
+        # Test with a tool in always_deny - should NOT bypass
+        result = ApprovalMiddleware._check_approval_mode_bypass(
+            ApprovalMode.AGGRESSIVE, config, "blocked_tool", {}
+        )
+        assert result is False
+
+    def test_check_approval_mode_bypass_active_with_always_ask(self):
+        """Test that ACTIVE mode respects always_ask rules."""
+        config = ToolApprovalConfig(
+            always_deny=[],
+            always_allow=[],
+            always_ask=[ToolApprovalRule(name="critical_tool", args=None)],
+        )
+
+        # Normal tool should bypass
+        result = ApprovalMiddleware._check_approval_mode_bypass(
+            ApprovalMode.ACTIVE, config, "normal_tool", {}
+        )
+        assert result is True
+
+        # Critical tool should NOT bypass
+        result = ApprovalMiddleware._check_approval_mode_bypass(
+            ApprovalMode.ACTIVE, config, "critical_tool", {}
+        )
+        assert result is False
 
     def test_save_approval_decision_allow(self):
         """Test saving an allow decision."""

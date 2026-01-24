@@ -7,6 +7,7 @@ from collections.abc import Callable
 from langrepl.cli.bootstrap.initializer import initializer
 from langrepl.cli.handlers import (
     AgentHandler,
+    ApproveHandler,
     CompressionHandler,
     GraphHandler,
     MCPHandler,
@@ -42,6 +43,7 @@ class CommandDispatcher:
         self.compression_handler = CompressionHandler(session)
         self.graph_handler = GraphHandler(session)
         self.todo_handler = TodoHandler(session)
+        self.approve_handler = ApproveHandler(session)
 
     def _register_commands(self) -> dict[str, Callable]:
         """Register all available commands."""
@@ -61,6 +63,7 @@ class CommandDispatcher:
             "/replay": self.cmd_replay,
             "/compress": self.cmd_compress,
             "/todo": self.cmd_todo,
+            "/approve": self.cmd_approve,
         }
 
     async def dispatch(self, command_line: str) -> None:
@@ -173,3 +176,7 @@ class CommandDispatcher:
                 console.print("")
                 return
         await self.todo_handler.handle(max_items)
+
+    async def cmd_approve(self, args: list[str]) -> None:
+        """Manage tool approval rules (always_allow, always_deny, always_ask)."""
+        await self.approve_handler.handle()

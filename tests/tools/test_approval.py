@@ -13,20 +13,22 @@ class TestCheckApproval:
             always_deny=[ToolApprovalRule(name="read_file", args={"path": "/tmp/.*"})],
         )
 
-        result = ApprovalMiddleware._check_approval_rules(
+        decision, is_always_ask = ApprovalMiddleware._check_approval_rules(
             config, "read_file", {"path": "/tmp/test"}
         )
-        assert result is False
+        assert decision is False
+        assert is_always_ask is False
 
     def test_always_allow_when_no_deny(self):
         config = ToolApprovalConfig(
             always_allow=[ToolApprovalRule(name="read_file", args=None)], always_deny=[]
         )
 
-        result = ApprovalMiddleware._check_approval_rules(
+        decision, is_always_ask = ApprovalMiddleware._check_approval_rules(
             config, "read_file", {"path": "/any/path"}
         )
-        assert result is True
+        assert decision is True
+        assert is_always_ask is False
 
     def test_no_match_returns_none(self):
         config = ToolApprovalConfig(
@@ -34,17 +36,19 @@ class TestCheckApproval:
             always_deny=[],
         )
 
-        result = ApprovalMiddleware._check_approval_rules(
+        decision, is_always_ask = ApprovalMiddleware._check_approval_rules(
             config, "read_file", {"path": "/tmp/test"}
         )
-        assert result is None
+        assert decision is None
+        assert is_always_ask is False
 
     def test_empty_config_returns_none(self):
-        config = ToolApprovalConfig(always_allow=[], always_deny=[])
-        result = ApprovalMiddleware._check_approval_rules(
+        config = ToolApprovalConfig(always_allow=[], always_deny=[], always_ask=[])
+        decision, is_always_ask = ApprovalMiddleware._check_approval_rules(
             config, "read_file", {"path": "/tmp/test"}
         )
-        assert result is None
+        assert decision is None
+        assert is_always_ask is False
 
     def test_deny_overrides_allow_same_tool(self):
         config = ToolApprovalConfig(
@@ -54,15 +58,30 @@ class TestCheckApproval:
             ],
         )
 
-        result = ApprovalMiddleware._check_approval_rules(
+        decision, is_always_ask = ApprovalMiddleware._check_approval_rules(
             config, "read_file", {"path": "/etc/passwd"}
         )
-        assert result is False
+        assert decision is False
+        assert is_always_ask is False
 
-        result = ApprovalMiddleware._check_approval_rules(
+        decision, is_always_ask = ApprovalMiddleware._check_approval_rules(
             config, "read_file", {"path": "/tmp/safe"}
         )
-        assert result is True
+        assert decision is True
+        assert is_always_ask is False
+
+    def test_always_ask_returns_none_with_flag(self):
+        config = ToolApprovalConfig(
+            always_allow=[],
+            always_deny=[],
+            always_ask=[ToolApprovalRule(name="run_command", args={"command": "rm.*"})],
+        )
+
+        decision, is_always_ask = ApprovalMiddleware._check_approval_rules(
+            config, "run_command", {"command": "rm -rf /"}
+        )
+        assert decision is None
+        assert is_always_ask is True
 
 
 class TestCheckApprovalModeBypass:
@@ -89,19 +108,40 @@ class TestCheckApprovalModeBypass:
         )
         assert result is False
 
-    def test_aggressive_bypasses_everything(self):
+    def test_aggressive_bypasses_except_deny(self):
         config = ToolApprovalConfig(
             always_allow=[],
             always_deny=[ToolApprovalRule(name="dangerous_tool", args=None)],
         )
 
+        # Dangerous tool in always_deny should NOT bypass
         result = ApprovalMiddleware._check_approval_mode_bypass(
             ApprovalMode.AGGRESSIVE, config, "dangerous_tool", {}
         )
-        assert result is True
+        assert result is False
 
+        # Normal tool should bypass
         result = ApprovalMiddleware._check_approval_mode_bypass(
             ApprovalMode.AGGRESSIVE, config, "any_tool", {}
+        )
+        assert result is True
+
+    def test_active_respects_always_ask(self):
+        config = ToolApprovalConfig(
+            always_allow=[],
+            always_deny=[],
+            always_ask=[ToolApprovalRule(name="critical_tool", args=None)],
+        )
+
+        # Critical tool in always_ask should NOT bypass in ACTIVE mode
+        result = ApprovalMiddleware._check_approval_mode_bypass(
+            ApprovalMode.ACTIVE, config, "critical_tool", {}
+        )
+        assert result is False
+
+        # Normal tool should bypass in ACTIVE mode
+        result = ApprovalMiddleware._check_approval_mode_bypass(
+            ApprovalMode.ACTIVE, config, "any_tool", {}
         )
         assert result is True
 

@@ -54,27 +54,52 @@ class ToolApprovalRule(BaseModel):
         return True
 
 
+def _default_always_ask_rules() -> list[ToolApprovalRule]:
+    """Default rules for critical commands that always require approval."""
+    return [
+        ToolApprovalRule(name="run_command", args={"command": r"rm\s+-rf.*"}),
+        ToolApprovalRule(name="run_command", args={"command": r"git\s+push.*"}),
+        ToolApprovalRule(
+            name="run_command", args={"command": r"git\s+reset\s+--hard.*"}
+        ),
+        ToolApprovalRule(name="run_command", args={"command": r"sudo\s+.*"}),
+    ]
+
+
 class ToolApprovalConfig(BaseModel):
     """Configuration for tool approvals and denials"""
 
     always_allow: list[ToolApprovalRule] = Field(default_factory=list)
     always_deny: list[ToolApprovalRule] = Field(default_factory=list)
+    always_ask: list[ToolApprovalRule] = Field(default_factory=list)
 
     @classmethod
     def from_json_file(cls, file_path: Path) -> ToolApprovalConfig:
         """Load configuration from JSON file"""
         if not file_path.exists():
-            return cls()
+            config = cls(always_ask=_default_always_ask_rules())
+            config.save_to_json_file(file_path)
+            return config
 
         try:
+            import json
+
             with open(file_path) as f:
-                content = f.read()
-            return cls.model_validate_json(content)
+                raw = json.load(f)
+
+            if "always_ask" not in raw:
+                raw["always_ask"] = [
+                    r.model_dump() for r in _default_always_ask_rules()
+                ]
+                with open(file_path, "w") as f:
+                    json.dump(raw, f, indent=2)
+
+            return cls.model_validate(raw)
         except Exception:
             return cls()
 
     def save_to_json_file(self, file_path: Path) -> None:
         """Save configuration to JSON file"""
-        file_path.parent.mkdir(exist_ok=True)
+        file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, "w") as f:
             f.write(self.model_dump_json(indent=2))

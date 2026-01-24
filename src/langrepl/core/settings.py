@@ -91,7 +91,7 @@ class CLISettings(BaseModel):
     # Behavior settings
     enable_word_wrap: bool = Field(default=True, description="Enable word wrap")
     editor: str = Field(
-        default="nano", description="Default text editor for /memory command"
+        default="vim", description="Default text editor for /memory command"
     )
 
     # Autocomplete settings

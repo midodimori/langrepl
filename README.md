@@ -418,6 +418,18 @@ Lists all skills available to the current agent with interactive selector. Skill
 
 </details>
 
+<details>
+<summary><code>/approve</code> - Manage tool approval rules</summary>
+
+Interactive tabbed interface for managing tool approval rules across three lists:
+- **always_deny**: Permanently blocked tools/commands
+- **always_ask**: Always prompt (even in ACTIVE mode) - for critical commands
+- **always_allow**: Auto-approved tools/commands
+
+Use Tab/Shift+Tab to switch tabs, arrow keys to navigate, `d` to delete, `e` to edit in editor.
+
+</details>
+
 ### Utilities
 
 <details>
@@ -846,25 +858,34 @@ skills/
 ```json
 {
   "always_allow": [
-    {
-      "name": "read_file",
-      "args": null
-    },
-    {
-      "name": "run_command",
-      "args": "pwd"
-    }
+    { "name": "read_file", "args": null }
   ],
   "always_deny": [
-    {
-      "name": "run_command",
-      "args": "rm -rf /.*"
-    }
+    { "name": "run_command", "args": { "command": "rm -rf /.*" } }
+  ],
+  "always_ask": [
+    { "name": "run_command", "args": { "command": "rm\\s+-rf.*" } },
+    { "name": "run_command", "args": { "command": "git\\s+push.*" } },
+    { "name": "run_command", "args": { "command": "git\\s+reset\\s+--hard.*" } },
+    { "name": "run_command", "args": { "command": "sudo\\s+.*" } }
   ]
 }
 ```
 
-**Modes**: `SEMI_ACTIVE` (ask unless whitelisted), `ACTIVE` (auto-approve except denied), `AGGRESSIVE` (bypass all)
+**Three rule lists:**
+- `always_deny` - Permanently blocked (highest priority)
+- `always_ask` - Always prompt, even in ACTIVE mode (for critical commands)
+- `always_allow` - Auto-approved
+
+**Modes and behavior:**
+
+| Mode | `always_deny` | `always_ask` | `always_allow` | No match |
+|------|---------------|--------------|----------------|----------|
+| `SEMI_ACTIVE` | Block | Prompt | Allow | Prompt |
+| `ACTIVE` | Block | Prompt | Allow | Auto-allow |
+| `AGGRESSIVE` | Block | Auto-allow | Allow | Auto-allow |
+
+Default `always_ask` rules protect against destructive commands like `rm -rf`, `git push`, `git reset --hard`, and `sudo`.
 
 ### Sandboxes (Beta)
 

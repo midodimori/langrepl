@@ -1,6 +1,7 @@
 """Handlers for executing specific commands and workflows."""
 
 from langrepl.cli.handlers.agents import AgentHandler
+from langrepl.cli.handlers.approve import ApproveHandler
 from langrepl.cli.handlers.compress import CompressionHandler
 from langrepl.cli.handlers.graph import GraphHandler
 from langrepl.cli.handlers.interrupts import InterruptHandler
@@ -15,6 +16,7 @@ from langrepl.cli.handlers.tools import ToolsHandler
 
 __all__ = [
     "AgentHandler",
+    "ApproveHandler",
     "CompressionHandler",
     "GraphHandler",
     "InterruptHandler",

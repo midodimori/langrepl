@@ -90,7 +90,8 @@ class MessageDispatcher:
             )
 
         except Exception as e:
-            console.print_error(f"Error processing message: {e}")
+            error_msg = str(e) or type(e).__name__
+            console.print_error(f"Error processing message: {error_msg}")
             console.print("")
             logger.debug("Message processing error", exc_info=True)
 

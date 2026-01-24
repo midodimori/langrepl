@@ -1,4 +1,4 @@
-"""MCP tool registry with filtering and deduplication."""
+"""MCP tool registry for filtering and module mapping."""
 
 from __future__ import annotations
 
@@ -8,10 +8,11 @@ logger = get_logger(__name__)
 
 
 class MCPRegistry:
-    """Filters tools and prevents cross-server duplicates."""
+    """Filters tools and builds module mapping for pattern matching."""
 
     def __init__(self, filters: dict[str, dict] | None = None) -> None:
         self._filters = filters or {}
+        self._registered: set[tuple[str, str]] = set()
         self._map: dict[str, str] = {}
 
     def allowed(self, name: str, server: str) -> bool:
@@ -32,18 +33,12 @@ class MCPRegistry:
         return True
 
     def register(self, name: str, server: str) -> bool:
-        """Register tool name. Returns False if duplicate from another server."""
-        existing = self._map.get(name)
-        if existing and existing != server:
-            logger.warning(
-                "Skipping %s from %s; already from %s",
-                name,
-                server,
-                existing,
-            )
+        """Register tool. Returns True if newly registered, False if already exists."""
+        key = (server, name)
+        if key in self._registered:
             return False
-
-        self._map.setdefault(name, server)
+        self._registered.add(key)
+        self._map[f"{server}__{name}"] = server
         return True
 
     @property

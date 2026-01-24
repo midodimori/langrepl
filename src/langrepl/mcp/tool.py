@@ -30,12 +30,13 @@ class MCPTool(BaseTool):
         metadata: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(
-            name=schema.name,
+            name=f"{server}__{schema.name}",
             description=schema.description,
             args_schema=schema.parameters,
             metadata=metadata,
         )
         self._server = server
+        self._original_name = schema.name
         self._loader = loader
         self._schema = schema
         self._loaded: BaseTool | None = None
@@ -52,7 +53,7 @@ class MCPTool(BaseTool):
         async with self._lock:
             if self._loaded:
                 return self._loaded
-            tool = await self._loader(self._server, self.name)
+            tool = await self._loader(self._server, self._original_name)
             if not tool:
                 raise RuntimeError(
                     f"Failed to load MCP tool {self.name} from {self._server}"

@@ -158,6 +158,7 @@ class MCPClient(MultiServerMCPClient):
         return tools
 
     async def _load_server(self, server: str) -> list[BaseTool]:
+        """Load tools from MCP server, register, cache, and populate _live."""
         meta = self._server_metadata.get(server)
         if meta and meta.stateful:
             raw = await self._loader.stateful(server)
@@ -165,15 +166,17 @@ class MCPClient(MultiServerMCPClient):
             raw = await self._loader.stateless(server)
 
         filtered = [t for t in raw if self._registry.allowed(t.name, server)]
-        registered = [t for t in filtered if self._registry.register(t.name, server)]
-        self._live[server] = {t.name: t for t in registered}
+        for t in filtered:
+            self._registry.register(t.name, server)
 
-        if registered:
-            schemas = [ToolSchema.from_tool(t) for t in registered]
+        self._live[server] = {t.name: t for t in filtered}
+
+        if filtered:
+            schemas = [ToolSchema.from_tool(t) for t in filtered]
             await self._cache.save(server, schemas)
-            logger.info("MCP server '%s': loaded %d tools", server, len(registered))
+            logger.info("MCP server '%s': loaded %d tools", server, len(filtered))
 
-        return [self._wrap_loaded(server, t) for t in registered]
+        return [self._wrap_loaded(server, t) for t in filtered]
 
     def _wrap_loaded(self, server: str, tool: BaseTool) -> MCPTool:
         schema = ToolSchema.from_tool(tool)
@@ -190,8 +193,19 @@ class MCPClient(MultiServerMCPClient):
         async with lock:
             if server in self._live:
                 return self._live[server].get(name)
-            await self._load_server(server)
+            await self._populate_live(server)
             return self._live.get(server, {}).get(name)
+
+    async def _populate_live(self, server: str) -> None:
+        """Fetch tools from MCP server and populate _live for invocation."""
+        meta = self._server_metadata.get(server)
+        if meta and meta.stateful:
+            raw = await self._loader.stateful(server)
+        else:
+            raw = await self._loader.stateless(server)
+
+        filtered = [t for t in raw if self._registry.allowed(t.name, server)]
+        self._live[server] = {t.name: t for t in filtered}
 
     async def close(self) -> None:
         """Close all stateful sessions."""

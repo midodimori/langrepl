@@ -30,13 +30,15 @@ class ResumeHandler:
 
     async def handle(
         self, thread_id: str | None = None, render_history: bool = True
-    ) -> None:
-        """Show interactive thread selector and resume selected thread."""
+    ) -> list | None:
+        """Show interactive thread selector and resume selected thread.
+
+        Returns pending interrupts if any, None otherwise.
+        """
         try:
             # If thread_id is provided, directly load that thread
             if thread_id:
-                await self._load_thread(thread_id, render_history=render_history)
-                return
+                return await self._load_thread(thread_id, render_history=render_history)
 
             threads = await initializer.get_threads(
                 self.session.context.agent, self.session.context.working_dir
@@ -53,21 +55,24 @@ class ResumeHandler:
             if not threads:
                 console.print_error("No other conversation threads found")
                 console.print("")
-                return
+                return None
 
             # Show interactive thread selector
             selected_thread_id = await self._get_thread_selection(threads)
 
             if selected_thread_id:
                 # Resume the selected thread and load its history
-                await self._load_thread(
+                return await self._load_thread(
                     selected_thread_id, render_history=render_history
                 )
+
+            return None
 
         except Exception as e:
             console.print_error(f"Error resuming threads: {e}")
             console.print("")
             logger.debug("Thread resume error", exc_info=True)
+            return None
 
     async def _get_thread_selection(self, threads: list[dict]) -> str:
         """Get thread selection from user using interactive list.
@@ -212,8 +217,13 @@ class ResumeHandler:
 
         return FormattedText(lines)
 
-    async def _load_thread(self, thread_id: str, render_history: bool = True) -> None:
-        """Load and display conversation history for a thread."""
+    async def _load_thread(
+        self, thread_id: str, render_history: bool = True
+    ) -> list | None:
+        """Load and display conversation history for a thread.
+
+        Returns pending interrupts if any, None otherwise.
+        """
         try:
             # Get checkpointer directly from initializer
             async with initializer.get_checkpointer(
@@ -231,7 +241,7 @@ class ResumeHandler:
                 if not latest_checkpoint:
                     console.print_error("No conversation history found for this thread")
                     console.print("")
-                    return
+                    return None
 
                 # Get channel values from the latest checkpoint
                 latest_channel_values: dict = {}
@@ -263,7 +273,16 @@ class ResumeHandler:
                 )
                 logger.info(f"Thread ID: {thread_id}")
 
+                # Check for pending interrupts and return them
+                if latest_checkpoint.pending_writes:
+                    for _task_id, channel, value in latest_checkpoint.pending_writes:
+                        if channel == "__interrupt__":
+                            return list(value) if not isinstance(value, list) else value
+
+                return None
+
         except Exception as e:
             console.print_error(f"Error loading thread history: {e}")
             console.print("")
             logger.debug("Thread history loading error", exc_info=True)
+            return None

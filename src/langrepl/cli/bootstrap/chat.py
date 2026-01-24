@@ -24,21 +24,21 @@ async def handle_chat_command(args) -> int:
 
         # One-shot mode
         if args.message:
-            if args.resume:
-                await session.command_dispatcher.resume_handler.handle(
-                    context.thread_id, render_history=False
-                )
-            return await session.send(args.message)
+            return await session.send(
+                args.message,
+                resume_thread_id=context.thread_id if args.resume else None,
+            )
 
         # Interactive mode
         first_start = True
         while True:
-            if first_start and args.resume:
-                await session.command_dispatcher.resume_handler.handle(
-                    context.thread_id
-                )
-
-            await session.start(show_welcome=first_start and not args.resume)
+            resume_thread_id = (
+                context.thread_id if first_start and args.resume else None
+            )
+            await session.start(
+                show_welcome=first_start and not args.resume,
+                resume_thread_id=resume_thread_id,
+            )
             first_start = False
 
             if session.needs_reload:

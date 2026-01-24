@@ -38,10 +38,8 @@ class TestHandleChatCommand:
 
         result = await handle_chat_command(mock_app_args)
 
-        patch_chat_dependencies[
-            "session"
-        ].command_dispatcher.resume_handler.handle.assert_called_once_with(
-            mock_context.thread_id
+        patch_chat_dependencies["session"].start.assert_called_once_with(
+            show_welcome=False, resume_thread_id=mock_context.thread_id
         )
         assert result == 0
 
@@ -88,12 +86,12 @@ class TestHandleChatCommand:
         await handle_chat_command(mock_app_args)
 
         patch_chat_dependencies["session"].start.assert_called_once_with(
-            show_welcome=True
+            show_welcome=True, resume_thread_id=None
         )
 
     @pytest.mark.asyncio
     async def test_handle_chat_command_hides_welcome_on_resume(
-        self, mock_app_args, patch_chat_dependencies
+        self, mock_app_args, patch_chat_dependencies, mock_context
     ):
         """Test that handle_chat_command hides welcome when resuming."""
         mock_app_args.resume = True
@@ -101,7 +99,7 @@ class TestHandleChatCommand:
         await handle_chat_command(mock_app_args)
 
         patch_chat_dependencies["session"].start.assert_called_once_with(
-            show_welcome=False
+            show_welcome=False, resume_thread_id=mock_context.thread_id
         )
 
     @pytest.mark.asyncio
@@ -145,7 +143,9 @@ class TestHandleChatCommand:
 
         result = await handle_chat_command(mock_app_args)
 
-        patch_chat_dependencies["session"].send.assert_called_once_with("test message")
+        patch_chat_dependencies["session"].send.assert_called_once_with(
+            "test message", resume_thread_id=None
+        )
         patch_chat_dependencies["session"].start.assert_not_called()
         assert result == 0
 
@@ -159,12 +159,9 @@ class TestHandleChatCommand:
 
         result = await handle_chat_command(mock_app_args)
 
-        patch_chat_dependencies[
-            "session"
-        ].command_dispatcher.resume_handler.handle.assert_called_once_with(
-            mock_context.thread_id, render_history=False
+        patch_chat_dependencies["session"].send.assert_called_once_with(
+            "test message", resume_thread_id=mock_context.thread_id
         )
-        patch_chat_dependencies["session"].send.assert_called_once_with("test message")
         patch_chat_dependencies["session"].start.assert_not_called()
         assert result == 0
 

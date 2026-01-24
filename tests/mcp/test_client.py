@@ -42,7 +42,7 @@ class TestMCPClientTools:
         tools = await client.tools()
 
         assert len(tools) == 1
-        assert tools[0].name == "tool1"
+        assert tools[0].name == "server1__tool1"
 
     @pytest.mark.asyncio
     async def test_tools_with_exclude_filter(self, create_mock_tool):
@@ -61,7 +61,7 @@ class TestMCPClientTools:
         tools = await client.tools()
 
         assert len(tools) == 1
-        assert tools[0].name == "tool1"
+        assert tools[0].name == "server1__tool1"
 
     @pytest.mark.asyncio
     async def test_include_and_exclude_raises_error(self, create_mock_tool):
@@ -99,6 +99,31 @@ class TestMCPClientTools:
         tools = await client.tools()
 
         assert len(tools) == 2
+
+    @pytest.mark.asyncio
+    async def test_duplicate_tool_names_across_servers(self, create_mock_tool):
+        """Both servers can have tools with the same name (prefixed with server name)."""
+        mock_tool_s1 = create_mock_tool("search")
+        mock_tool_s2 = create_mock_tool("search")
+
+        async def get_tools_side_effect(server_name):
+            if server_name == "server1":
+                return [mock_tool_s1]
+            else:
+                return [mock_tool_s2]
+
+        client = MCPClient(
+            connections={"server1": Mock(), "server2": Mock()},
+            enable_approval=False,
+        )
+        cast(Any, client).get_tools = AsyncMock(side_effect=get_tools_side_effect)
+
+        tools = await client.tools()
+
+        # Both tools should be registered with prefixed names
+        assert len(tools) == 2
+        tool_names = {t.name for t in tools}
+        assert tool_names == {"server1__search", "server2__search"}
 
     @pytest.mark.asyncio
     async def test_server_error_returns_empty(self):
@@ -154,7 +179,7 @@ class TestMCPClientTools:
         tools = await client.tools()
 
         assert len(tools) == 1
-        assert tools[0].name == "tool1"
+        assert tools[0].name == "server1__tool1"
         assert tools[0]._loaded == mock_tool  # type: ignore[attr-defined]
         client._load_server.assert_awaited_once()
 
@@ -216,7 +241,7 @@ class TestMCPClientTools:
         tools = await client.tools()
 
         assert len(tools) == 1
-        assert tools[0].name == "tool1"
+        assert tools[0].name == "server1__tool1"
         client._load_server.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -245,7 +270,7 @@ class TestMCPClientTools:
         tools = await client.tools()
 
         assert len(tools) == 1
-        assert tools[0].name == "tool_ok"
+        assert tools[0].name == "server2__tool_ok"
 
     @pytest.mark.asyncio
     async def test_invoke_timeout_set_in_metadata(self, create_mock_tool):
@@ -330,7 +355,7 @@ class TestMCPClientTools:
         tools = await client.tools()
 
         assert len(tools) == 1
-        assert tools[0].name == "tool1"
+        assert tools[0].name == "server1__tool1"
 
     @pytest.mark.asyncio
     async def test_multiple_stateful_servers_warmed_in_parallel(self, create_mock_tool):
@@ -404,3 +429,29 @@ class TestMCPClientTools:
 
         # Warmup should NOT be called (server loaded via _load_server instead)
         client._sessions.get.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_module_map_returns_prefixed_names(self, create_mock_tool):
+        """module_map should map prefixed tool names to server names."""
+        mock_tool1 = create_mock_tool("tool1")
+        mock_tool2 = create_mock_tool("tool2")
+
+        async def get_tools_side_effect(server_name):
+            if server_name == "server1":
+                return [mock_tool1]
+            else:
+                return [mock_tool2]
+
+        client = MCPClient(
+            connections={"server1": Mock(), "server2": Mock()},
+            enable_approval=False,
+        )
+        cast(Any, client).get_tools = AsyncMock(side_effect=get_tools_side_effect)
+
+        await client.tools()
+
+        module_map = client.module_map
+        assert module_map == {
+            "server1__tool1": "server1",
+            "server2__tool2": "server2",
+        }

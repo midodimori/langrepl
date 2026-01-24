@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from langrepl.core.constants import MCP_CACHE_VERSION
 from langrepl.core.logging import get_logger
 
 if TYPE_CHECKING:
@@ -39,12 +40,18 @@ class MCPCache:
         try:
             content = await asyncio.to_thread(path.read_text)
             data = json.loads(content)
+            cache_version = "0.0.0"
             cache_hash = None
             tools_data = data
 
             if isinstance(data, dict):
+                cache_version = data.get("version", "0.0.0")
                 cache_hash = data.get("hash")
                 tools_data = data.get("tools", [])
+
+            # Invalidate cache if version mismatch
+            if cache_version != MCP_CACHE_VERSION:
+                return None
 
             expected = self._hashes.get(server)
             if expected and cache_hash != expected:
@@ -64,6 +71,7 @@ class MCPCache:
         try:
             await asyncio.to_thread(path.parent.mkdir, parents=True, exist_ok=True)
             data = {
+                "version": MCP_CACHE_VERSION,
                 "hash": self._hashes.get(server),
                 "tools": [s.model_dump() for s in schemas],
             }

@@ -148,13 +148,13 @@ class AgentFactory:
                 *self._filter_tools(
                     tool_resources.impl, impl_patterns, tool_resources.impl_module_map
                 ),
-                *self._filter_tools(
+                *self._filter_mcp_tools(
                     tool_resources.mcp, mcp_patterns, tool_resources.mcp_module_map
                 ),
             ]
             if impl_first
             else [
-                *self._filter_tools(
+                *self._filter_mcp_tools(
                     tool_resources.mcp, mcp_patterns, tool_resources.mcp_module_map
                 ),
                 *self._filter_tools(
@@ -199,6 +199,30 @@ class AgentFactory:
             for name, tool in tool_dict.items()
             if matches_patterns(
                 patterns, two_part_matcher(name, module_map.get(name, ""))
+            )
+        ]
+
+    @staticmethod
+    def _filter_mcp_tools(
+        tool_dict: dict[str, BaseTool],
+        patterns: list[str] | None,
+        module_map: dict[str, str],
+    ) -> list[BaseTool]:
+        """Filter MCP tools by pattern. Handles server:name prefixed format."""
+        if not patterns:
+            return []
+
+        def get_original_name(prefixed_name: str) -> str:
+            """Extract original tool name from server__name format."""
+            parts = prefixed_name.split("__", 1)
+            return parts[1] if len(parts) == 2 else prefixed_name
+
+        return [
+            tool
+            for name, tool in tool_dict.items()
+            if matches_patterns(
+                patterns,
+                two_part_matcher(get_original_name(name), module_map.get(name, "")),
             )
         ]
 

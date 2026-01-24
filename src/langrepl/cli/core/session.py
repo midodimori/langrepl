@@ -61,7 +61,9 @@ class Session:
         self._sigint_registered = False
         self._previous_sigint: SignalHandler = None
 
-    async def start(self, show_welcome: bool = True) -> None:
+    async def start(
+        self, show_welcome: bool = True, resume_thread_id: str | None = None
+    ) -> None:
         """Start the interactive session."""
         try:
             self.graph_context = initializer.get_graph(
@@ -78,6 +80,16 @@ class Session:
                 async with self.graph_context as graph:
                     self.graph = graph
                     status.stop()
+
+                    # Handle resume if requested
+                    pending_interrupts = None
+                    if resume_thread_id:
+                        pending_interrupts = (
+                            await self.command_dispatcher.resume_handler.handle(
+                                resume_thread_id
+                            )
+                        )
+
                     if show_welcome:
                         console.print("")
                         self.renderer.show_welcome(self.context)
@@ -91,6 +103,12 @@ class Session:
                                     f"[muted]New version available ({latest_version}). Upgrade with: [muted.bold]uv tool install langrepl --upgrade[/muted.bold][/muted]"
                                 )
                                 console.print("")
+
+                    # Handle pending interrupts from resumed thread
+                    if pending_interrupts:
+                        await self.message_dispatcher.resume_from_interrupt(
+                            self.context.thread_id, pending_interrupts
+                        )
 
                     await self._main_loop()
                     status.start()
@@ -131,7 +149,7 @@ class Session:
 
         logger.info("Session ended")
 
-    async def send(self, message: str) -> int:
+    async def send(self, message: str, resume_thread_id: str | None = None) -> int:
         """Send a single message in one-shot mode (non-interactive)."""
         try:
             self.graph_context = initializer.get_graph(
@@ -144,6 +162,19 @@ class Session:
 
             async with self.graph_context as graph:
                 self.graph = graph
+
+                # Handle resume if requested
+                if resume_thread_id:
+                    pending_interrupts = (
+                        await self.command_dispatcher.resume_handler.handle(
+                            resume_thread_id, render_history=False
+                        )
+                    )
+                    if pending_interrupts:
+                        await self.message_dispatcher.resume_from_interrupt(
+                            self.context.thread_id, pending_interrupts
+                        )
+
                 await self.message_dispatcher.dispatch(message)
                 return 0
 

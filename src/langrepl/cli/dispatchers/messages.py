@@ -96,7 +96,7 @@ class MessageDispatcher:
 
     async def _stream_response(
         self,
-        input_data: dict[str, Any],
+        input_data: dict[str, Any] | Command,
         config: RunnableConfig,
         context: AgentContext,
     ) -> None:
@@ -474,3 +474,47 @@ class MessageDispatcher:
             f"[{theme.spinner_color}]Context at {usage_pct}%, auto-compressing to new thread...[/{theme.spinner_color}]"
         ):
             await CompressionHandler(self.session).handle()
+
+    async def resume_from_interrupt(
+        self, thread_id: str, interrupts: list[Interrupt]
+    ) -> None:
+        """Resume graph from pending interrupts.
+
+        Shows approval panel and resumes graph execution.
+        """
+        # Show approval panel
+        resume_value = await self.interrupt_handler.handle(interrupts)
+        if resume_value is None:
+            return
+
+        # Build Command
+        cmd: Command
+        if isinstance(resume_value, dict):
+            cmd = Command(resume=resume_value)
+        else:
+            cmd = Command(resume={interrupts[0].id: resume_value})
+
+        # Reuse existing context creation + streaming
+        ctx = self.session.context
+        now = datetime.now(timezone.utc).astimezone()
+        user_memory = await initializer.load_user_memory(ctx.working_dir)
+        agent_context = AgentContext(
+            approval_mode=ctx.approval_mode,
+            working_dir=ctx.working_dir,
+            platform=PLATFORM,
+            os_version=OS_VERSION,
+            current_date_time_zoned=now.strftime("%Y-%m-%d %H:%M:%S %Z"),
+            user_memory=user_memory,
+            tool_catalog=initializer.cached_tools_in_catalog,
+            skill_catalog=initializer.cached_agent_skills,
+            input_cost_per_mtok=ctx.input_cost_per_mtok,
+            output_cost_per_mtok=ctx.output_cost_per_mtok,
+            tool_output_max_tokens=ctx.tool_output_max_tokens,
+        )
+
+        graph_config = RunnableConfig(
+            configurable={"thread_id": thread_id},
+            recursion_limit=ctx.recursion_limit,
+        )
+
+        await self._stream_response(cmd, graph_config, agent_context)

@@ -445,7 +445,7 @@ Renders in terminal (ASCII) or opens in browser with `--browser` flag.
 </details>
 
 <details>
-<summary><code>/exit</code> - Exit application</summary>
+<summary><code>/exit</code> - Exit application (or double Ctrl+C)</summary>
 
 </details>
 
@@ -535,6 +535,106 @@ agents:
 - `mcp:server:*` - All tools from MCP server
 
 **Tool catalog**: When `use_catalog: true`, impl/mcp tools are wrapped in a unified catalog interface to reduce token usage. The agent receives catalog tools instead of individual tool definitions.
+
+#### Available Tools
+
+<details>
+<summary><strong>impl:file_system</strong> - File operations</summary>
+
+| Tool | Pattern | Description |
+|------|---------|-------------|
+| `read_file` | `impl:file_system:read_file` | Read file content with line-based pagination |
+| `write_file` | `impl:file_system:write_file` | Create a new file with content |
+| `edit_file` | `impl:file_system:edit_file` | Edit a file by replacing old content with new content |
+| `create_dir` | `impl:file_system:create_dir` | Create a directory recursively |
+| `move_file` | `impl:file_system:move_file` | Move a file from source to destination |
+| `move_multiple_files` | `impl:file_system:move_multiple_files` | Move multiple files in one operation |
+| `delete_file` | `impl:file_system:delete_file` | Delete a file |
+| `delete_dir` | `impl:file_system:delete_dir` | Delete a directory recursively |
+| `insert_at_line` | `impl:file_system:insert_at_line` | Insert content at a specific line number |
+
+</details>
+
+<details>
+<summary><strong>impl:grep_search</strong> - Code search</summary>
+
+| Tool | Pattern | Description |
+|------|---------|-------------|
+| `grep_search` | `impl:grep_search:grep_search` | Search for code using ripgrep-compatible Rust regex patterns |
+
+</details>
+
+<details>
+<summary><strong>impl:terminal</strong> - Terminal commands</summary>
+
+| Tool | Pattern | Description |
+|------|---------|-------------|
+| `run_command` | `impl:terminal:run_command` | Execute terminal commands |
+| `get_directory_structure` | `impl:terminal:get_directory_structure` | Get a tree view of directory structure |
+
+</details>
+
+<details>
+<summary><strong>impl:web</strong> - Web operations</summary>
+
+| Tool | Pattern | Description |
+|------|---------|-------------|
+| `fetch_web_content` | `impl:web:fetch_web_content` | Fetch webpage main content as markdown |
+
+</details>
+
+<details>
+<summary><strong>internal:memory</strong> - Virtual filesystem for agent state</summary>
+
+| Tool | Pattern | Description |
+|------|---------|-------------|
+| `list_memory_files` | `internal:memory:list_memory_files` | List all files in virtual memory filesystem |
+| `read_memory_file` | `internal:memory:read_memory_file` | Read memory file content with pagination |
+| `write_memory_file` | `internal:memory:write_memory_file` | Create or overwrite a memory file |
+| `edit_memory_file` | `internal:memory:edit_memory_file` | Edit a memory file by replacing content |
+
+</details>
+
+<details>
+<summary><strong>internal:todo</strong> - Task management</summary>
+
+| Tool | Pattern | Description |
+|------|---------|-------------|
+| `write_todos` | `internal:todo:write_todos` | Create and manage structured task lists |
+| `read_todos` | `internal:todo:read_todos` | Read the current TODO list |
+
+</details>
+
+<details>
+<summary><strong>subagents</strong> - Agent delegation (auto-injected when <code>subagents:</code> exists)</summary>
+
+| Tool | Description |
+|------|-------------|
+| `task` | Delegate a task to a specialized sub-agent |
+| `think` | Strategic reflection on progress and decision-making |
+
+</details>
+
+<details>
+<summary><strong>skills</strong> - Skill discovery (auto-injected when <code>skills.use_catalog: true</code>)</summary>
+
+| Tool | Description |
+|------|-------------|
+| `fetch_skills` | Discover and search for available skills |
+| `get_skill` | Read the full content of a specific skill |
+
+</details>
+
+<details>
+<summary><strong>catalog</strong> - Tool discovery (auto-injected when <code>tools.use_catalog: true</code>)</summary>
+
+| Tool | Description |
+|------|-------------|
+| `fetch_tools` | Discover and search for available tools |
+| `get_tool` | Get tool documentation and parameters |
+| `run_tool` | Execute a tool from the catalog |
+
+</details>
 
 ### Custom Prompts
 

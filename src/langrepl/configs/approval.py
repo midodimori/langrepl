@@ -100,6 +100,6 @@ class ToolApprovalConfig(BaseModel):
 
     def save_to_json_file(self, file_path: Path) -> None:
         """Save configuration to JSON file"""
-        file_path.parent.mkdir(exist_ok=True)
+        file_path.parent.mkdir(parents=True, exist_ok=True)
         with open(file_path, "w") as f:
             f.write(self.model_dump_json(indent=2))

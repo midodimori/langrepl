@@ -2,6 +2,20 @@
 
 <!-- version list -->
 
+## v1.10.15 (2026-01-24)
+
+### Bug Fixes
+
+- Show exception type when error message is empty
+  ([`778fa71`](https://github.com/midodimori/langrepl/commit/778fa7189c0bfa868e094f7a716989192e7613f3))
+
+### Features
+
+- **mcp**: Prefix tool names with server to avoid collisions (#100)
+  ([#100](https://github.com/midodimori/langrepl/pull/100),
+  [`d99017e`](https://github.com/midodimori/langrepl/commit/d99017e324f737c5f5a3e33f600d0c477eef4fd5))
+
+
 ## v1.10.14 (2026-01-24)
 
 ### Bug Fixes

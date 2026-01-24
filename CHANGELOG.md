@@ -2,6 +2,20 @@
 
 <!-- version list -->
 
+## v1.10.13 (2026-01-24)
+
+### Chores
+
+- **docs**: Readme
+  ([`81cb5bb`](https://github.com/midodimori/langrepl/commit/81cb5bb2eeabe8cd45c9361757e570fadf1328cc))
+
+### Features
+
+- Restore pending approval panel on resume (#98)
+  ([#98](https://github.com/midodimori/langrepl/pull/98),
+  [`a05c6de`](https://github.com/midodimori/langrepl/commit/a05c6de6a5b11285f4c823f251cc487ec52ba3c9))
+
+
 ## v1.10.12 (2026-01-23)
 
 ### Features

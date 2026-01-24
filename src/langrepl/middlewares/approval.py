@@ -55,17 +55,30 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
     @staticmethod
     def _check_approval_rules(
         config: ToolApprovalConfig, tool_name: str, tool_args: dict
-    ) -> bool | None:
-        """Check if a tool call should be automatically approved or denied."""
+    ) -> tuple[bool | None, bool]:
+        """Check if a tool call should be automatically approved or denied.
+
+        Returns:
+            Tuple of (decision, is_always_ask) where:
+            - decision: True=allow, False=deny, None=prompt user
+            - is_always_ask: True if matched an always_ask rule
+        """
+        # Check deny first (highest priority)
         for rule in config.always_deny:
             if rule.matches_call(tool_name, tool_args):
-                return False
+                return False, False
 
+        # Check allow
         for rule in config.always_allow:
             if rule.matches_call(tool_name, tool_args):
-                return True
+                return True, False
 
-        return None
+        # Check always_ask (prompt even in ACTIVE mode)
+        for rule in config.always_ask:
+            if rule.matches_call(tool_name, tool_args):
+                return None, True
+
+        return None, False
 
     @staticmethod
     def _check_approval_mode_bypass(
@@ -74,15 +87,30 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
         tool_name: str,
         tool_args: dict,
     ) -> bool:
-        """Check if approval should be bypassed based on current approval mode."""
+        """Check if approval should be bypassed based on current approval mode.
+
+        Decision flow by mode:
+        - SEMI_ACTIVE: Never bypass (always prompt if not in allow/deny)
+        - ACTIVE: Bypass unless in always_deny or always_ask
+        - AGGRESSIVE: Bypass unless in always_deny
+        """
         if approval_mode == ApprovalMode.SEMI_ACTIVE:
             return False
         elif approval_mode == ApprovalMode.ACTIVE:
+            # Check deny first
             for rule in config.always_deny:
+                if rule.matches_call(tool_name, tool_args):
+                    return False
+            # Check always_ask - don't bypass critical commands
+            for rule in config.always_ask:
                 if rule.matches_call(tool_name, tool_args):
                     return False
             return True
         elif approval_mode == ApprovalMode.AGGRESSIVE:
+            # Only respect deny
+            for rule in config.always_deny:
+                if rule.matches_call(tool_name, tool_args):
+                    return False
             return True
         return False
 
@@ -93,10 +121,21 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
         tool_name: str,
         tool_args: dict | None,
         allow: bool,
+        from_always_ask: bool = False,
     ):
-        """Save an approval decision to the configuration."""
+        """Save an approval decision to the configuration.
+
+        Args:
+            config: The approval configuration
+            config_file: Path to save the config
+            tool_name: Name of the tool
+            tool_args: Tool arguments pattern
+            allow: Whether to allow or deny
+            from_always_ask: If True, also remove from always_ask list
+        """
         rule = ToolApprovalRule(name=tool_name, args=tool_args)
 
+        # Remove from allow and deny lists
         config.always_allow = [
             r
             for r in config.always_allow
@@ -107,6 +146,14 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
             for r in config.always_deny
             if not (r.name == tool_name and r.args == tool_args)
         ]
+
+        # Remove from always_ask only on permanent decisions
+        if from_always_ask:
+            config.always_ask = [
+                r
+                for r in config.always_ask
+                if not (r.name == tool_name and r.args == tool_args)
+            ]
 
         if allow:
             config.always_allow.append(rule)
@@ -164,11 +211,16 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
 
         formatted_args = format_args_fn(tool_args) if format_args_fn else tool_args
 
-        approval_decision = self._check_approval_mode_bypass(
+        if self._check_approval_mode_bypass(
             context.approval_mode, approval_config, tool_name, formatted_args
-        ) or self._check_approval_rules(approval_config, tool_name, formatted_args)
+        ):
+            return ALLOW
 
-        if approval_decision:
+        approval_decision, is_always_ask = self._check_approval_rules(
+            approval_config, tool_name, formatted_args
+        )
+
+        if approval_decision is True:
             return ALLOW
         elif approval_decision is False:
             return DENY
@@ -191,11 +243,21 @@ class ApprovalMiddleware(AgentMiddleware[AgentState, AgentContext]):
 
         if user_response == ALWAYS_ALLOW:
             self._save_approval_decision(
-                approval_config, config_file, tool_name, args_to_save, True
+                approval_config,
+                config_file,
+                tool_name,
+                args_to_save,
+                allow=True,
+                from_always_ask=is_always_ask,
             )
         elif user_response == ALWAYS_DENY:
             self._save_approval_decision(
-                approval_config, config_file, tool_name, args_to_save, False
+                approval_config,
+                config_file,
+                tool_name,
+                args_to_save,
+                allow=False,
+                from_always_ask=is_always_ask,
             )
 
         return user_response

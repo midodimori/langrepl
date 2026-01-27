@@ -31,8 +31,7 @@ class IndexedAsyncSqliteSaver(AsyncSqliteSaver, BaseCheckpointer):
         await super().setup()
 
         async with self.lock:
-            await self.conn.executescript(
-                """
+            await self.conn.executescript("""
             CREATE TABLE IF NOT EXISTS checkpoint_messages (
                 thread_id TEXT NOT NULL,
                 checkpoint_id TEXT NOT NULL,
@@ -48,8 +47,7 @@ class IndexedAsyncSqliteSaver(AsyncSqliteSaver, BaseCheckpointer):
                 ON checkpoints(thread_id, checkpoint_ns);
             CREATE INDEX IF NOT EXISTS idx_checkpoint_id
                 ON checkpoints(checkpoint_id);
-            """
-            )
+            """)
             await self.conn.commit()
 
         logger.debug("Message index tables and indices created")

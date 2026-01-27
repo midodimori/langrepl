@@ -39,8 +39,7 @@ class TestSkill:
     async def test_from_file_valid(self, temp_dir):
         """Test that from_file parses valid skill file."""
         skill_path = temp_dir / "SKILL.md"
-        skill_path.write_text(
-            """---
+        skill_path.write_text("""---
 name: test-skill
 description: Test skill description
 allowed_tools:
@@ -51,8 +50,7 @@ allowed_tools:
 # Test Skill
 
 Content here.
-"""
-        )
+""")
 
         skill = await Skill.from_file(skill_path, "test-category")
 

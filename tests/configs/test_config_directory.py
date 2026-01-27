@@ -10,16 +10,14 @@ from langrepl.configs import (
 @pytest.mark.asyncio
 async def test_llm_config_old_format(temp_dir):
     config_file = temp_dir / "config.llms.yml"
-    config_file.write_text(
-        """
+    config_file.write_text("""
 llms:
   - model: test-model
     alias: test-llm
     provider: anthropic
     max_tokens: 1000
     temperature: 0.1
-"""
-    )
+""")
 
     config = await BatchLLMConfig.from_yaml(file_path=config_file)
     assert len(config.llms) == 1
@@ -32,15 +30,13 @@ async def test_llm_config_new_format(temp_dir):
     llms_dir.mkdir()
 
     # Files can be organized by provider
-    (llms_dir / "anthropic.yml").write_text(
-        """
+    (llms_dir / "anthropic.yml").write_text("""
 - model: test-model
   alias: test-llm
   provider: anthropic
   max_tokens: 1000
   temperature: 0.1
-"""
-    )
+""")
 
     config = await BatchLLMConfig.from_yaml(dir_path=llms_dir)
     assert len(config.llms) == 1
@@ -51,8 +47,7 @@ async def test_llm_config_new_format(temp_dir):
 async def test_llm_config_combine_both_formats(temp_dir):
     """Test that unique LLMs from both file and directory can be loaded together."""
     config_file = temp_dir / "config.llms.yml"
-    config_file.write_text(
-        """
+    config_file.write_text("""
 llms:
   - model: old-model
     alias: old-llm
@@ -64,13 +59,11 @@ llms:
     provider: openai
     max_tokens: 2000
     temperature: 0.2
-"""
-    )
+""")
 
     llms_dir = temp_dir / "llms"
     llms_dir.mkdir()
-    (llms_dir / "anthropic.yml").write_text(
-        """
+    (llms_dir / "anthropic.yml").write_text("""
 - model: new-model
   alias: new-llm
   provider: anthropic
@@ -81,8 +74,7 @@ llms:
   provider: anthropic
   max_tokens: 3000
   temperature: 0.3
-"""
-    )
+""")
 
     config = await BatchLLMConfig.from_yaml(file_path=config_file, dir_path=llms_dir)
     assert len(config.llms) == 4
@@ -98,28 +90,24 @@ llms:
 async def test_llm_config_duplicate_between_formats_raises_error(temp_dir):
     """Test that duplicate LLMs between file and directory raise an error."""
     config_file = temp_dir / "config.llms.yml"
-    config_file.write_text(
-        """
+    config_file.write_text("""
 llms:
   - model: old-model
     alias: duplicate-llm
     provider: anthropic
     max_tokens: 1000
     temperature: 0.1
-"""
-    )
+""")
 
     llms_dir = temp_dir / "llms"
     llms_dir.mkdir()
-    (llms_dir / "openai.yml").write_text(
-        """
+    (llms_dir / "openai.yml").write_text("""
 - model: new-model
   alias: duplicate-llm
   provider: openai
   max_tokens: 2000
   temperature: 0.2
-"""
-    )
+""")
 
     with pytest.raises(ValueError, match=r"Duplicate llm 'alias': 'duplicate-llm'"):
         await BatchLLMConfig.from_yaml(file_path=config_file, dir_path=llms_dir)
@@ -128,13 +116,11 @@ llms:
 @pytest.mark.asyncio
 async def test_checkpointer_config_old_format(temp_dir):
     config_file = temp_dir / "config.checkpointers.yml"
-    config_file.write_text(
-        """
+    config_file.write_text("""
 checkpointers:
   - type: sqlite
     max_connections: 10
-"""
-    )
+""")
 
     config = await BatchCheckpointerConfig.from_yaml(file_path=config_file)
     assert len(config.checkpointers) == 1
@@ -146,12 +132,10 @@ async def test_checkpointer_config_new_format(temp_dir):
     checkpointers_dir = temp_dir / "checkpointers"
     checkpointers_dir.mkdir()
 
-    (checkpointers_dir / "sqlite.yml").write_text(
-        """
+    (checkpointers_dir / "sqlite.yml").write_text("""
 type: sqlite
 max_connections: 10
-"""
-    )
+""")
 
     config = await BatchCheckpointerConfig.from_yaml(dir_path=checkpointers_dir)
     assert len(config.checkpointers) == 1
@@ -161,15 +145,13 @@ max_connections: 10
 @pytest.mark.asyncio
 async def test_agent_config_old_format(temp_dir, mock_llm_config):
     config_file = temp_dir / "config.agents.yml"
-    config_file.write_text(
-        f"""
+    config_file.write_text(f"""
 agents:
   - name: test-agent
     prompt: "test prompt"
     llm: {mock_llm_config.alias}
     default: true
-"""
-    )
+""")
 
     llm_config = BatchLLMConfig(llms=[mock_llm_config])
     config = await BatchAgentConfig.from_yaml(
@@ -184,14 +166,12 @@ async def test_agent_config_new_format(temp_dir, mock_llm_config):
     agents_dir = temp_dir / "agents"
     agents_dir.mkdir()
 
-    (agents_dir / "test-agent.yml").write_text(
-        f"""
+    (agents_dir / "test-agent.yml").write_text(f"""
 name: test-agent
 prompt: "test prompt"
 llm: {mock_llm_config.alias}
 default: true
-"""
-    )
+""")
 
     llm_config = BatchLLMConfig(llms=[mock_llm_config])
     config = await BatchAgentConfig.from_yaml(
@@ -204,26 +184,22 @@ default: true
 @pytest.mark.asyncio
 async def test_agent_config_merge_both_formats(temp_dir, mock_llm_config):
     config_file = temp_dir / "config.agents.yml"
-    config_file.write_text(
-        f"""
+    config_file.write_text(f"""
 agents:
   - name: old-agent
     prompt: "old prompt"
     llm: {mock_llm_config.alias}
     default: true
-"""
-    )
+""")
 
     agents_dir = temp_dir / "agents"
     agents_dir.mkdir()
-    (agents_dir / "new-agent.yml").write_text(
-        f"""
+    (agents_dir / "new-agent.yml").write_text(f"""
 name: new-agent
 prompt: "new prompt"
 llm: {mock_llm_config.alias}
 default: false
-"""
-    )
+""")
 
     llm_config = BatchLLMConfig(llms=[mock_llm_config])
     config = await BatchAgentConfig.from_yaml(
@@ -240,14 +216,12 @@ async def test_update_agent_llm_directory_format(temp_dir):
     agents_dir = temp_dir / "agents"
     agents_dir.mkdir()
 
-    (agents_dir / "test-agent.yml").write_text(
-        """
+    (agents_dir / "test-agent.yml").write_text("""
 name: test-agent
 prompt: "test prompt"
 llm: old-llm
 default: true
-"""
-    )
+""")
 
     await BatchAgentConfig.update_agent_llm(
         file_path=temp_dir / "config.agents.yml",
@@ -264,15 +238,13 @@ default: true
 @pytest.mark.asyncio
 async def test_update_agent_llm_fallback_to_file(temp_dir):
     config_file = temp_dir / "config.agents.yml"
-    config_file.write_text(
-        """
+    config_file.write_text("""
 agents:
   - name: test-agent
     prompt: "test prompt"
     llm: old-llm
     default: true
-"""
-    )
+""")
 
     await BatchAgentConfig.update_agent_llm(
         file_path=config_file,
@@ -291,23 +263,19 @@ async def test_update_default_agent_directory_format(temp_dir):
     agents_dir = temp_dir / "agents"
     agents_dir.mkdir()
 
-    (agents_dir / "agent1.yml").write_text(
-        """
+    (agents_dir / "agent1.yml").write_text("""
 name: agent1
 prompt: "test prompt"
 llm: test-llm
 default: true
-"""
-    )
+""")
 
-    (agents_dir / "agent2.yml").write_text(
-        """
+    (agents_dir / "agent2.yml").write_text("""
 name: agent2
 prompt: "test prompt"
 llm: test-llm
 default: false
-"""
-    )
+""")
 
     await BatchAgentConfig.update_default_agent(
         file_path=temp_dir / "config.agents.yml",

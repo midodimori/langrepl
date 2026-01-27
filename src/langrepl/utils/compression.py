@@ -6,7 +6,13 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, cast
 
 import tiktoken
-from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, merge_content
+from langchain_core.messages import (
+    AIMessage,
+    AnyMessage,
+    HumanMessage,
+    get_buffer_string,
+    merge_content,
+)
 
 from langrepl.utils.render import render_templates
 
@@ -143,11 +149,13 @@ async def _summarize_messages(
     Args:
         messages: Messages to summarize
         compression_llm: LLM to use for summarization
+        prompt: Custom prompt template for summarization
+        prompt_vars: Additional variables for prompt template rendering
 
     Returns:
         Summary message
     """
-    conversation_text = _format_messages_for_summary(messages)
+    conversation_text = get_buffer_string(list(messages))
     prompt_template = prompt or "Summarize the conversation.\n\n{conversation}"
     if "{conversation}" not in prompt_template:
         prompt_template = (
@@ -164,26 +172,3 @@ async def _summarize_messages(
     )
     ai_response.name = "compression_summary"
     return ai_response
-
-
-def _format_messages_for_summary(messages: Sequence[AnyMessage]) -> str:
-    """Format messages into readable text for summarization.
-
-    Args:
-        messages: Messages to format
-
-    Returns:
-        Formatted conversation text
-    """
-    lines = []
-
-    for msg in messages:
-        role = msg.type.capitalize()
-        content = str(msg.text)
-        if hasattr(msg, "tool_calls") and msg.tool_calls:
-            tool_calls_str = ", ".join(tc["name"] for tc in msg.tool_calls)
-            content += f" [Tool calls: {tool_calls_str}]"
-
-        lines.append(f"{role}: {content}")
-
-    return "\n".join(lines)

@@ -286,7 +286,7 @@ class Session:
                 latest_version, upgrade_command = updates
                 if latest_version and upgrade_command:
                     console.print_warning(
-                        f"[muted]New version available ({latest_version}). Upgrade with: [muted.bold]uv tool install langrepl --upgrade[/muted.bold][/muted]"
+                        f"[muted]New version available ({latest_version}). Upgrade with: [muted.bold]uv tool install --python 3.13 langrepl --upgrade[/muted.bold][/muted]"
                     )
                     console.print("")
         except Exception:

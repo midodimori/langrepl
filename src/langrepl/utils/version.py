@@ -83,7 +83,7 @@ def check_for_updates() -> tuple[str, str] | None:
             return tuple(int(x) for x in v.split("."))
 
         if parse_version(latest_version) > parse_version(current_version):
-            upgrade_command = "uv tool install langrepl --upgrade"
+            upgrade_command = "uv tool install --python 3.13 langrepl --upgrade"
             return latest_version, upgrade_command
 
         return None

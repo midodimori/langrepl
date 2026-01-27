@@ -90,15 +90,15 @@ Aliases: `langrepl` or `lg`
 
 **Quick try (no installation):**
 ```bash
-uvx langrepl
-uvx langrepl -w /path  # specify working dir
+uvx --python 3.13 langrepl
+uvx --python 3.13 langrepl -w /path  # specify working dir
 ```
 
 **Install globally:**
 ```bash
-uv tool install langrepl
+uv tool install --python 3.13 langrepl
 # or with pipx:
-pipx install langrepl
+pipx install --python 3.13 langrepl
 ```
 
 Then run from any directory:
@@ -111,13 +111,13 @@ langrepl -w /path     # specify working directory
 
 **Quick try (no installation):**
 ```bash
-uvx --from git+https://github.com/midodimori/langrepl langrepl
-uvx --from git+https://github.com/midodimori/langrepl langrepl -w /path  # specify working dir
+uvx --python 3.13 --from git+https://github.com/midodimori/langrepl langrepl
+uvx --python 3.13 --from git+https://github.com/midodimori/langrepl langrepl -w /path  # specify working dir
 ```
 
 **Install globally:**
 ```bash
-uv tool install git+https://github.com/midodimori/langrepl
+uv tool install --python 3.13 git+https://github.com/midodimori/langrepl
 ```
 
 Then run from any directory:

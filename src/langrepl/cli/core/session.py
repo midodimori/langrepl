@@ -94,15 +94,11 @@ class Session:
                         console.print("")
                         self.renderer.show_welcome(self.context)
 
-                        # Check for updates
-                        updates = check_for_updates()
-                        if updates:
-                            latest_version, upgrade_command = updates
-                            if latest_version and upgrade_command:
-                                console.print_warning(
-                                    f"[muted]New version available ({latest_version}). Upgrade with: [muted.bold]uv tool install langrepl --upgrade[/muted.bold][/muted]"
-                                )
-                                console.print("")
+                        # Check for updates in background
+                        update_task = asyncio.create_task(
+                            self._check_updates_background()
+                        )
+                        await update_task
 
                     # Handle pending interrupts from resumed thread
                     if pending_interrupts:
@@ -282,4 +278,17 @@ class Session:
         except Exception:
             pass
 
+    async def _check_updates_background(self) -> None:
+        """Check for updates in background without blocking prompt."""
+        try:
+            updates = await asyncio.to_thread(check_for_updates)
+            if updates:
+                latest_version, upgrade_command = updates
+                if latest_version and upgrade_command:
+                    console.print_warning(
+                        f"[muted]New version available ({latest_version}). Upgrade with: [muted.bold]uv tool install langrepl --upgrade[/muted.bold][/muted]"
+                    )
+                    console.print("")
+        except Exception:
+            pass
         self._sigint_registered = False

@@ -2,6 +2,28 @@
 
 <!-- version list -->
 
+## v1.10.16 (2026-01-27)
+
+### Chores
+
+- **deps**: Bump black from 25.12.0 to 26.1.0 (#103)
+  ([#103](https://github.com/midodimori/langrepl/pull/103),
+  [`dbcb71b`](https://github.com/midodimori/langrepl/commit/dbcb71be7de56f962ceaf10a9351dcaf92afcab0))
+
+- **deps**: Bump the langchain group with 3 updates (#101)
+  ([#101](https://github.com/midodimori/langrepl/pull/101),
+  [`fcb699c`](https://github.com/midodimori/langrepl/commit/fcb699c3d32a1a8e33b26a916b75321e04bdfd83))
+
+- **deps**: Bump the production-deps group with 4 updates (#102)
+  ([#102](https://github.com/midodimori/langrepl/pull/102),
+  [`3350a36`](https://github.com/midodimori/langrepl/commit/3350a36390b59e7676a85fbeafc101eab454a853))
+
+### Features
+
+- Implement background update check in session
+  ([`d49b393`](https://github.com/midodimori/langrepl/commit/d49b39356c2b74a7fb71365335d05ada27b79f6f))
+
+
 ## v1.10.15 (2026-01-24)
 
 ### Bug Fixes

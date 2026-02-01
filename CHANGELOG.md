@@ -2,6 +2,15 @@
 
 <!-- version list -->
 
+## v1.10.17 (2026-02-01)
+
+### Features
+
+- Pin to python13 for stable installation (#105)
+  ([#105](https://github.com/midodimori/langrepl/pull/105),
+  [`d9cacfd`](https://github.com/midodimori/langrepl/commit/d9cacfdb0080fa250b11120ce9708f25e1a133f4))
+
+
 ## v1.10.16 (2026-01-27)
 
 ### Chores

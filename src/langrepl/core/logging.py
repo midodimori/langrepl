@@ -1,4 +1,5 @@
 import logging
+import sys
 import warnings
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
@@ -95,6 +96,15 @@ def configure_logging(show_logs: bool = False, working_dir: Path = Path.cwd()) -
             logging.getLogger(__name__).info("Logging initialized")
         except (OSError, PermissionError):
             pass  # Sandbox may block file creation
+
+    # Suppress urllib3 "I/O operation on closed file" during botocore GC cleanup.
+    _orig_hook = sys.unraisablehook
+    sys.unraisablehook = lambda u: (
+        None
+        if isinstance(u.exc_value, ValueError)
+        and "I/O operation on closed file" in str(u.exc_value)
+        else _orig_hook(u)
+    )
 
 
 def get_logger(name: str) -> logging.Logger:

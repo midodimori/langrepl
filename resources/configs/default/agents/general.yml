@@ -7,7 +7,7 @@ prompt:
 llm: haiku-4.5
 checkpointer: sqlite
 default: true
-recursion_limit: 40
+recursion_limit: 1000
 tools:
   patterns:
     - impl:web:*

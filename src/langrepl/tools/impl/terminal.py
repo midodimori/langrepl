@@ -15,20 +15,38 @@ from langrepl.utils.path import resolve_path
 logger = get_logger(__name__)
 
 
-def _transform_command_for_approval(command: str) -> str:
-    """Extract first 2 words from each sub-command while preserving shell operators."""
-    parts = re.split(r"(&&|\|\||;|\|)", command)
-    result = []
-    for i, part in enumerate(parts):
-        part = part.strip()
-        if not part:
+_CHAIN_OPS = re.compile(r"\s*(&&|\|\||;|\|)\s*")
+_SUBST_DOLLAR = re.compile(r"\$\(([^()]*(?:\([^()]*\)[^()]*)*)\)")
+_SUBST_BACKTICK = re.compile(r"`([^`]+)`")
+
+
+def _extract_command_parts(command: str) -> list[str]:
+    """Extract all command parts including nested $(...) and `...` substitutions."""
+    parts = []
+    for seg in _CHAIN_OPS.split(command):
+        seg = seg.strip()
+        if not seg or seg in ("&&", "||", ";", "|"):
             continue
-        if part in ("&&", "||", ";", "|"):
-            result.append(f" {part} ")
-        else:
-            words = part.split()
-            result.append(" ".join(words[:2]) if len(words) >= 2 else words[0])
-    return "".join(result).strip()
+        parts.append(seg)
+        for pattern in (_SUBST_DOLLAR, _SUBST_BACKTICK):
+            for m in pattern.finditer(seg):
+                parts.extend(_extract_command_parts(m.group(1)))
+    return parts
+
+
+def _first_n_words(cmd: str, n: int = 3) -> str:
+    """Extract first n words from a command, handling shell quoting."""
+    try:
+        words = shlex.split(cmd, posix=True)[:n]
+    except ValueError:
+        words = cmd.split()[:n]
+    return " ".join(words)
+
+
+def _transform_command_for_approval(command: str) -> str:
+    """Transform command to first 3 words of each part for pattern matching."""
+    parts = [_first_n_words(p) for p in _extract_command_parts(command) if p]
+    return " && ".join(parts) if parts else command
 
 
 def _render_command_args(args: dict, config: dict) -> str:

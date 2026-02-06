@@ -44,7 +44,7 @@ class ToolApprovalRule(BaseModel):
 
             try:
                 pattern = re.compile(expected_str)
-                if pattern.fullmatch(actual_value):
+                if pattern.search(actual_value):
                     continue
             except re.error:
                 pass

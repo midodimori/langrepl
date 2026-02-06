@@ -4,6 +4,7 @@ from langrepl.middlewares.approval import (
     create_field_extractor,
     create_field_transformer,
 )
+from langrepl.tools.impl.terminal import _transform_command_for_approval
 
 
 class TestCheckApproval:
@@ -199,3 +200,61 @@ class TestCreateFieldTransformer:
         transformer = create_field_transformer({"missing": lambda x: x.upper()})
         result = transformer({"command": "test"})
         assert result == {"command": "test"}
+
+
+class TestCommandApprovalPatterns:
+    """Test that dangerous commands in various forms trigger approval rules."""
+
+    def _check_rule_matches(self, command: str, pattern: str) -> bool:
+        """Helper to check if a command triggers a rule with the given pattern."""
+        config = ToolApprovalConfig(
+            always_allow=[],
+            always_deny=[],
+            always_ask=[
+                ToolApprovalRule(name="run_command", args={"command": pattern})
+            ],
+        )
+        # Transform the command as the approval system would
+        transformed_args = {"command": _transform_command_for_approval(command)}
+        decision, is_always_ask = ApprovalMiddleware._check_approval_rules(
+            config, "run_command", transformed_args
+        )
+        return is_always_ask
+
+    def test_simple_rm_rf_triggers_rule(self):
+        """rm -rf /tmp should trigger rm -rf rule."""
+        assert self._check_rule_matches("rm -rf /tmp", r"rm\s+-rf.*")
+
+    def test_chained_command_triggers_rule(self):
+        """npm install && rm -rf /tmp should trigger rm -rf rule."""
+        assert self._check_rule_matches("npm install && rm -rf /tmp", r"rm\s+-rf.*")
+
+    def test_command_substitution_triggers_rule(self):
+        """echo $(rm -rf /) should trigger rm -rf rule."""
+        assert self._check_rule_matches("echo $(rm -rf /)", r"rm\s+-rf.*")
+
+    def test_backtick_substitution_triggers_rule(self):
+        """echo `rm -rf /` should trigger rm -rf rule."""
+        assert self._check_rule_matches("echo `rm -rf /`", r"rm\s+-rf.*")
+
+    def test_git_push_in_chain_triggers_rule(self):
+        """npm test && git push origin should trigger git push rule."""
+        assert self._check_rule_matches("npm test && git push origin", r"git\s+push.*")
+
+    def test_sudo_in_substitution_triggers_rule(self):
+        """echo $(sudo apt update) should trigger sudo rule."""
+        assert self._check_rule_matches("echo $(sudo apt update)", r"sudo\s+.*")
+
+    def test_git_reset_hard_in_chain_triggers_rule(self):
+        """git stash && git reset --hard HEAD should trigger rule."""
+        assert self._check_rule_matches(
+            "git stash && git reset --hard HEAD", r"git\s+reset\s+--hard.*"
+        )
+
+    def test_safe_command_does_not_trigger(self):
+        """ls -la should NOT trigger rm -rf rule."""
+        assert not self._check_rule_matches("ls -la", r"rm\s+-rf.*")
+
+    def test_multiple_safe_commands_do_not_trigger(self):
+        """npm install && npm test should NOT trigger rm -rf rule."""
+        assert not self._check_rule_matches("npm install && npm test", r"rm\s+-rf.*")

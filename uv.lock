@@ -1477,7 +1477,7 @@ wheels = [
 
 [[package]]
 name = "langrepl"
-version = "1.10.17"
+version = "1.10.18"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },

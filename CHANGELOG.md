@@ -2,6 +2,32 @@
 
 <!-- version list -->
 
+## v1.10.18 (2026-02-07)
+
+### Bug Fixes
+
+- Detect dangerous commands in chained and nested shell constructs (#111)
+  ([#111](https://github.com/midodimori/langrepl/pull/111),
+  [`de8b111`](https://github.com/midodimori/langrepl/commit/de8b111c51db4ace86a730f3c0ce5157019980d8))
+
+### Chores
+
+- **deps**: Bump langchain-aws in the langchain group (#108)
+  ([#108](https://github.com/midodimori/langrepl/pull/108),
+  [`136f5f3`](https://github.com/midodimori/langrepl/commit/136f5f39a0ef5de398d515bd625730ce0ecd45ec))
+
+- **deps**: Bump protobuf from 6.33.2 to 6.33.5 (#107)
+  ([#107](https://github.com/midodimori/langrepl/pull/107),
+  [`65d1108`](https://github.com/midodimori/langrepl/commit/65d1108577f74bc73585e5c00044add1ab28ee36))
+
+- **deps**: Bump the production-deps group with 3 updates (#109)
+  ([#109](https://github.com/midodimori/langrepl/pull/109),
+  [`e489cd8`](https://github.com/midodimori/langrepl/commit/e489cd895157fcc369c26c8ad624c862937a2703))
+
+- **deps**: Bump types-jsonschema (#110) ([#110](https://github.com/midodimori/langrepl/pull/110),
+  [`01a0bbd`](https://github.com/midodimori/langrepl/commit/01a0bbdf58d84a2c745046ec2bec9c132e964edd))
+
+
 ## v1.10.17 (2026-02-01)
 
 ### Features

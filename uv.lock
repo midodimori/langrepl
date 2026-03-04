@@ -585,7 +585,7 @@ wheels = [
 
 [[package]]
 name = "fastapi"
-version = "0.131.0"
+version = "0.135.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -594,9 +594,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/91/32/158cbf685b7d5a26f87131069da286bf10fc9fbf7fc968d169d48a45d689/fastapi-0.131.0.tar.gz", hash = "sha256:6531155e52bee2899a932c746c9a8250f210e3c3303a5f7b9f8a808bfe0548ff", size = 369612, upload-time = "2026-02-22T16:38:11.252Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e7/7b/f8e0211e9380f7195ba3f3d40c292594fd81ba8ec4629e3854c353aaca45/fastapi-0.135.1.tar.gz", hash = "sha256:d04115b508d936d254cea545b7312ecaa58a7b3a0f84952535b4c9afae7668cd", size = 394962, upload-time = "2026-03-01T18:18:29.369Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ff/94/b58ec24c321acc2ad1327f69b033cadc005e0f26df9a73828c9e9c7db7ce/fastapi-0.131.0-py3-none-any.whl", hash = "sha256:ed0e53decccf4459de78837ce1b867cd04fa9ce4579497b842579755d20b405a", size = 103854, upload-time = "2026-02-22T16:38:09.814Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/72/42e900510195b23a56bde950d26a51f8b723846bfcaa0286e90287f0422b/fastapi-0.135.1-py3-none-any.whl", hash = "sha256:46e2fc5745924b7c840f71ddd277382af29ce1cdb7d5eab5bf697e3fb9999c9e", size = 116999, upload-time = "2026-03-01T18:18:30.831Z" },
 ]
 
 [[package]]
@@ -1063,11 +1063,11 @@ wheels = [
 
 [[package]]
 name = "json-repair"
-version = "0.58.0"
+version = "0.58.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/0c/9b/2a1500e587fd7c33f10dc90d4e26a6ad421bdfbc7ab84c244279b2515e42/json_repair-0.58.0.tar.gz", hash = "sha256:8465fe2f8b7515d1cbf262a2608630e73d9498598bd42330c89f59923c50d0e4", size = 57425, upload-time = "2026-02-17T12:30:29.797Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c5/19/54a7f22971669e583bb223217ae16a21b0bc8d4549c22c88b97cbfcb6fe5/json_repair-0.58.1.tar.gz", hash = "sha256:7a4560ef04dcc4ef69c05131372d8608fc7ea8c51de0d76b53958f26d8ecb4cc", size = 58654, upload-time = "2026-02-28T09:24:02.936Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1a/35/006b1625a645556f0d18247694c3f278eb122526fca2766ab2e8fba997e7/json_repair-0.58.0-py3-none-any.whl", hash = "sha256:54c31d22a47d5d4a52c4b022604d73f64bc5b01211f3422f0a671b1cc4ccfe3c", size = 40024, upload-time = "2026-02-17T12:30:28.601Z" },
+    { url = "https://files.pythonhosted.org/packages/49/54/d8b06c401d30b4c32ddcd875878b61e15fd3f7a956a2771a2d8066273841/json_repair-0.58.1-py3-none-any.whl", hash = "sha256:d4f10319855573e84376c6205ebf7a5f7f6f02059854e3d03b292d8dde1412bb", size = 40538, upload-time = "2026-02-28T09:24:01.507Z" },
 ]
 
 [[package]]
@@ -2565,11 +2565,11 @@ wheels = [
 
 [[package]]
 name = "python-dotenv"
-version = "1.2.1"
+version = "1.2.2"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f0/26/19cadc79a718c5edbec86fd4919a6b6d3f681039a2f6d66d14be94e75fb9/python_dotenv-1.2.1.tar.gz", hash = "sha256:42667e897e16ab0d66954af0e60a9caa94f0fd4ecf3aaf6d2d260eec1aa36ad6", size = 44221, upload-time = "2025-10-26T15:12:10.434Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/82/ed/0301aeeac3e5353ef3d94b6ec08bbcabd04a72018415dcb29e588514bba8/python_dotenv-1.2.2.tar.gz", hash = "sha256:2c371a91fbd7ba082c2c1dc1f8bf89ca22564a087c2c287cd9b662adde799cf3", size = 50135, upload-time = "2026-03-01T16:00:26.196Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/14/1b/a298b06749107c305e1fe0f814c6c74aea7b2f1e10989cb30f544a1b3253/python_dotenv-1.2.1-py3-none-any.whl", hash = "sha256:b81ee9561e9ca4004139c6cbba3a238c32b03e4894671e181b671e8cb8425d61", size = 21230, upload-time = "2025-10-26T15:12:09.109Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/d7/1959b9648791274998a9c3526f6d0ec8fd2233e4d4acce81bbae76b44b2a/python_dotenv-1.2.2-py3-none-any.whl", hash = "sha256:1d8214789a24de455a8b8bd8ae6fe3c6b69a5e3d64aa8a8e5d68e694bbcb285a", size = 22101, upload-time = "2026-03-01T16:00:25.09Z" },
 ]
 
 [[package]]

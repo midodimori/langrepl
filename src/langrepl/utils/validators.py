@@ -5,7 +5,7 @@ import json
 from collections.abc import Callable
 from typing import Annotated, Any, get_args, get_origin
 
-from json_repair import loads as repair_loads, repair_json
+from json_repair import loads as repair_loads
 from langchain.tools import tool
 from pydantic import BaseModel, ConfigDict, Field, create_model, field_validator
 from pydantic.fields import FieldInfo

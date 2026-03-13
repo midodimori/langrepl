@@ -2,7 +2,7 @@ import json
 import shutil
 from typing import Annotated
 
-from json_repair import loads as repair_loads, repair_json
+from json_repair import loads as repair_loads
 from langchain.tools import ToolRuntime, tool
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import ToolException

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
 
-from langrepl.checkpointer.base import BaseCheckpointer, HumanMessageEntry
+from langrepl.checkpointer.base import SERDE, BaseCheckpointer, HumanMessageEntry
 from langrepl.core.logging import get_logger
 
 if TYPE_CHECKING:
@@ -27,7 +27,7 @@ class MemoryCheckpointer(MemorySaver, BaseCheckpointer):
 
     def __init__(self):
         """Initialize the memory checkpointer."""
-        super().__init__()
+        super().__init__(serde=SERDE)
         logger.debug("Memory checkpointer initialized")
 
     def delete_checkpoints(

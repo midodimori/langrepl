@@ -7,6 +7,11 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from langgraph.checkpoint.base import BaseCheckpointSaver as _BaseCheckpointSaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+
+SERDE = JsonPlusSerializer(
+    allowed_json_modules=[("langrepl.middlewares.approval", "InterruptPayload")]
+)
 
 if TYPE_CHECKING:
     from langchain_core.messages import BaseMessage

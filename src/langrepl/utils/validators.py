@@ -5,7 +5,7 @@ import json
 from collections.abc import Callable
 from typing import Annotated, Any, get_args, get_origin
 
-from json_repair import repair_json
+from json_repair import loads as repair_loads
 from langchain.tools import tool
 from pydantic import BaseModel, ConfigDict, Field, create_model, field_validator
 from pydantic.fields import FieldInfo
@@ -22,7 +22,7 @@ def json_list_parser(model_cls: type[BaseModel]):
             parsed = json.loads(v)
         except (json.JSONDecodeError, ValueError) as e:
             try:
-                parsed = json.loads(repair_json(v))
+                parsed = repair_loads(v)
             except Exception:
                 raise ValueError(
                     f"Failed to parse JSON (auto-repair failed): {e}"

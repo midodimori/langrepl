@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 from langrepl.checkpointer.base import BaseCheckpointer, HumanMessageEntry
 from langrepl.core.logging import get_logger
@@ -27,7 +28,10 @@ class MemoryCheckpointer(MemorySaver, BaseCheckpointer):
 
     def __init__(self):
         """Initialize the memory checkpointer."""
-        super().__init__()
+        serde = JsonPlusSerializer(
+            allowed_json_modules=[("langrepl.middlewares.approval", "InterruptPayload")]
+        )
+        super().__init__(serde=serde)
         logger.debug("Memory checkpointer initialized")
 
     def delete_checkpoints(

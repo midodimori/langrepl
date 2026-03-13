@@ -10,7 +10,8 @@ from langgraph.checkpoint.base import BaseCheckpointSaver as _BaseCheckpointSave
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 SERDE = JsonPlusSerializer(
-    allowed_json_modules=[("langrepl.middlewares.approval", "InterruptPayload")]
+    allowed_json_modules=[("langrepl.middlewares.approval", "InterruptPayload")],
+    allowed_msgpack_modules=[("langrepl.middlewares.approval", "InterruptPayload")],
 )
 
 if TYPE_CHECKING:

@@ -1528,7 +1528,6 @@ dev = [
     { name = "pytest-asyncio" },
     { name = "python-semantic-release" },
     { name = "pyupgrade" },
-    { name = "tomlkit" },
 ]
 
 [package.metadata]
@@ -1583,7 +1582,6 @@ dev = [
     { name = "pytest-asyncio", specifier = "~=1.3.0" },
     { name = "python-semantic-release", specifier = "~=10.5.3" },
     { name = "pyupgrade", specifier = "~=3.21.2" },
-    { name = "tomlkit", specifier = "~=0.13.3" },
 ]
 
 [[package]]

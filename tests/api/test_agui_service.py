@@ -26,9 +26,9 @@ class TestBuildAgentContext:
     def test_builds_context_with_custom_approval_mode(self, temp_dir: Path):
         ctx = build_agent_context(
             working_dir=temp_dir,
-            approval_mode=ApprovalMode.SEMI_ACTIVE,
+            approval_mode=ApprovalMode.AGGRESSIVE,
         )
-        assert ctx.approval_mode == ApprovalMode.SEMI_ACTIVE
+        assert ctx.approval_mode == ApprovalMode.AGGRESSIVE
 
 
 class TestLangreplAGUIAgentContextInjection:

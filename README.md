@@ -24,6 +24,7 @@ https://github.com/user-attachments/assets/f9573310-29dc-4c67-aa1b-cc6b6ab051a2
   - [Interactive Chat Mode](#interactive-chat-mode)
   - [One-Shot Mode](#one-shot-mode)
   - [LangGraph Server Mode](#langgraph-server-mode)
+  - [AG-UI Server Mode](#ag-ui-server-mode)
 - [Interactive Commands](#interactive-commands)
   - [Conversation Management](#conversation-management)
   - [Configuration](#configuration)
@@ -47,6 +48,7 @@ https://github.com/user-attachments/assets/f9573310-29dc-4c67-aa1b-cc6b6ab051a2
 - **[Deep Agent Architecture](https://blog.langchain.com/deep-agents/)** - Planning tools, virtual filesystem, and
   sub-agent delegation for complex multi-step tasks
 - **LangGraph Server Mode** - Run agents as API servers with LangGraph Studio integration for visual debugging
+- **AG-UI Server Mode** - Expose agents via the [AG-UI protocol](https://docs.ag-ui.com) (SSE streaming) for frontend integration with [CopilotKit](https://www.copilotkit.ai) and other AG-UI clients
 - **Multi-Provider LLM Support** - OpenAI, Anthropic, Google, AWS Bedrock, Ollama, DeepSeek, ZhipuAI, and local models (LMStudio, Ollama)
 - **Multimodal Image Support** - Send images to vision models via clipboard paste, drag-and-drop, or absolute paths
 - **Extensible Tool System** - File operations, web search, terminal access, grep search, and MCP server integration
@@ -79,7 +81,9 @@ https://github.com/user-attachments/assets/f9573310-29dc-4c67-aa1b-cc6b6ab051a2
   - Ubuntu/Debian: `sudo apt install bubblewrap`
   - Arch Linux: `sudo pacman -S bubblewrap`
   - Optional enhanced syscall filtering: `uv pip install pyseccomp`
-- **Node.js & npm** (optional) - Required only if using MCP servers that run via npx
+- **Node.js & npm** (optional) - Required for MCP servers that run via npx and for the AG-UI demo UI
+- **[pnpm](https://pnpm.io/installation)** (optional) - Required for the AG-UI demo UI (`ui/`)
+  - `npm install -g pnpm` or `corepack enable`
 
 ## Installation
 
@@ -90,15 +94,15 @@ Aliases: `langrepl` or `lg`
 
 **Quick try (no installation):**
 ```bash
-uvx --python 3.13 langrepl
-uvx --python 3.13 langrepl -w /path  # specify working dir
+uvx langrepl
+uvx langrepl -w /path  # specify working dir
 ```
 
 **Install globally:**
 ```bash
-uv tool install --python 3.13 langrepl
+uv tool install langrepl
 # or with pipx:
-pipx install --python 3.13 langrepl
+pipx install langrepl
 ```
 
 Then run from any directory:
@@ -111,13 +115,13 @@ langrepl -w /path     # specify working directory
 
 **Quick try (no installation):**
 ```bash
-uvx --python 3.13 --from git+https://github.com/midodimori/langrepl langrepl
-uvx --python 3.13 --from git+https://github.com/midodimori/langrepl langrepl -w /path  # specify working dir
+uvx --from git+https://github.com/midodimori/langrepl langrepl
+uvx --from git+https://github.com/midodimori/langrepl langrepl -w /path  # specify working dir
 ```
 
 **Install globally:**
 ```bash
-uv tool install --python 3.13 git+https://github.com/midodimori/langrepl
+uv tool install git+https://github.com/midodimori/langrepl
 ```
 
 Then run from any directory:
@@ -221,7 +225,7 @@ CLI__MAX_AUTOCOMPLETE_SUGGESTIONS=10 # Autocomplete limit (default: 10)
 #### Server Settings
 
 ```bash
-SERVER__LANGGRAPH_SERVER_URL=http://localhost:2024  # Default
+SERVER__LANGGRAPH_SERVER_URL=http://localhost:2024  # LangSmith server URL (default)
 ```
 
 #### Other Settings
@@ -253,7 +257,8 @@ langrepl [OPTIONS] [MESSAGE]
 | `-m` | `--model` | LLM model to use (overrides agent's default) | Agent's default model |
 | `-r` | `--resume` | Resume the last conversation thread | false |
 | `-t` | `--timer` | Enable performance timing for startup phases | false |
-| `-s` | `--server` | Run in LangGraph server mode | false |
+| `-s` | `--server` | Run in server mode | false |
+| `-p` | `--protocol` | Server protocol: `langsmith` (default), `agui` | `langsmith` |
 | `-am` | `--approval-mode` | Tool approval mode: `semi-active`, `active`, `aggressive` | From config |
 | `-v` | `--verbose` | Enable verbose logging to console and `.langrepl/logs/app.log` | false |
 
@@ -284,8 +289,11 @@ langrepl -r "Continue from where we left off"
 # Set approval mode
 langrepl -am aggressive
 
-# LangGraph server mode
+# LangGraph server mode (LangSmith)
 langrepl -s -a general
+
+# AG-UI server mode
+langrepl -s --protocol agui -a general
 
 # Verbose logging
 langrepl -v
@@ -337,6 +345,35 @@ Server features:
 - Creates/updates assistants via LangGraph API
 - Enables visual debugging with LangGraph Studio
 - Supports all agent configs and MCP servers
+
+### AG-UI Server Mode
+
+```bash
+langrepl -s --protocol agui              # Start AG-UI server (default agent)
+langrepl -s --protocol agui -a general   # Use specific agent
+langrepl -s --protocol agui -m gpt-4o    # Override model
+
+# Server: http://localhost:8000
+# Health: http://localhost:8000/agent/health
+# Chat:   POST http://localhost:8000/agent (SSE stream)
+```
+
+AG-UI server features:
+- [AG-UI protocol](https://docs.ag-ui.com) over Server-Sent Events (SSE)
+- In-process FastAPI + uvicorn (no subprocess)
+- Thread persistence via configured checkpointer
+- Interrupt-based tool approval (works with `semi-active` mode)
+- Compatible with [CopilotKit](https://www.copilotkit.ai) and any AG-UI client
+
+**Demo UI** (CopilotKit frontend included in `ui/`):
+```bash
+# Terminal 1: start AG-UI backend
+langrepl -s --protocol agui
+
+# Terminal 2: start CopilotKit frontend
+cd ui && pnpm install && pnpm dev
+# Opens at http://localhost:3000
+```
 
 ## Interactive Commands
 
@@ -960,7 +997,8 @@ make install
 ```bash
 uv run langrepl              # Start interactive session
 uv run langrepl -w /path     # Specify working directory
-uv run langrepl -s -a general  # Start LangGraph server
+uv run langrepl -s -a general  # Start LangSmith server
+uv run langrepl -s --protocol agui  # Start AG-UI server
 ```
 
 **Development commands:**

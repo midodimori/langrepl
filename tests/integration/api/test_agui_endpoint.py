@@ -56,7 +56,7 @@ class TestAGUIHealthEndpoint:
             from langrepl.api.route.agui import app
 
             with TestClient(app) as client:
-                response = client.get("/health")
+                response = client.get("/agent/health")
                 assert response.status_code == 200
                 data = response.json()
                 assert data["status"] == "ok"

@@ -244,6 +244,53 @@ async def _send_message(
         return 1, ""
 
 
+async def handle_agui_server_command(args) -> int:
+    """Start AG-UI FastAPI server with uvicorn in-process.
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        Exit code (0 for success, 1 for error)
+    """
+    import uvicorn
+
+    working_dir = Path(args.working_dir)
+
+    os.environ["LANGREPL_WORKING_DIR"] = str(working_dir)
+    if args.agent:
+        os.environ["LANGREPL_AGENT"] = args.agent
+    if args.model:
+        os.environ["LANGREPL_MODEL"] = args.model
+    os.environ["LANGREPL_APPROVAL_MODE"] = args.approval_mode
+
+    port = (
+        settings.server.agui_server_port
+        if hasattr(settings.server, "agui_server_port")
+        else 8000
+    )
+    host = "0.0.0.0"
+
+    console.print(f"Starting AG-UI server on {host}:{port}...")
+
+    try:
+        config = uvicorn.Config(
+            "langrepl.api.route.agui:app",
+            host=host,
+            port=port,
+            log_level="info",
+        )
+        server = uvicorn.Server(config)
+        await server.serve()
+        return 0
+    except KeyboardInterrupt:
+        return 0
+    except Exception as e:
+        console.print_error(f"Error starting AG-UI server: {e}")
+        console.print("")
+        return 1
+
+
 async def handle_server_command(args) -> int:
     """Handle server mode command.
 
@@ -253,6 +300,9 @@ async def handle_server_command(args) -> int:
     Returns:
         Exit code (0 for success, 1 for error)
     """
+    if getattr(args, "protocol", "langsmith") == "agui":
+        return await handle_agui_server_command(args)
+
     process = None
     try:
         working_dir = Path(args.working_dir)

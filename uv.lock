@@ -3,6 +3,34 @@ revision = 3
 requires-python = ">=3.13"
 
 [[package]]
+name = "ag-ui-langgraph"
+version = "0.0.28"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ag-ui-protocol" },
+    { name = "langchain" },
+    { name = "langchain-core" },
+    { name = "langgraph" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1c/98/8aadfbac7e7ea0f06911ffe5b684eac683f8b1c4df37d6185fcf17b42be4/ag_ui_langgraph-0.0.28.tar.gz", hash = "sha256:663a7556182c2c24adf1a7417fad8e3c3b3721bda42ca5d8036a7b31b31cb0d2", size = 202922, upload-time = "2026-03-20T23:23:05.105Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/07/ad/b102935dabea5ed8adf051301a9b71fcdb70686e7fd47548fcc25e6c0e79/ag_ui_langgraph-0.0.28-py3-none-any.whl", hash = "sha256:f44e4da8bead9a03eedd39a91a047512a2bc67371a35a380e11bb59fb783d30b", size = 18930, upload-time = "2026-03-20T23:23:03.764Z" },
+]
+
+[[package]]
+name = "ag-ui-protocol"
+version = "0.1.14"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/53/ee/319d189343e1dc67b1109c950a0d1091fe32498104b5917fbbd806ff58dd/ag_ui_protocol-0.1.14.tar.gz", hash = "sha256:d8e86b308f86a6cf6a5e18ca7154d7642895de2fe94cd2cece57723cdbba6406", size = 5687, upload-time = "2026-03-18T00:43:13.358Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0c/99/eaa83816924791fc25ebb44ac7987196b687a3fdf597b1e7a62c69306a8d/ag_ui_protocol-0.1.14-py3-none-any.whl", hash = "sha256:ec072e6a45e0d45b8714e6d54919cc9bde3d097fdc36f7e82953b2f21f1cdbef", size = 8069, upload-time = "2026-03-18T00:43:12.1Z" },
+]
+
+[[package]]
 name = "aiofiles"
 version = "25.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1478,6 +1506,7 @@ name = "langrepl"
 version = "1.10.18"
 source = { editable = "." }
 dependencies = [
+    { name = "ag-ui-langgraph" },
     { name = "aiofiles" },
     { name = "aiosqlite" },
     { name = "fastapi" },
@@ -1514,6 +1543,7 @@ dependencies = [
     { name = "types-aiofiles" },
     { name = "types-jsonschema" },
     { name = "types-pyyaml" },
+    { name = "uvicorn" },
 ]
 
 [package.dev-dependencies]
@@ -1533,6 +1563,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ag-ui-langgraph", specifier = "~=0.0.28" },
     { name = "aiofiles", specifier = "~=25.1.0" },
     { name = "aiosqlite", specifier = "~=0.22.1" },
     { name = "fastapi", specifier = ">=0.128.0" },
@@ -1569,6 +1600,7 @@ requires-dist = [
     { name = "types-aiofiles", specifier = "~=25.1.0.20251011" },
     { name = "types-jsonschema", specifier = ">=4.25.1.20251009,<4.26.1.0" },
     { name = "types-pyyaml", specifier = "~=6.0.12.20250915" },
+    { name = "uvicorn", specifier = "~=0.34.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -3291,15 +3323,15 @@ wheels = [
 
 [[package]]
 name = "uvicorn"
-version = "0.40.0"
+version = "0.34.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
     { name = "h11" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c3/d1/8f3c683c9561a4e6689dd3b1d345c815f10f86acd044ee1fb9a4dcd0b8c5/uvicorn-0.40.0.tar.gz", hash = "sha256:839676675e87e73694518b5574fd0f24c9d97b46bea16df7b8c05ea1a51071ea", size = 81761, upload-time = "2025-12-21T14:16:22.45Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/ad/713be230bcda622eaa35c28f0d328c3675c371238470abdea52417f17a8e/uvicorn-0.34.3.tar.gz", hash = "sha256:35919a9a979d7a59334b6b10e05d77c1d0d574c50e0fc98b8b1a0f165708b55a", size = 76631, upload-time = "2025-06-01T07:48:17.531Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3d/d8/2083a1daa7439a66f3a48589a57d576aa117726762618f6bb09fe3798796/uvicorn-0.40.0-py3-none-any.whl", hash = "sha256:c6c8f55bc8bf13eb6fa9ff87ad62308bbbc33d0b67f84293151efe87e0d5f2ee", size = 68502, upload-time = "2025-12-21T14:16:21.041Z" },
+    { url = "https://files.pythonhosted.org/packages/6d/0d/8adfeaa62945f90d19ddc461c55f4a50c258af7662d34b6a3d5d1f8646f6/uvicorn-0.34.3-py3-none-any.whl", hash = "sha256:16246631db62bdfbf069b0645177d6e8a77ba950cfedbfd093acef9444e4d885", size = 62431, upload-time = "2025-06-01T07:48:15.664Z" },
 ]
 
 [[package]]

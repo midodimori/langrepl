@@ -82,6 +82,14 @@ def create_parser() -> argparse.ArgumentParser:
         help=f"Tool approval mode ({', '.join(mode.value for mode in ApprovalMode)})",
     )
     parser.add_argument(
+        "-p",
+        "--protocol",
+        type=str,
+        choices=["langsmith", "agui"],
+        default="langsmith",
+        help="Server protocol to use (default: langsmith)",
+    )
+    parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",

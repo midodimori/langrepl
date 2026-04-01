@@ -1,13 +1,13 @@
-"""AG-UI FastAPI app with lifespan and endpoint wiring."""
+"""AG-UI FastAPI app factory with multi-agent endpoints and discovery."""
 
 from __future__ import annotations
 
-import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from ag_ui_langgraph import add_langgraph_fastapi_endpoint
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 
 from langrepl.api.service.agui import LangreplAGUIAgent
 from langrepl.cli.bootstrap.initializer import initializer
@@ -17,44 +17,65 @@ from langrepl.core.logging import get_logger
 logger = get_logger(__name__)
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Initialize graph on startup, cleanup on shutdown."""
-    agent_name = os.getenv("LANGREPL_AGENT")
-    model = os.getenv("LANGREPL_MODEL")
-    working_dir_str = os.getenv("LANGREPL_WORKING_DIR")
-    approval_mode_str = os.getenv(
-        "LANGREPL_APPROVAL_MODE", ApprovalMode.SEMI_ACTIVE.value
-    )
+def create_app(
+    working_dir: str,
+    agent: str | None = None,
+    model: str | None = None,
+    approval_mode: str = ApprovalMode.SEMI_ACTIVE.value,
+) -> FastAPI:
+    """Create AG-UI FastAPI app with agent endpoints."""
 
-    if not working_dir_str:
-        raise ValueError("LANGREPL_WORKING_DIR environment variable is required")
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        wd = Path(working_dir)
+        mode = ApprovalMode(approval_mode)
 
-    working_dir = Path(working_dir_str)
-    approval_mode = ApprovalMode(approval_mode_str)
+        registry = initializer.get_registry(wd)
+        await registry.ensure_config_dir()
 
-    logger.info("Initializing AG-UI server for agent=%s, model=%s", agent_name, model)
+        agents_config = await registry.load_agents()
+        agent_names = [agent] if agent else agents_config.agent_names
 
-    graph, cleanup = await initializer.create_graph(agent_name, model, working_dir)
+        logger.info("Loading agents: %s", agent_names)
 
-    agui_agent = LangreplAGUIAgent(
-        name=agent_name or "default",
-        graph=graph,
-        working_dir=working_dir,
-        approval_mode=approval_mode,
-    )
+        cleanups = []
+        agent_list = []
 
-    add_langgraph_fastapi_endpoint(app, agui_agent, "/agent")
+        for name in agent_names:
+            model_override = model if agent else None
+            graph, cleanup = await initializer.create_graph(name, model_override, wd)
+            cleanups.append(cleanup)
 
-    app.state.cleanup = cleanup
+            agui_agent = LangreplAGUIAgent(
+                name=name,
+                graph=graph,
+                working_dir=wd,
+                approval_mode=mode,
+            )
 
-    logger.info("AG-UI server ready")
+            add_langgraph_fastapi_endpoint(app, agui_agent, f"/agent/{name}")
 
-    yield
+            agent_cfg = agents_config.get_agent_config(name)
+            is_default = agent_cfg.default if agent_cfg else False
+            agent_list.append({"name": name, "default": is_default})
+            logger.info("Registered agent: %s at /agent/%s", name, name)
 
-    logger.info("Shutting down AG-UI server...")
-    await cleanup()
-    logger.info("Cleanup complete")
+        app.state.agent_list = agent_list
 
+        logger.info("AG-UI server ready with %d agent(s)", len(agent_list))
 
-app = FastAPI(title="Langrepl AG-UI Server", lifespan=lifespan)
+        yield
+
+        logger.info("Shutting down AG-UI server...")
+        for cleanup in cleanups:
+            await cleanup()
+        logger.info("Cleanup complete")
+
+    agui_app = FastAPI(title="Langrepl AG-UI Server", lifespan=lifespan)
+
+    @agui_app.get("/agents")
+    async def list_agents():
+        """List available agents with default flag."""
+        return JSONResponse(content=agui_app.state.agent_list)
+
+    return agui_app

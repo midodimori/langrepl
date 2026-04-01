@@ -4,6 +4,7 @@ import { CopilotChat } from "@copilotkit/react-ui";
 import { StateInspector } from "@/components/state-inspector";
 import { ApprovalHandler } from "@/components/approval-handler";
 import { StepProgress } from "@/components/step-progress";
+import { AgentSelector } from "@/components/agent-selector";
 
 export default function Home() {
   return (
@@ -12,11 +13,10 @@ export default function Home() {
         <h1 className="text-sm font-bold text-zinc-300">
           Langrepl <span className="text-cyan-400">AG-UI</span> Demo
         </h1>
-        <span className="text-xs text-zinc-500">localhost:8000/agent</span>
+        <AgentSelector />
       </header>
 
       <div className="flex flex-1 min-h-0">
-        {/* Chat Panel */}
         <div className="flex-1 flex flex-col min-h-0">
           <StepProgress />
           <div className="flex-1 min-h-0">
@@ -30,7 +30,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* State Panel */}
         <div className="w-[360px] flex flex-col border-l border-zinc-800 bg-zinc-900 shrink-0">
           <StateInspector />
         </div>

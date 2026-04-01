@@ -22,16 +22,13 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
-    # Add positional message argument for one-shot mode
     parser.add_argument(
         "message",
         type=str,
         nargs="?",
         default=None,
-        help="Message to send in one-shot mode (omit for interactive mode)",
+        help="Message to send in one-shot mode (chat mode only)",
     )
-
-    # Add global working directory option
     parser.add_argument(
         "-w",
         "--working-dir",
@@ -39,27 +36,25 @@ def create_parser() -> argparse.ArgumentParser:
         default=os.getcwd(),
         help="Working directory for the session (default: current directory)",
     )
-
-    # Add chat arguments directly to main parser
     parser.add_argument(
         "-a",
         "--agent",
         type=str,
         default=None,
-        help="Agent to use for the session (uses default agent from config if not specified)",
+        help="Agent to use. In server mode: serve only this agent (default: serve all)",
     )
     parser.add_argument(
         "-m",
         "--model",
         type=str,
         default=None,
-        help="LLM model to use for the session (overrides agent's default model if specified)",
+        help="LLM model override. In server mode: requires -a",
     )
     parser.add_argument(
         "-r",
         "--resume",
         action="store_true",
-        help="Resume the last conversation thread",
+        help="Resume the last conversation thread (chat mode only)",
     )
     parser.add_argument(
         "-t",
@@ -71,7 +66,7 @@ def create_parser() -> argparse.ArgumentParser:
         "-s",
         "--server",
         action="store_true",
-        help="Run in LangGraph server mode (generates langgraph.json and runs langgraph dev)",
+        help="Run as HTTP server (protocol from config.server.yml)",
     )
     parser.add_argument(
         "-am",
@@ -79,15 +74,7 @@ def create_parser() -> argparse.ArgumentParser:
         type=str,
         choices=[mode.value for mode in ApprovalMode],
         default=ApprovalMode.SEMI_ACTIVE.value,
-        help=f"Tool approval mode ({', '.join(mode.value for mode in ApprovalMode)})",
-    )
-    parser.add_argument(
-        "-p",
-        "--protocol",
-        type=str,
-        choices=["langsmith", "agui"],
-        default="langsmith",
-        help="Server protocol to use (default: langsmith)",
+        help="Tool approval mode. In server mode: requires -a",
     )
     parser.add_argument(
         "-v",
@@ -99,18 +86,29 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _validate_server_args(parser: argparse.ArgumentParser, args) -> None:
+    """Validate flag combinations for server mode."""
+    if args.resume:
+        parser.error("--resume is not available in server mode")
+    if args.message:
+        parser.error("one-shot messages are not supported in server mode")
+    if args.model and not args.agent:
+        parser.error("--model requires --agent (-a) in server mode")
+    if args.approval_mode != ApprovalMode.SEMI_ACTIVE.value and not args.agent:
+        parser.error("--approval-mode requires --agent (-a) in server mode")
+
+
 async def main() -> int:
     """Main CLI entry point."""
     parser = create_parser()
     args = parser.parse_args()
 
-    # Configure logging after argument parsing
     configure_logging(show_logs=args.verbose, working_dir=Path(args.working_dir))
     logger = get_logger(__name__)
 
     try:
-        # Route to server mode if -s flag is present
         if args.server:
+            _validate_server_args(parser, args)
             return await handle_server_command(args)
         else:
             return await handle_chat_command(args)

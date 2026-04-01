@@ -18,6 +18,7 @@ from langrepl.configs.checkpointer import BatchCheckpointerConfig, CheckpointerC
 from langrepl.configs.llm import BatchLLMConfig, LLMConfig
 from langrepl.configs.mcp import MCPConfig
 from langrepl.configs.sandbox import BatchSandboxConfig, SandboxConfig
+from langrepl.configs.server import ServerConfig
 from langrepl.core.constants import (
     CONFIG_AGENTS_DIR,
     CONFIG_AGENTS_FILE_NAME,
@@ -31,6 +32,7 @@ from langrepl.core.constants import (
     CONFIG_MCP_FILE_NAME,
     CONFIG_MEMORY_FILE_NAME,
     CONFIG_SANDBOXES_DIR,
+    CONFIG_SERVER_FILE_NAME,
     CONFIG_SUBAGENTS_DIR,
     CONFIG_SUBAGENTS_FILE_NAME,
 )
@@ -51,6 +53,7 @@ class ConfigRegistry:
         self._sandboxes: BatchSandboxConfig | None = None
         self._mcp: MCPConfig | None = None
         self._approval: ToolApprovalConfig | None = None
+        self._server: ServerConfig | None = None
 
     # === Setup ===
 
@@ -68,6 +71,20 @@ class ConfigRegistry:
                     CONFIG_APPROVAL_FILE_NAME.name,
                 ),
             )
+
+        # Ensure config.server.yml exists (may be missing in older workspaces)
+        server_file = self.working_dir / CONFIG_SERVER_FILE_NAME
+        if not server_file.exists():
+            template = Path(
+                str(
+                    files("resources")
+                    / "configs"
+                    / "default"
+                    / CONFIG_SERVER_FILE_NAME.name
+                )
+            )
+            if template.exists():
+                await asyncio.to_thread(shutil.copy2, template, server_file)
 
         # Ensure CONFIG_DIR_NAME is ignored in git (local-only, not committed)
         git_info_exclude = self.working_dir / ".git" / "info" / "exclude"
@@ -252,6 +269,16 @@ class ConfigRegistry:
         """Save approval config to file."""
         config.save_to_json_file(self.working_dir / CONFIG_APPROVAL_FILE_NAME)
         self._approval = config
+
+    # === Server config ===
+
+    async def load_server(self, force_reload: bool = False) -> ServerConfig:
+        """Load server config (cached). Returns defaults if file missing."""
+        if self._server is None or force_reload:
+            self._server = await ServerConfig.from_yaml(
+                self.working_dir / CONFIG_SERVER_FILE_NAME
+            )
+        return self._server
 
     # === User memory ===
 

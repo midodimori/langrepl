@@ -3,6 +3,19 @@
 :root {
   --background: #0a0a0a;
   --foreground: #ededed;
+
+  /* CopilotKit theme — terminal dark */
+  --copilot-kit-background-color: #0a0a0a;
+  --copilot-kit-primary-color: #18181b;
+  --copilot-kit-contrast-color: #d4d4d8;
+  --copilot-kit-secondary-color: #27272a;
+  --copilot-kit-secondary-contrast-color: #a1a1aa;
+  --copilot-kit-muted-color: #52525b;
+  --copilot-kit-separator-color: #27272a;
+  --copilot-kit-input-background-color: #18181b;
+  --copilot-kit-shadow-sm: none;
+  --copilot-kit-shadow-md: none;
+  --copilot-kit-shadow-lg: none;
 }
 
 body {
@@ -11,20 +24,173 @@ body {
   font-family: var(--font-mono), monospace;
 }
 
-/* Force CopilotChat to fill its container and keep input sticky */
+/* Chat container */
 .copilotKitChat {
   display: flex !important;
   flex-direction: column !important;
   height: 100% !important;
   max-height: 100% !important;
+  background: #0a0a0a !important;
+  font-family: var(--font-mono), monospace !important;
+  border: none !important;
 }
 
+/* Messages area */
 .copilotKitMessages {
   flex: 1 !important;
   min-height: 0 !important;
   overflow-y: auto !important;
+  background: #0a0a0a !important;
 }
 
+/* Header */
+.copilotKitHeader {
+  background: #18181b !important;
+  border-bottom: 1px solid #27272a !important;
+  color: #a1a1aa !important;
+}
+
+/* User message — bordered box like tool renderer */
+.copilotKitMessage.copilotKitUserMessage {
+  background: #18181b !important;
+  color: #d4d4d8 !important;
+  border: 1px solid #3f3f46 !important;
+  border-radius: 0.375rem !important;
+  font-family: var(--font-mono), monospace !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.5 !important;
+}
+
+/* Assistant message */
+.copilotKitMessage.copilotKitAssistantMessage {
+  color: #d4d4d8 !important;
+  font-family: var(--font-mono), monospace !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.5 !important;
+}
+
+/* Markdown elements inside messages */
+.copilotKitMarkdownElement {
+  color: #d4d4d8 !important;
+  font-family: var(--font-mono), monospace !important;
+}
+
+.copilotKitMarkdownElement h1,
+.copilotKitMarkdownElement h2,
+.copilotKitMarkdownElement h3 {
+  color: #e4e4e7 !important;
+}
+
+.copilotKitMarkdownElement a {
+  color: #22d3ee !important;
+}
+
+.copilotKitMarkdownElement code {
+  background: #27272a !important;
+  color: #22d3ee !important;
+  border-radius: 0.25rem !important;
+  padding: 0.125rem 0.375rem !important;
+  font-size: 0.75rem !important;
+}
+
+.copilotKitMarkdownElement pre {
+  background: #18181b !important;
+  border: 1px solid #27272a !important;
+  border-radius: 0.375rem !important;
+}
+
+/* Code block */
+.copilotKitCodeBlock {
+  background: #18181b !important;
+  border: 1px solid #27272a !important;
+  border-radius: 0.375rem !important;
+}
+
+.copilotKitCodeBlockToolbar {
+  background: #18181b !important;
+  border-bottom: 1px solid #27272a !important;
+  color: #71717a !important;
+}
+
+.copilotKitCodeBlockToolbarLanguage {
+  color: #71717a !important;
+}
+
+/* Inline code */
+.copilotKitInlineCode {
+  background: #27272a !important;
+  color: #22d3ee !important;
+}
+
+/* Input area */
 .copilotKitInput {
   flex-shrink: 0 !important;
+  background: #18181b !important;
+  border: 1px solid #3f3f46 !important;
+  border-radius: 0.375rem !important;
+  color: #d4d4d8 !important;
+  font-family: var(--font-mono), monospace !important;
+  font-size: 0.8125rem !important;
+}
+
+.copilotKitInput textarea {
+  color: #d4d4d8 !important;
+  font-family: var(--font-mono), monospace !important;
+}
+
+.copilotKitInput textarea::placeholder {
+  color: #52525b !important;
+}
+
+/* Input controls / send button */
+.copilotKitInputControls {
+  color: #71717a !important;
+}
+
+.copilotKitInputControlButton {
+  color: #71717a !important;
+}
+
+.copilotKitInputControlButton:hover {
+  color: #22d3ee !important;
+}
+
+/* Message action buttons (regenerate, copy, thumbs) */
+.copilotKitMessageControls {
+  color: #52525b !important;
+}
+
+.copilotKitMessageControlButton {
+  color: #52525b !important;
+}
+
+.copilotKitMessageControlButton:hover {
+  color: #a1a1aa !important;
+}
+
+/* Spinner / loading */
+.copilotKitSpinner {
+  border-color: #27272a !important;
+  border-top-color: #22d3ee !important;
+}
+
+/* Activity dot */
+.copilotKitActivityDot {
+  background: #22d3ee !important;
+}
+
+/* Footer */
+.copilotKitMessagesFooter {
+  color: #3f3f46 !important;
+  font-size: 0.6875rem !important;
+}
+
+/* Dev console trigger button */
+.copilotKitDevConsole {
+  color: #52525b !important;
+}
+
+/* Custom assistant message (tool renders, interrupts) */
+.copilotKitCustomAssistantMessage {
+  font-family: var(--font-mono), monospace !important;
 }

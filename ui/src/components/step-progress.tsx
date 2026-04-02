@@ -2,8 +2,8 @@
 
 import { useCoAgent } from "@copilotkit/react-core";
 
-export function StepProgress() {
-  const { running } = useCoAgent({ name: "default" });
+export function StepProgress({ agentName }: { agentName: string }) {
+  const { running } = useCoAgent({ name: agentName });
 
   if (!running) return null;
 

@@ -10,7 +10,7 @@ import { AgentSelector } from "@/components/agent-selector";
 import { ToolRenderer } from "@/components/tool-renderer";
 import { DevConsoleTheme } from "@/components/dev-console-theme";
 import { ThreadSelector } from "@/components/thread-selector";
-import { ThreadMessagesLoader } from "@/components/thread-messages-loader";
+import { ThreadHistoryLoader } from "@/components/thread-history-loader";
 
 type AgentInfo = { name: string; default: boolean };
 
@@ -52,6 +52,7 @@ export default function Home() {
       agent={selected}
       threadId={threadId}
     >
+      <ThreadHistoryLoader threadId={threadId} agentName={selected} />
       <div className="flex flex-col h-screen overflow-hidden">
         <header className="flex items-center justify-between px-4 py-2 border-b border-zinc-800 bg-zinc-900 shrink-0">
           <h1 className="text-sm font-bold text-zinc-300">

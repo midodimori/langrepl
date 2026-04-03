@@ -88,7 +88,7 @@ def create_app(
 
     @agui_app.get("/threads/{thread_id}/messages")
     async def get_thread_messages(thread_id: str, agent: str | None = None):
-        """Get messages for a specific thread."""
+        """Get messages for a specific thread in AG-UI format."""
         from langchain_core.runnables import RunnableConfig
 
         wd = agui_app.state.working_dir
@@ -116,7 +116,7 @@ def create_app(
                             role = "user"
                         elif role == "ai":
                             role = "assistant"
-                        elif role == "tool":
+                        else:
                             continue
                         content = getattr(msg, "content", "")
                         if isinstance(content, list):

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { CopilotKit } from "@copilotkit/react-core";
 import { CopilotChat } from "@copilotkit/react-ui";
 import { StateInspector } from "@/components/state-inspector";
@@ -25,6 +25,9 @@ export default function Home() {
   const [agents, setAgents] = useState<AgentInfo[]>([]);
   const [selected, setSelected] = useState<string>("");
   const [threadId, setThreadId] = useState<string>("");
+  const [showState, setShowState] = useState(true);
+  const [stateWidth, setStateWidth] = useState(360);
+  const dragging = useRef(false);
 
   useEffect(() => {
     fetch(`${AGUI_URL}/agents`)
@@ -41,6 +44,24 @@ export default function Home() {
   const handleNewThread = useCallback(() => {
     setThreadId(crypto.randomUUID());
   }, []);
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    dragging.current = true;
+    const startX = e.clientX;
+    const startW = stateWidth;
+    const onMove = (ev: MouseEvent) => {
+      if (!dragging.current) return;
+      setStateWidth(Math.max(200, Math.min(800, startW - (ev.clientX - startX))));
+    };
+    const onUp = () => {
+      dragging.current = false;
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, [stateWidth]);
 
   const BoundAssistantMessage = useMemo(
     () => (props: any) => (
@@ -81,6 +102,17 @@ export default function Home() {
               selected={selected}
               onSelect={setSelected}
             />
+            <button
+              onClick={() => setShowState(!showState)}
+              className={`px-2 py-1 text-xs rounded border transition-colors ${
+                showState
+                  ? "border-cyan-800 text-cyan-400 bg-cyan-950/30"
+                  : "border-zinc-700 text-zinc-500 hover:text-zinc-300"
+              }`}
+              title={showState ? "Hide state panel" : "Show state panel"}
+            >
+              {"{}"}
+            </button>
           </div>
         </header>
 
@@ -99,9 +131,18 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="w-[360px] flex flex-col border-l border-zinc-800 bg-zinc-900 shrink-0">
-            <StateInspector agentName={selected} />
-          </div>
+          {showState && (
+            <div
+              className="flex flex-col border-l border-zinc-800 bg-zinc-900 shrink-0 relative"
+              style={{ width: stateWidth }}
+            >
+              <div
+                className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-cyan-800/40 transition-colors z-10"
+                onMouseDown={handleResizeStart}
+              />
+              <StateInspector agentName={selected} threadId={threadId} />
+            </div>
+          )}
         </div>
 
         <ApprovalHandler />

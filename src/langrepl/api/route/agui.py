@@ -138,6 +138,61 @@ def create_app(
                 continue
         return JSONResponse(content=[])
 
+    @agui_app.get("/threads/{thread_id}/state")
+    async def get_thread_state(
+        thread_id: str,
+        agent: str | None = None,
+        include_messages: bool = False,
+    ):
+        """Get full checkpoint state for a thread."""
+        from langchain_core.runnables import RunnableConfig
+
+        wd = agui_app.state.working_dir
+        agents_to_try = (
+            [agent] if agent else [a["name"] for a in agui_app.state.agent_list]
+        )
+
+        for agent_name in agents_to_try:
+            try:
+                async with initializer.get_checkpointer(agent_name, wd) as checkpointer:
+                    checkpoint = await checkpointer.aget_tuple(
+                        config=RunnableConfig(configurable={"thread_id": thread_id})
+                    )
+                    if not checkpoint or not checkpoint.checkpoint:
+                        continue
+                    values = checkpoint.checkpoint.get("channel_values", {})
+                    if not values:
+                        continue
+
+                    result = {}
+                    for key, val in values.items():
+                        if key == "messages" and not include_messages:
+                            continue
+                        if ":" in key:
+                            continue
+                        if val is None:
+                            continue
+                        try:
+                            if isinstance(val, list):
+                                result[key] = [
+                                    (
+                                        item.model_dump()
+                                        if hasattr(item, "model_dump")
+                                        else item
+                                    )
+                                    for item in val
+                                ]
+                            elif hasattr(val, "model_dump"):
+                                result[key] = val.model_dump()
+                            else:
+                                result[key] = val
+                        except Exception:
+                            continue
+                    return JSONResponse(content=result)
+            except Exception:
+                continue
+        return JSONResponse(content={})
+
     @agui_app.get("/threads")
     async def list_threads(agent: str | None = None):
         """List saved conversation threads."""

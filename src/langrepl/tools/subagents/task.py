@@ -168,9 +168,17 @@ def create_task_tool(
                                 await emit_state()
             elif mode == "updates":
                 if isinstance(data, dict):
-                    if "messages" in data:
-                        result = data
-                    for msg in data.get("messages", []):
+                    # Flat update: {"messages": [...]}
+                    update = data if "messages" in data else None
+                    # Node-keyed update: {"model": {"messages": [...]}}
+                    if update is None:
+                        for node_data in data.values():
+                            if isinstance(node_data, dict) and "messages" in node_data:
+                                update = node_data
+                                break
+                    if update is not None:
+                        result = update
+                    for msg in (update or {}).get("messages", []):
                         if getattr(msg, "type", None) == "tool" and current_tool:
                             for step in steps:
                                 if (

@@ -2,6 +2,134 @@
 
 <!-- version list -->
 
+## v1.11.0 (2026-04-04)
+
+### Bug Fixes
+
+- Use repair_loads() for json-repair 0.58.5 compat (#135)
+  ([#135](https://github.com/midodimori/langrepl/pull/135),
+  [`f738055`](https://github.com/midodimori/langrepl/commit/f73805512263e78ba0002c9cad7d7a0b7a8be5de))
+
+### Chores
+
+- **deps**: Bump aiohttp from 3.13.3 to 3.13.4 (#152)
+  ([#152](https://github.com/midodimori/langrepl/pull/152),
+  [`6f05387`](https://github.com/midodimori/langrepl/commit/6f053877d71baf3c67364deb109410ab92c8a842))
+
+- **deps**: Bump anthropic from 0.86.0 to 0.87.0 (#153)
+  ([#153](https://github.com/midodimori/langrepl/pull/153),
+  [`4e6058e`](https://github.com/midodimori/langrepl/commit/4e6058e301dd3937c66980ceab0ce7137e5ab70d))
+
+- **deps**: Bump autoflake from 2.3.1 to 2.3.3 in the dev-deps group (#119)
+  ([#119](https://github.com/midodimori/langrepl/pull/119),
+  [`8136394`](https://github.com/midodimori/langrepl/commit/81363944242a55202480bcb9d59a69953635db78))
+
+- **deps**: Bump black from 26.1.0 to 26.3.1 (#133)
+  ([#133](https://github.com/midodimori/langrepl/pull/133),
+  [`173c8d1`](https://github.com/midodimori/langrepl/commit/173c8d16d6c7e0b2b5e1ce334dc8a1ac91a9d67d))
+
+- **deps**: Bump cryptography from 46.0.3 to 46.0.5 (#115)
+  ([#115](https://github.com/midodimori/langrepl/pull/115),
+  [`c188c43`](https://github.com/midodimori/langrepl/commit/c188c436cf5069ca9aa0c502661390e97b12b8fe))
+
+- **deps**: Bump cryptography from 46.0.5 to 46.0.6 (#147)
+  ([#147](https://github.com/midodimori/langrepl/pull/147),
+  [`bb7c238`](https://github.com/midodimori/langrepl/commit/bb7c238f3be7fbc0cf12c9c78c0713cccf0e5caa))
+
+- **deps**: Bump isort from 7.0.0 to 8.0.0 (#120)
+  ([#120](https://github.com/midodimori/langrepl/pull/120),
+  [`868ba10`](https://github.com/midodimori/langrepl/commit/868ba10360344e7fd25746bea58f7bcaabe4e76f))
+
+- **deps**: Bump isort from 8.0.0 to 8.0.1 in the dev-deps group (#128)
+  ([#128](https://github.com/midodimori/langrepl/pull/128),
+  [`ff3b96b`](https://github.com/midodimori/langrepl/commit/ff3b96b2c1efc54a0e051cde215fb052bf9c46ae))
+
+- **deps**: Bump json-repair in the production-deps group (#131)
+  ([#131](https://github.com/midodimori/langrepl/pull/131),
+  [`425fda8`](https://github.com/midodimori/langrepl/commit/425fda8474a378090760399df19c228ba59576a0))
+
+- **deps**: Bump json-repair in the production-deps group (#143)
+  ([#143](https://github.com/midodimori/langrepl/pull/143),
+  [`01ff798`](https://github.com/midodimori/langrepl/commit/01ff798db30c4d40a2ae259f04920a153d58c1a7))
+
+- **deps**: Bump langchain-core from 1.2.9 to 1.2.11 (#116)
+  ([#116](https://github.com/midodimori/langrepl/pull/116),
+  [`d16644f`](https://github.com/midodimori/langrepl/commit/d16644f8a3a256de4041c50dabcedb02b9b241e8))
+
+- **deps**: Bump langgraph-checkpoint from 3.0.1 to 4.0.0 (#124)
+  ([#124](https://github.com/midodimori/langrepl/pull/124),
+  [`f8e1a0a`](https://github.com/midodimori/langrepl/commit/f8e1a0a0de814dee5273bf57e2aa7e4d6e3fcec0))
+
+- **deps**: Bump langsmith from 0.5.2 to 0.6.3 (#114)
+  ([#114](https://github.com/midodimori/langrepl/pull/114),
+  [`0a766c4`](https://github.com/midodimori/langrepl/commit/0a766c47667d06038c8353e529774780963355dd))
+
+- **deps**: Bump lxml-html-clean from 0.4.3 to 0.4.4 (#129)
+  ([#129](https://github.com/midodimori/langrepl/pull/129),
+  [`cddd042`](https://github.com/midodimori/langrepl/commit/cddd042c80d6b69590baf8da366525ac2d0094fb))
+
+- **deps**: Bump orjson from 3.11.5 to 3.11.6 (#134)
+  ([#134](https://github.com/midodimori/langrepl/pull/134),
+  [`cd9d910`](https://github.com/midodimori/langrepl/commit/cd9d910fec5f0951ee667513d7175b167a71b37c))
+
+- **deps**: Bump pyasn1 from 0.6.2 to 0.6.3 (#142)
+  ([#142](https://github.com/midodimori/langrepl/pull/142),
+  [`b606d1e`](https://github.com/midodimori/langrepl/commit/b606d1e232e178809b98c009e3b842aeea8a2254))
+
+- **deps**: Bump pygments from 2.19.2 to 2.20.0 (#150)
+  ([#150](https://github.com/midodimori/langrepl/pull/150),
+  [`bae171a`](https://github.com/midodimori/langrepl/commit/bae171a9468a3d31feb7068c4586b44c1dba55c4))
+
+- **deps**: Bump pyjwt from 2.10.1 to 2.12.0 (#140)
+  ([#140](https://github.com/midodimori/langrepl/pull/140),
+  [`d61f89c`](https://github.com/midodimori/langrepl/commit/d61f89caf8bf0bddfc8b1418c21a62ca6670f910))
+
+- **deps**: Bump requests from 2.32.5 to 2.33.0 (#145)
+  ([#145](https://github.com/midodimori/langrepl/pull/145),
+  [`bc6832f`](https://github.com/midodimori/langrepl/commit/bc6832f63ad8a7c5d83eb7be68066c9051dece8a))
+
+- **deps**: Bump the langchain group across 1 directory with 6 updates (#144)
+  ([#144](https://github.com/midodimori/langrepl/pull/144),
+  [`d0f8204`](https://github.com/midodimori/langrepl/commit/d0f8204a3d4dd1ca5785eb8a1071d672daa262b9))
+
+- **deps**: Bump the langchain group across 1 directory with 8 updates (#121)
+  ([#121](https://github.com/midodimori/langrepl/pull/121),
+  [`f2bb8d6`](https://github.com/midodimori/langrepl/commit/f2bb8d665e47c54687635a01bca45bf78188b08e))
+
+- **deps**: Bump the langchain group with 4 updates (#112)
+  ([#112](https://github.com/midodimori/langrepl/pull/112),
+  [`66b2cfd`](https://github.com/midodimori/langrepl/commit/66b2cfdcf759de6be51f4d63b043bfe20d6f5ca0))
+
+- **deps**: Bump the langchain group with 4 updates (#126)
+  ([#126](https://github.com/midodimori/langrepl/pull/126),
+  [`412241b`](https://github.com/midodimori/langrepl/commit/412241be8d0094346537b007c532142e5d3872c4))
+
+- **deps**: Bump the production-deps group across 1 directory with 5 updates (#122)
+  ([#122](https://github.com/midodimori/langrepl/pull/122),
+  [`e4bc498`](https://github.com/midodimori/langrepl/commit/e4bc4987a4bb5fdd097c1139541f4b47c43a0ab2))
+
+- **deps**: Bump the production-deps group with 2 updates (#113)
+  ([#113](https://github.com/midodimori/langrepl/pull/113),
+  [`6dd9d31`](https://github.com/midodimori/langrepl/commit/6dd9d3183fe1cc11497f9997d4bcf1ce3f4709a2))
+
+- **deps**: Bump the production-deps group with 2 updates (#148)
+  ([#148](https://github.com/midodimori/langrepl/pull/148),
+  [`6a801f2`](https://github.com/midodimori/langrepl/commit/6a801f295d5829ef8c40067b519413365cdb5192))
+
+- **deps**: Bump the production-deps group with 3 updates (#127)
+  ([#127](https://github.com/midodimori/langrepl/pull/127),
+  [`a7ad564`](https://github.com/midodimori/langrepl/commit/a7ad564bde9c0c0c2e1918e049732ae63bd76076))
+
+- **deps**: Bump types-jsonschema (#149) ([#149](https://github.com/midodimori/langrepl/pull/149),
+  [`68ed34b`](https://github.com/midodimori/langrepl/commit/68ed34b6da73dd182b4c6cb8d08f557a56fd9a18))
+
+### Features
+
+- Add AG-UI server mode and CopilotKit demo UI (#151)
+  ([#151](https://github.com/midodimori/langrepl/pull/151),
+  [`4e31cc2`](https://github.com/midodimori/langrepl/commit/4e31cc27c31e0c0c47a91e84763a846035e3989f))
+
+
 ## v1.10.18 (2026-02-07)
 
 ### Bug Fixes

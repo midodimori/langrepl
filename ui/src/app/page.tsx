@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { CopilotKit } from "@copilotkit/react-core";
 import { CopilotChat } from "@copilotkit/react-ui";
 import { StateInspector } from "@/components/state-inspector";
@@ -8,6 +8,10 @@ import { ApprovalHandler } from "@/components/approval-handler";
 import { StepProgress } from "@/components/step-progress";
 import { AgentSelector } from "@/components/agent-selector";
 import { ToolRenderer } from "@/components/tool-renderer";
+import {
+  AssistantMessageWithThinking,
+  ReasoningDisplay,
+} from "@/components/reasoning-display";
 import { SubagentActivity } from "@/components/subagent-activity";
 import { DevConsoleTheme } from "@/components/dev-console-theme";
 import { ThreadSelector } from "@/components/thread-selector";
@@ -37,6 +41,13 @@ export default function Home() {
   const handleNewThread = useCallback(() => {
     setThreadId(crypto.randomUUID());
   }, []);
+
+  const BoundAssistantMessage = useMemo(
+    () => (props: any) => (
+      <AssistantMessageWithThinking {...props} agentName={selected} />
+    ),
+    [selected],
+  );
 
   if (!selected || !threadId) {
     return (
@@ -83,6 +94,7 @@ export default function Home() {
                   title: selected,
                   initial: "",
                 }}
+                AssistantMessage={BoundAssistantMessage}
               />
             </div>
           </div>
@@ -94,6 +106,7 @@ export default function Home() {
 
         <ApprovalHandler />
         <ToolRenderer />
+        <ReasoningDisplay agentName={selected} />
         <SubagentActivity agentName={selected} />
         <DevConsoleTheme />
       </div>

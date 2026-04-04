@@ -9,9 +9,28 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
-from ag_ui.core import CustomEvent, EventType
+import ag_ui_langgraph.agent as _agui_agent_mod
+from ag_ui.core import (
+    CustomEvent,
+    EventType,
+    ReasoningMessageStartEvent,
+)
 from ag_ui_langgraph import LangGraphAgent
 from ag_ui_langgraph.types import LangGraphEventTypes
+from pydantic import model_validator
+
+
+# Fix ag-ui-langgraph bug: passes role="assistant" but ag-ui-protocol requires "reasoning"
+class _FixedReasoningMessageStartEvent(ReasoningMessageStartEvent):
+    @model_validator(mode="before")
+    @classmethod
+    def _fix_role(cls, data: dict) -> dict:
+        if isinstance(data, dict) and data.get("role") == "assistant":
+            data["role"] = "reasoning"
+        return data
+
+
+_agui_agent_mod.ReasoningMessageStartEvent = _FixedReasoningMessageStartEvent
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import Runtime
@@ -42,17 +61,20 @@ class LangreplAGUIAgent(LangGraphAgent):
         self.approval_mode = approval_mode
 
     async def run(self, input) -> AsyncGenerator[str]:
-        """Override to fix ag-ui-langgraph bug: only tasks[0] checked for interrupts.
+        """Override to fix ag-ui-langgraph bugs and bridge reasoning to CopilotKit.
 
-        Buffers RUN_FINISHED, checks all tasks for missed interrupts,
-        emits them BEFORE RUN_FINISHED so CopilotKit receives them.
+        - Buffers RUN_FINISHED, checks all tasks for missed interrupts
+        - Converts REASONING_* events to STATE_DELTA (CopilotKit has no reasoning support)
         """
         saw_interrupt = False
         buffered_run_finished = None
+        reasoning_state: dict | None = None
 
         async for event in super().run(input):
+            event_type = getattr(event, "type", None)
+
             # Track if parent already emitted an interrupt
-            if hasattr(event, "type") and event.type == EventType.CUSTOM:
+            if event_type == EventType.CUSTOM:
                 if (
                     hasattr(event, "name")
                     and event.name == LangGraphEventTypes.OnInterrupt.value
@@ -60,9 +82,28 @@ class LangreplAGUIAgent(LangGraphAgent):
                     saw_interrupt = True
 
             # Buffer RUN_FINISHED — we may need to inject interrupt events before it
-            if hasattr(event, "type") and event.type == EventType.RUN_FINISHED:
+            if event_type == EventType.RUN_FINISHED:
                 buffered_run_finished = event
                 continue
+
+            # Bridge reasoning events into STATE_SNAPSHOT for CopilotKit
+            # (CopilotKit has no REASONING_* support)
+            if event_type == EventType.REASONING_MESSAGE_CONTENT:
+                text = reasoning_state["text"] if reasoning_state else ""
+                text += getattr(event, "delta", "")
+                reasoning_state = {"text": text, "active": True}
+            elif event_type in (
+                EventType.REASONING_MESSAGE_END,
+                EventType.REASONING_END,
+            ):
+                if reasoning_state:
+                    reasoning_state["active"] = False
+
+            # Inject reasoning into library's STATE_SNAPSHOT events
+            if event_type == EventType.STATE_SNAPSHOT and reasoning_state:
+                snapshot = getattr(event, "snapshot", None)
+                if isinstance(snapshot, dict):
+                    snapshot["reasoning"] = reasoning_state
 
             yield event
 

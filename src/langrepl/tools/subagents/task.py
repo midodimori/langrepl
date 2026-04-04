@@ -168,7 +168,8 @@ def create_task_tool(
                                 await emit_state()
             elif mode == "updates":
                 if isinstance(data, dict):
-                    result = data
+                    if "messages" in data:
+                        result = data
                     for msg in data.get("messages", []):
                         if getattr(msg, "type", None) == "tool" and current_tool:
                             for step in steps:

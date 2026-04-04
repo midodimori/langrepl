@@ -14,7 +14,7 @@ https://github.com/user-attachments/assets/f9573310-29dc-4c67-aa1b-cc6b6ab051a2
 
 ### AG-UI Server Mode
 
-
+https://github.com/user-attachments/assets/3666d330-154c-4443-902c-8640c66a7d62
 
 ## Table of Contents
 

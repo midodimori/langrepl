@@ -252,8 +252,7 @@ async def _start_agui_server(args, server_config) -> int:
         from langrepl.api.route.agui import create_app
     except ImportError as e:
         raise SystemExit(
-            f"Missing dependency for server mode: {e}\n"
-            "Run: uvx --upgrade langrepl -s"
+            f"Missing dependency for server mode: {e}\n" "Run: uvx langrepl@latest -s"
         ) from None
 
     working_dir = Path(args.working_dir)

@@ -116,7 +116,7 @@ langrepl              # or: lg
 langrepl -w /path     # specify working directory
 ```
 
-> **Upgrading:** After major updates, run `uvx --upgrade langrepl` or `uv tool upgrade langrepl` to refresh cached dependencies.
+> **Upgrading:** Run `uv tool upgrade langrepl` (if installed globally) or `uvx langrepl@latest` (for ephemeral runs) to get the latest version.
 
 ### From GitHub
 

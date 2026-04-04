@@ -125,7 +125,7 @@ def create_task_tool(
         async for chunk in subagent.astream(
             state,
             config={"recursion_limit": subagent_obj.config.recursion_limit},
-            context=context,  # type: ignore[arg-type]
+            context=context,  # type: ignore[arg-type,call-overload]
             stream_mode=["messages", "updates"],
             subgraphs=True,
         ):

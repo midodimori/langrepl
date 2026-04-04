@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.11.2 (2026-04-04)
+
+### Bug Fixes
+
+- Tighten langgraph bounds to prevent ExecutionInfo import error
+  ([`a75643f`](https://github.com/midodimori/langrepl/commit/a75643f90698f2a4d382e0ceaa7d34d2d758d818))
+
+
 ## v1.11.1 (2026-04-04)
 
 ### Bug Fixes

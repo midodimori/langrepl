@@ -8,7 +8,13 @@ Interactive terminal CLI for building and running LLM agents. Built with LangCha
 [![Python Version](https://img.shields.io/pypi/pyversions/langrepl?logo=python&logoColor=white)](https://pypi.org/project/langrepl/)
 [![License](https://img.shields.io/github/license/midodimori/langrepl)](https://github.com/midodimori/langrepl/blob/main/LICENSE)
 
+### CLI Mode
+
 https://github.com/user-attachments/assets/f9573310-29dc-4c67-aa1b-cc6b6ab051a2
+
+### AG-UI Server Mode
+
+
 
 ## Table of Contents
 
@@ -360,9 +366,12 @@ langrepl -s -a general                   # Serve only this agent
 langrepl -s -a general -m gpt-4o        # Single agent with model override
 
 # Endpoints (multi-agent):
-# GET  /agents                → list available agents
-# POST /agent/{name}          → AG-UI SSE stream per agent
-# GET  /agent/{name}/health   → per-agent health check
+# GET  /agents                        → list available agents
+# POST /agent/{name}                  → AG-UI SSE stream per agent
+# GET  /agent/{name}/health           → per-agent health check
+# GET  /threads                       → list saved threads
+# GET  /threads/{id}/messages         → thread message history
+# GET  /threads/{id}/state            → full checkpoint state
 ```
 
 AG-UI server features:

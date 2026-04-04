@@ -9,7 +9,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Langrepl AG-UI Demo",
+  title: "Langrepl AG-UI",
   description: "AG-UI event viewer for langrepl agents",
 };
 

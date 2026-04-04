@@ -2,6 +2,30 @@
 
 <!-- version list -->
 
+## v1.11.1 (2026-04-04)
+
+### Bug Fixes
+
+- Correct uvx upgrade instructions
+  ([`c9fb895`](https://github.com/midodimori/langrepl/commit/c9fb89520560b3dd549e85de16c938b48d965ba7))
+
+- Tighten langgraph dep bounds to prevent uvx resolver conflicts
+  ([`14b269e`](https://github.com/midodimori/langrepl/commit/14b269eef6f4eb5923ae0318cad09dfc428b1c02))
+
+### Continuous Integration
+
+- Add uvx fresh-resolve smoke test
+  ([`82bdae6`](https://github.com/midodimori/langrepl/commit/82bdae63568b61541b0483cf928caebdc978741b))
+
+### Documentation
+
+- Clean up installation instructions, add platform notice and upgrade note
+  ([`26487d2`](https://github.com/midodimori/langrepl/commit/26487d206fd042447c5bd0fb1eaafe4cb6c3de19))
+
+- Update AG-UI Server Mode link in README
+  ([`48bf880`](https://github.com/midodimori/langrepl/commit/48bf880000fdfedb5a755f8fc097b65b8ac6831d))
+
+
 ## v1.11.0 (2026-04-04)
 
 ### Bug Fixes

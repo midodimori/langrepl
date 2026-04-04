@@ -5,14 +5,17 @@ import { useRenderToolCall } from "@copilotkit/react-core";
 export function ToolRenderer() {
   useRenderToolCall({
     name: "*",
-    render: ({ args, status, result }) => {
+    render: ({ name, args, status, result }: any) => {
       const isComplete = status === "complete";
+      const resultStr =
+        typeof result === "string" ? result : result != null ? JSON.stringify(result) : "";
+      const firstLine = resultStr.split("\n")[0]?.toLowerCase() ?? "";
       const isError =
         isComplete &&
-        result &&
-        (typeof result === "string"
-          ? result.startsWith("Error") || result.startsWith("error")
-          : false);
+        result != null &&
+        (firstLine.startsWith("error") ||
+          firstLine.startsWith("sandbox error:") ||
+          firstLine.startsWith("traceback (most recent"));
 
       const borderColor = isError
         ? "border-red-800"
@@ -40,7 +43,9 @@ export function ToolRenderer() {
         >
           <div className="flex items-center gap-2 px-3 py-1.5 border-b border-zinc-800">
             <span className={`h-2 w-2 rounded-full ${statusDot}`} />
-            <span className="text-zinc-400">{statusText}</span>
+            <span className="text-zinc-300">{name}</span>
+            <span className="text-zinc-600">·</span>
+            <span className="text-zinc-500">{statusText}</span>
           </div>
 
           {args && Object.keys(args).length > 0 && (

@@ -8,6 +8,7 @@ import { ApprovalHandler } from "@/components/approval-handler";
 import { StepProgress } from "@/components/step-progress";
 import { AgentSelector } from "@/components/agent-selector";
 import { ToolRenderer } from "@/components/tool-renderer";
+import { SubagentActivity } from "@/components/subagent-activity";
 import { DevConsoleTheme } from "@/components/dev-console-theme";
 import { ThreadSelector } from "@/components/thread-selector";
 import { ThreadHistoryLoader } from "@/components/thread-history-loader";
@@ -93,6 +94,7 @@ export default function Home() {
 
         <ApprovalHandler />
         <ToolRenderer />
+        <SubagentActivity agentName={selected} />
         <DevConsoleTheme />
       </div>
     </CopilotKit>

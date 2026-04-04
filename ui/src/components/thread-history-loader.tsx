@@ -16,8 +16,9 @@ export function ThreadHistoryLoader({
   const loadedRef = useRef<string>("");
 
   useEffect(() => {
-    if (!setMessages || loadedRef.current === threadId) return;
-    loadedRef.current = threadId;
+    const cacheKey = `${threadId}:${agentName}`;
+    if (!setMessages || loadedRef.current === cacheKey) return;
+    loadedRef.current = cacheKey;
 
     setMessages([]);
 

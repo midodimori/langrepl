@@ -248,7 +248,13 @@ async def _start_agui_server(args, server_config) -> int:
     """Start AG-UI FastAPI server with uvicorn in-process."""
     import uvicorn
 
-    from langrepl.api.route.agui import create_app
+    try:
+        from langrepl.api.route.agui import create_app
+    except ImportError as e:
+        raise SystemExit(
+            f"Missing dependency for server mode: {e}\n"
+            "Run: uvx --upgrade langrepl -s"
+        ) from None
 
     working_dir = Path(args.working_dir)
 

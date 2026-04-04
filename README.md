@@ -69,27 +69,27 @@ https://github.com/user-attachments/assets/3666d330-154c-4443-902c-8640c66a7d62
 
 ## Prerequisites
 
-- **Python 3.13+** - Required for the project
-- **[uv](https://docs.astral.sh/uv/getting-started/installation/)** - Fast Python package
-  installer ([install instructions](https://docs.astral.sh/uv/getting-started/installation/))
-- **[ripgrep (rg)](https://github.com/BurntSushi/ripgrep)** - Required for fast code search (`grep_search` tool) and directory structure visualization (`get_directory_structure` tool):
+> **macOS and Linux only** — Windows is not supported.
+
+- **Python 3.13+** — Older versions will fail to install. Check with `python3 --version`
+- **[uv](https://docs.astral.sh/uv/getting-started/installation/)** — Fast Python package manager ([install instructions](https://docs.astral.sh/uv/getting-started/installation/))
+- **[ripgrep (rg)](https://github.com/BurntSushi/ripgrep)** — Required for code search and directory structure:
   - macOS: `brew install ripgrep`
   - Ubuntu/Debian: `sudo apt install ripgrep`
   - Arch Linux: `sudo pacman -S ripgrep`
-- **[fd](https://github.com/sharkdp/fd)** - Required for fast file/directory completion with `@` (fallback when not in a Git repository):
+- **[fd](https://github.com/sharkdp/fd)** — Required for file/directory completion with `@`:
   - macOS: `brew install fd`
   - Ubuntu/Debian: `sudo apt install fd-find && sudo ln -s $(which fdfind) /usr/bin/fd`
   - Arch Linux: `sudo pacman -S fd`
-- **tree** - Required for file system visualization:
+- **tree** — Required for file system visualization:
   - macOS: `brew install tree`
   - Ubuntu/Debian: `sudo apt install tree`
   - Arch Linux: `sudo pacman -S tree`
-- **bubblewrap** (Linux only, optional) - Required for sandbox feature:
+- **bubblewrap** (Linux only, optional) — Required for sandbox feature:
   - Ubuntu/Debian: `sudo apt install bubblewrap`
   - Arch Linux: `sudo pacman -S bubblewrap`
-  - Optional enhanced syscall filtering: `uv pip install pyseccomp`
-- **Node.js & npm** (optional) - Required for MCP servers that run via npx and for the AG-UI chat UI
-- **[pnpm](https://pnpm.io/installation)** (optional) - Required for the AG-UI chat UI (`ui/`)
+- **Node.js & npm** (optional) — Required for MCP servers that run via npx and for the AG-UI chat UI
+- **[pnpm](https://pnpm.io/installation)** (optional) — Required for the AG-UI chat UI (`ui/`)
   - `npm install -g pnpm` or `corepack enable`
 
 ## Installation
@@ -108,8 +108,6 @@ uvx langrepl -w /path  # specify working dir
 **Install globally:**
 ```bash
 uv tool install langrepl
-# or with pipx:
-pipx install langrepl
 ```
 
 Then run from any directory:
@@ -118,12 +116,13 @@ langrepl              # or: lg
 langrepl -w /path     # specify working directory
 ```
 
+> **Upgrading:** After major updates, run `uvx --upgrade langrepl` or `uv tool upgrade langrepl` to refresh cached dependencies.
+
 ### From GitHub
 
 **Quick try (no installation):**
 ```bash
 uvx --from git+https://github.com/midodimori/langrepl langrepl
-uvx --from git+https://github.com/midodimori/langrepl langrepl -w /path  # specify working dir
 ```
 
 **Install globally:**
@@ -131,19 +130,17 @@ uvx --from git+https://github.com/midodimori/langrepl langrepl -w /path  # speci
 uv tool install git+https://github.com/midodimori/langrepl
 ```
 
-Then run from any directory:
-```bash
-langrepl              # or: lg
-langrepl -w /path     # specify working directory
-```
-
 ### From Source
 
-Clone and install:
 ```bash
 git clone https://github.com/midodimori/langrepl.git
 cd langrepl
-make install
+make install        # install deps + pre-commit hooks
+uv run langrepl     # run locally without global install
+```
+
+To install globally from source:
+```bash
 uv tool install --editable .
 ```
 

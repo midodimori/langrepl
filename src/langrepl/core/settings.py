@@ -100,14 +100,6 @@ class CLISettings(BaseModel):
     )
 
 
-class ServerSettings(BaseModel):
-    """LangGraph server settings."""
-
-    langgraph_server_url: str = Field(
-        default="http://localhost:2024", description="LangGraph server URL"
-    )
-
-
 class Settings(BaseSettings):
     log_level: str = Field(default="INFO", description="The log level")
     suppress_grpc_warnings: bool = Field(
@@ -121,9 +113,6 @@ class Settings(BaseSettings):
     )
     cli: CLISettings = Field(
         default_factory=CLISettings, description="The CLI settings"
-    )
-    server: ServerSettings = Field(
-        default_factory=ServerSettings, description="The server settings"
     )
 
     model_config = SettingsConfigDict(

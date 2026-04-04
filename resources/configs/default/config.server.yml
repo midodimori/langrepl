@@ -1,0 +1,4 @@
+version: 1.0.0
+protocol: agui
+backend_url: http://0.0.0.0:8000
+frontend_url: http://localhost:3000

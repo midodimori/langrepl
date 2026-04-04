@@ -29,6 +29,7 @@ from langrepl.configs.sandbox import (
     SandboxOS,
     SandboxType,
 )
+from langrepl.configs.server import ServerConfig, ServerProtocol
 from langrepl.configs.utils import load_prompt_content
 
 __all__ = [
@@ -67,6 +68,9 @@ __all__ = [
     "ApprovalMode",
     "ToolApprovalConfig",
     "ToolApprovalRule",
+    # Server
+    "ServerConfig",
+    "ServerProtocol",
     # Registry
     "ConfigRegistry",
     # Utils

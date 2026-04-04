@@ -52,6 +52,21 @@ def mock_initializer(mock_agent_config, mock_llm_config, mock_checkpointer, mock
     initializer.get_checkpointer = mock_get_checkpointer
     initializer.get_graph = mock_get_graph
 
+    # Mock registry for server config
+    mock_registry = MagicMock()
+    mock_registry.ensure_config_dir = AsyncMock()
+    mock_registry.load_server = AsyncMock(
+        return_value=MagicMock(
+            protocol="langsmith",
+            backend_url="http://localhost:2024",
+            frontend_url="http://localhost:3000",
+            host="0.0.0.0",
+            port=8000,
+            ui_port=3000,
+        )
+    )
+    initializer.get_registry = MagicMock(return_value=mock_registry)
+
     return initializer
 
 

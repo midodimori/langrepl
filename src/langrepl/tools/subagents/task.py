@@ -4,7 +4,8 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from langchain.tools import ToolRuntime, tool
-from langchain_core.messages import AnyMessage, HumanMessage
+from langchain_core.callbacks.manager import adispatch_custom_event
+from langchain_core.messages import AIMessageChunk, AnyMessage, HumanMessage
 from langchain_core.tools import BaseTool, ToolException
 from langgraph.types import Command
 from pydantic import BaseModel, ConfigDict, Field
@@ -105,7 +106,94 @@ def create_task_tool(
                     subagent_obj.config.tools.output_max_tokens
                 )
 
-        result = await subagent.ainvoke(state, context=context)  # type: ignore
+        steps: list[dict] = []
+        activity_state: dict = {
+            "agent": subagent_type,
+            "task": description,
+            "steps": steps,
+            "done": False,
+        }
+
+        async def emit_state() -> None:
+            await adispatch_custom_event(
+                "copilotkit_manually_emit_intermediate_state",
+                {"subagent_activity": activity_state},
+            )
+
+        result = None
+        current_tool: str | None = None
+        async for chunk in subagent.astream(
+            state,
+            config={"recursion_limit": subagent_obj.config.recursion_limit},
+            context=context,  # type: ignore[arg-type,call-overload]
+            stream_mode=["messages", "updates"],
+            subgraphs=True,
+        ):
+            namespace, mode, data = chunk[0], chunk[1], chunk[2]  # type: ignore[index]
+            if mode == "messages":
+                msg_chunk, _metadata = data
+                if isinstance(msg_chunk, AIMessageChunk):
+                    content = ""
+                    if isinstance(msg_chunk.content, str):
+                        content = msg_chunk.content
+                    elif isinstance(msg_chunk.content, list):
+                        for block in msg_chunk.content:
+                            if isinstance(block, dict) and block.get("type") == "text":
+                                content += block.get("text", "")
+                    if content:
+                        if steps and steps[-1].get("type") == "text":
+                            steps[-1]["content"] = (
+                                steps[-1].get("content", "") + content
+                            )
+                        else:
+                            steps.append(
+                                {
+                                    "type": "text",
+                                    "content": content,
+                                    "status": "running",
+                                }
+                            )
+                        await emit_state()
+                    if msg_chunk.tool_call_chunks:
+                        for tc in msg_chunk.tool_call_chunks:
+                            if tc.get("name") and tc["name"] != current_tool:
+                                current_tool = tc["name"]
+                                steps.append(
+                                    {
+                                        "type": "tool",
+                                        "tool": current_tool,
+                                        "status": "running",
+                                    }
+                                )
+                                await emit_state()
+            elif mode == "updates":
+                if isinstance(data, dict):
+                    # Flat update: {"messages": [...]}
+                    update = data if "messages" in data else None
+                    # Node-keyed update: {"model": {"messages": [...]}}
+                    if update is None:
+                        for node_data in data.values():
+                            if isinstance(node_data, dict) and "messages" in node_data:
+                                update = node_data
+                                break
+                    if update is not None:
+                        result = update
+                    for msg in (update or {}).get("messages", []):
+                        if getattr(msg, "type", None) == "tool" and current_tool:
+                            for step in steps:
+                                if (
+                                    step.get("tool") == current_tool
+                                    and step["status"] == "running"
+                                ):
+                                    step["status"] = "done"
+                            current_tool = None
+                            await emit_state()
+
+        activity_state["done"] = True
+        await emit_state()
+
+        if result is None:
+            raise ToolException(f"Subagent '{subagent_type}' returned no result")
 
         last_message: AnyMessage = result["messages"][-1]
         final_message = create_tool_message(

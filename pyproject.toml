@@ -25,7 +25,6 @@ classifiers = [
     "Environment :: Console",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
     "Operating System :: MacOS",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
@@ -73,6 +72,8 @@ dependencies = [
     'pyseccomp~=0.1.2; sys_platform == "linux"',
     'pathspec>=0.12.1,<1.1.0',
     "fastapi>=0.128.0",
+    'ag-ui-langgraph~=0.0.28',
+    'uvicorn~=0.34.0',
 ]
 
 [project.urls]
@@ -95,7 +96,11 @@ mypy_path = ["src"]
 [[tool.mypy.overrides]]
 module = [
     "langchain_mcp_adapters.*",
-    "pygments_cache.*"
+    "pygments_cache.*",
+    "ag_ui_langgraph",
+    "ag_ui_langgraph.*",
+    "ag_ui",
+    "ag_ui.*",
 ]
 ignore_missing_imports = true
 

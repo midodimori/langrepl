@@ -24,6 +24,7 @@ https://github.com/user-attachments/assets/f9573310-29dc-4c67-aa1b-cc6b6ab051a2
   - [Interactive Chat Mode](#interactive-chat-mode)
   - [One-Shot Mode](#one-shot-mode)
   - [LangGraph Server Mode](#langgraph-server-mode)
+  - [AG-UI Server Mode](#ag-ui-server-mode)
 - [Interactive Commands](#interactive-commands)
   - [Conversation Management](#conversation-management)
   - [Configuration](#configuration)
@@ -36,6 +37,7 @@ https://github.com/user-attachments/assets/f9573310-29dc-4c67-aa1b-cc6b6ab051a2
   - [Sub-Agents](#sub-agents)
   - [Custom Tools](#custom-tools)
   - [Skills](#skills)
+  - [Server](#server-configserveryml)
   - [MCP Servers](#mcp-servers-configmcpjson)
   - [Tool Approval](#tool-approval-configapprovaljson)
   - [Sandboxes (Beta)](#sandboxes-beta)
@@ -47,6 +49,7 @@ https://github.com/user-attachments/assets/f9573310-29dc-4c67-aa1b-cc6b6ab051a2
 - **[Deep Agent Architecture](https://blog.langchain.com/deep-agents/)** - Planning tools, virtual filesystem, and
   sub-agent delegation for complex multi-step tasks
 - **LangGraph Server Mode** - Run agents as API servers with LangGraph Studio integration for visual debugging
+- **AG-UI Server Mode** - Expose agents via the [AG-UI protocol](https://docs.ag-ui.com) (SSE streaming) for frontend integration with [CopilotKit](https://www.copilotkit.ai) and other AG-UI clients
 - **Multi-Provider LLM Support** - OpenAI, Anthropic, Google, AWS Bedrock, Ollama, DeepSeek, ZhipuAI, and local models (LMStudio, Ollama)
 - **Multimodal Image Support** - Send images to vision models via clipboard paste, drag-and-drop, or absolute paths
 - **Extensible Tool System** - File operations, web search, terminal access, grep search, and MCP server integration
@@ -79,7 +82,9 @@ https://github.com/user-attachments/assets/f9573310-29dc-4c67-aa1b-cc6b6ab051a2
   - Ubuntu/Debian: `sudo apt install bubblewrap`
   - Arch Linux: `sudo pacman -S bubblewrap`
   - Optional enhanced syscall filtering: `uv pip install pyseccomp`
-- **Node.js & npm** (optional) - Required only if using MCP servers that run via npx
+- **Node.js & npm** (optional) - Required for MCP servers that run via npx and for the AG-UI demo UI
+- **[pnpm](https://pnpm.io/installation)** (optional) - Required for the AG-UI demo UI (`ui/`)
+  - `npm install -g pnpm` or `corepack enable`
 
 ## Installation
 
@@ -90,15 +95,15 @@ Aliases: `langrepl` or `lg`
 
 **Quick try (no installation):**
 ```bash
-uvx --python 3.13 langrepl
-uvx --python 3.13 langrepl -w /path  # specify working dir
+uvx langrepl
+uvx langrepl -w /path  # specify working dir
 ```
 
 **Install globally:**
 ```bash
-uv tool install --python 3.13 langrepl
+uv tool install langrepl
 # or with pipx:
-pipx install --python 3.13 langrepl
+pipx install langrepl
 ```
 
 Then run from any directory:
@@ -111,13 +116,13 @@ langrepl -w /path     # specify working directory
 
 **Quick try (no installation):**
 ```bash
-uvx --python 3.13 --from git+https://github.com/midodimori/langrepl langrepl
-uvx --python 3.13 --from git+https://github.com/midodimori/langrepl langrepl -w /path  # specify working dir
+uvx --from git+https://github.com/midodimori/langrepl langrepl
+uvx --from git+https://github.com/midodimori/langrepl langrepl -w /path  # specify working dir
 ```
 
 **Install globally:**
 ```bash
-uv tool install --python 3.13 git+https://github.com/midodimori/langrepl
+uv tool install git+https://github.com/midodimori/langrepl
 ```
 
 Then run from any directory:
@@ -220,9 +225,7 @@ CLI__MAX_AUTOCOMPLETE_SUGGESTIONS=10 # Autocomplete limit (default: 10)
 
 #### Server Settings
 
-```bash
-SERVER__LANGGRAPH_SERVER_URL=http://localhost:2024  # Default
-```
+Server configuration is in `.langrepl/config.server.yml` (not `.env`). See [AG-UI Server Mode](#ag-ui-server-mode).
 
 #### Other Settings
 
@@ -249,12 +252,12 @@ langrepl [OPTIONS] [MESSAGE]
 |------|-----------|-------------|---------|
 | `-h` | `--help` | Show help message and exit | - |
 | `-w` | `--working-dir` | Working directory for the session | Current directory |
-| `-a` | `--agent` | Agent to use for the session | Default agent from config |
-| `-m` | `--model` | LLM model to use (overrides agent's default) | Agent's default model |
-| `-r` | `--resume` | Resume the last conversation thread | false |
+| `-a` | `--agent` | Agent to use. In server mode: serve only this agent (default: all) | Default agent from config |
+| `-m` | `--model` | LLM model override. In server mode: requires `-a` | Agent's default model |
+| `-r` | `--resume` | Resume the last conversation thread (chat mode only) | false |
 | `-t` | `--timer` | Enable performance timing for startup phases | false |
-| `-s` | `--server` | Run in LangGraph server mode | false |
-| `-am` | `--approval-mode` | Tool approval mode: `semi-active`, `active`, `aggressive` | From config |
+| `-s` | `--server` | Run as HTTP server (protocol from `config.server.yml`) | false |
+| `-am` | `--approval-mode` | Tool approval mode. In server mode: requires `-a` | `semi-active` |
 | `-v` | `--verbose` | Enable verbose logging to console and `.langrepl/logs/app.log` | false |
 
 #### Examples
@@ -284,7 +287,10 @@ langrepl -r "Continue from where we left off"
 # Set approval mode
 langrepl -am aggressive
 
-# LangGraph server mode
+# Server mode (protocol from config.server.yml)
+langrepl -s
+
+# Server mode with single agent
 langrepl -s -a general
 
 # Verbose logging
@@ -337,6 +343,50 @@ Server features:
 - Creates/updates assistants via LangGraph API
 - Enables visual debugging with LangGraph Studio
 - Supports all agent configs and MCP servers
+
+### AG-UI Server Mode
+
+Configure in `.langrepl/config.server.yml`:
+```yaml
+version: 1.0.0
+protocol: ag                          # ag (API only), agui (API + UI), langsmith
+backend_url: http://0.0.0.0:8000
+frontend_url: http://localhost:3000   # only used with agui
+```
+
+```bash
+langrepl -s                              # Serve all agents (protocol from config)
+langrepl -s -a general                   # Serve only this agent
+langrepl -s -a general -m gpt-4o        # Single agent with model override
+
+# Endpoints (multi-agent):
+# GET  /agents                → list available agents
+# POST /agent/{name}          → AG-UI SSE stream per agent
+# GET  /agent/{name}/health   → per-agent health check
+```
+
+AG-UI server features:
+- [AG-UI protocol](https://docs.ag-ui.com) over Server-Sent Events (SSE)
+- Multi-agent serving: all agents from `agents/*.yml` at `/agent/{name}`
+- Dynamic discovery via `GET /agents`
+- In-process FastAPI + uvicorn (no subprocess)
+- Thread persistence via configured checkpointer
+- Interrupt-based tool approval (works with `semi-active` mode)
+- Compatible with [CopilotKit](https://www.copilotkit.ai) and any AG-UI client
+
+**Demo UI** (set `protocol: agui` in config — auto-launches CopilotKit UI):
+```bash
+langrepl -s   # Starts AG-UI server + CopilotKit UI at localhost:3000
+```
+
+Or manually:
+```bash
+# Terminal 1: start AG-UI backend (protocol: ag)
+langrepl -s
+
+# Terminal 2: start CopilotKit frontend
+cd ui && pnpm install && pnpm dev
+```
 
 ## Interactive Commands
 
@@ -815,6 +865,20 @@ skills/
 
 **Built-in**: [skill-creator](https://www.aitmpl.com/component/skill/skill-creator) - Guide for creating custom skills
 
+### Server (`config.server.yml`)
+
+```yaml
+version: 1.0.0
+protocol: ag                          # ag | agui | langsmith
+backend_url: http://0.0.0.0:8000
+frontend_url: http://localhost:3000   # only used with agui
+```
+
+- `protocol`: `ag` starts AG-UI server only, `agui` starts AG-UI server + CopilotKit UI, `langsmith` starts LangGraph Platform server
+- `backend_url`: server bind address for `ag`/`agui`, LangGraph Platform URL for `langsmith`
+- Auto-generated for new workspaces. For existing workspaces, create manually or use defaults
+- See [AG-UI Server Mode](#ag-ui-server-mode) for usage
+
 ### MCP Servers (`config.mcp.json`)
 
 ```json
@@ -960,7 +1024,8 @@ make install
 ```bash
 uv run langrepl              # Start interactive session
 uv run langrepl -w /path     # Specify working directory
-uv run langrepl -s -a general  # Start LangGraph server
+uv run langrepl -s             # Start server (protocol from config.server.yml)
+uv run langrepl -s -a general  # Start server with single agent
 ```
 
 **Development commands:**

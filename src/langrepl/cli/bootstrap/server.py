@@ -15,9 +15,9 @@ import httpx
 from langrepl.cli.bootstrap.initializer import initializer
 from langrepl.cli.bootstrap.webapp import app
 from langrepl.cli.theme import console
+from langrepl.configs.server import ServerProtocol
 from langrepl.core.constants import CONFIG_LANGGRAPH_FILE_NAME
 from langrepl.core.logging import get_logger
-from langrepl.core.settings import settings
 
 logger = get_logger(__name__)
 
@@ -244,6 +244,76 @@ async def _send_message(
         return 1, ""
 
 
+async def _start_agui_server(args, server_config) -> int:
+    """Start AG-UI FastAPI server with uvicorn in-process."""
+    import uvicorn
+
+    from langrepl.api.route.agui import create_app
+
+    working_dir = Path(args.working_dir)
+
+    agui_app = create_app(
+        working_dir=str(working_dir),
+        agent=args.agent,
+        model=args.model,
+        approval_mode=args.approval_mode,
+        frontend_url=server_config.frontend_url,
+    )
+
+    host = server_config.host
+    port = server_config.port
+
+    console.print(f"Starting AG-UI server on {host}:{port}...")
+
+    ui_process = None
+    try:
+        # If agui protocol, also start the CopilotKit UI
+        if server_config.protocol == ServerProtocol.AGUI:
+            ui_process = _start_ui_subprocess(server_config.ui_port)
+
+        config = uvicorn.Config(
+            agui_app,
+            host=host,
+            port=port,
+            log_level="info",
+        )
+        server = uvicorn.Server(config)
+        await server.serve()
+        return 0
+    except KeyboardInterrupt:
+        return 0
+    except Exception as e:
+        console.print_error(f"Error starting AG-UI server: {e}")
+        console.print("")
+        return 1
+    finally:
+        if ui_process:
+            ui_process.terminate()
+            ui_process.wait()
+
+
+def _start_ui_subprocess(ui_port: int) -> subprocess.Popen | None:
+    """Start the CopilotKit UI as a subprocess."""
+    import shutil
+
+    if not shutil.which("pnpm"):
+        console.print_error(
+            "pnpm is required for agui protocol. Install with: npm install -g pnpm"
+        )
+        return None
+
+    ui_dir = Path(__file__).resolve().parents[4] / "ui"
+    if not ui_dir.exists():
+        console.print_error(f"UI directory not found at {ui_dir}")
+        return None
+
+    console.print(f"Starting CopilotKit UI on port {ui_port}...")
+    return subprocess.Popen(
+        ["pnpm", "dev", "--port", str(ui_port)],
+        cwd=ui_dir,
+    )
+
+
 async def handle_server_command(args) -> int:
     """Handle server mode command.
 
@@ -253,6 +323,14 @@ async def handle_server_command(args) -> int:
     Returns:
         Exit code (0 for success, 1 for error)
     """
+    working_dir = Path(args.working_dir)
+    registry = initializer.get_registry(working_dir)
+    await registry.ensure_config_dir()
+    server_config = await registry.load_server()
+
+    if server_config.protocol in (ServerProtocol.AG, ServerProtocol.AGUI):
+        return await _start_agui_server(args, server_config)
+
     process = None
     try:
         working_dir = Path(args.working_dir)
@@ -313,7 +391,7 @@ async def handle_server_command(args) -> int:
             env=env,
         )
 
-        server_url = settings.server.langgraph_server_url
+        server_url = server_config.backend_url
 
         async with httpx.AsyncClient() as client:
             # Wait for server to be ready

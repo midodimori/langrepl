@@ -81,7 +81,7 @@ class LangreplAGUIAgent(LangGraphAgent):
                             value = intr.value
                             if hasattr(value, "model_dump"):
                                 value = value.model_dump()
-                            logger.info("Emitting missed interrupt: %s", value)
+                            logger.debug("Emitting missed interrupt: %s", value)
                             yield self._dispatch_event(
                                 CustomEvent(
                                     type=EventType.CUSTOM,

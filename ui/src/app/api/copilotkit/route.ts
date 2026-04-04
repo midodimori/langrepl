@@ -29,6 +29,7 @@ async function getRuntime(): Promise<CopilotRuntime> {
     }
   } catch (err) {
     console.error("Failed to fetch agents from AG-UI server:", err);
+    return new CopilotRuntime({ agents });
   }
 
   cachedRuntime = new CopilotRuntime({ agents });

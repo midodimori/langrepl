@@ -338,3 +338,4 @@ class ConfigRegistry:
         self._sandboxes = None
         self._mcp = None
         self._approval = None
+        self._server = None

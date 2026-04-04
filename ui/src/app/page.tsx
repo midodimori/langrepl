@@ -14,8 +14,7 @@ import { ThreadHistoryLoader } from "@/components/thread-history-loader";
 
 type AgentInfo = { name: string; default: boolean };
 
-const AGUI_URL =
-  process.env.NEXT_PUBLIC_LANGREPL_AGUI_URL || "http://localhost:8000";
+import { AGUI_URL } from "@/lib/constants";
 
 export default function Home() {
   const [agents, setAgents] = useState<AgentInfo[]>([]);

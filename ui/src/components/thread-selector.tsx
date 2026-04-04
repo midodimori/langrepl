@@ -9,8 +9,7 @@ type ThreadInfo = {
   agent: string;
 };
 
-const AGUI_URL =
-  process.env.NEXT_PUBLIC_LANGREPL_AGUI_URL || "http://localhost:8000";
+import { AGUI_URL } from "@/lib/constants";
 
 function timeAgo(ts: string): string {
   if (!ts) return "";

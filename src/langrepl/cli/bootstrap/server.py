@@ -257,6 +257,7 @@ async def _start_agui_server(args, server_config) -> int:
         agent=args.agent,
         model=args.model,
         approval_mode=args.approval_mode,
+        frontend_url=server_config.frontend_url,
     )
 
     host = server_config.host

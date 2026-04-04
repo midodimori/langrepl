@@ -3,8 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useCopilotChatInternal } from "@copilotkit/react-core";
 
-const AGUI_URL =
-  process.env.NEXT_PUBLIC_LANGREPL_AGUI_URL || "http://localhost:8000";
+import { AGUI_URL } from "@/lib/constants";
 
 export function ThreadHistoryLoader({
   threadId,
@@ -30,7 +29,9 @@ export function ThreadHistoryLoader({
         if (cancelled || msgs.length === 0) return;
         setMessages(msgs);
       })
-      .catch(() => {});
+      .catch(() => {
+        loadedRef.current = "";
+      });
 
     return () => {
       cancelled = true;

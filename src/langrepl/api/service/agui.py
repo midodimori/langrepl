@@ -66,14 +66,17 @@ class LangreplAGUIAgent(LangGraphAgent):
 
             yield event
 
-        # Check all tasks for missed interrupts before emitting RUN_FINISHED
-        if not saw_interrupt and buffered_run_finished:
+        # Check tasks for missed interrupts before emitting RUN_FINISHED.
+        # Upstream only checks tasks[0] — emit interrupts from remaining tasks.
+        # When saw_interrupt is True, parent already handled tasks[0], so skip it.
+        if buffered_run_finished:
             thread_id = input.thread_id
             config = {"configurable": {"thread_id": thread_id}}
             try:
                 state = await self.graph.aget_state(config)
                 if state.tasks:
-                    for task in state.tasks:
+                    tasks_to_check = state.tasks[1:] if saw_interrupt else state.tasks
+                    for task in tasks_to_check:
                         for intr in task.interrupts:
                             value = intr.value
                             if hasattr(value, "model_dump"):

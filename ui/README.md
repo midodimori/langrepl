@@ -30,7 +30,7 @@ Open [http://localhost:3000](http://localhost:3000).
 Edit `.env.local` to change the AG-UI server URL:
 
 ```
-LANGREPL_AGUI_URL=http://localhost:8000/agent
+NEXT_PUBLIC_LANGREPL_AGUI_URL=http://localhost:8000
 ```
 
 ## Structure

@@ -23,6 +23,7 @@ def create_app(
     agent: str | None = None,
     model: str | None = None,
     approval_mode: str = ApprovalMode.SEMI_ACTIVE.value,
+    frontend_url: str = "http://localhost:3000",
 ) -> FastAPI:
     """Create AG-UI FastAPI app with agent endpoints."""
 
@@ -76,7 +77,7 @@ def create_app(
     agui_app = FastAPI(title="Langrepl AG-UI Server", lifespan=lifespan)
     agui_app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=[frontend_url.rstrip("/")],
         allow_methods=["*"],
         allow_headers=["*"],
     )

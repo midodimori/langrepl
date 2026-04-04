@@ -50,7 +50,7 @@ export function ToolRenderer() {
             </div>
           )}
 
-          {isComplete && result && (
+          {isComplete && result != null && (
             <details className="px-3 py-1.5">
               <summary
                 className={`cursor-pointer hover:text-zinc-300 ${

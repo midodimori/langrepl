@@ -6,8 +6,9 @@ import {
 import { LangGraphHttpAgent } from "@copilotkit/runtime/langgraph";
 import { NextRequest } from "next/server";
 
-const AGUI_BASE_URL =
-  process.env.LANGREPL_AGUI_URL || "http://localhost:8000";
+import { AGUI_URL } from "@/lib/constants";
+
+const AGUI_BASE_URL = AGUI_URL;
 const serviceAdapter = new ExperimentalEmptyAdapter();
 
 let cachedRuntime: CopilotRuntime | null = null;
@@ -26,11 +27,8 @@ async function getRuntime(): Promise<CopilotRuntime> {
         url: `${AGUI_BASE_URL}/agent/${agent.name}`,
       });
     }
-  } catch {
-    // Fallback: single default agent
-    agents["default"] = new LangGraphHttpAgent({
-      url: `${AGUI_BASE_URL}/agent/default`,
-    });
+  } catch (err) {
+    console.error("Failed to fetch agents from AG-UI server:", err);
   }
 
   cachedRuntime = new CopilotRuntime({ agents });

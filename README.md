@@ -88,8 +88,8 @@ https://github.com/user-attachments/assets/3666d330-154c-4443-902c-8640c66a7d62
   - Ubuntu/Debian: `sudo apt install bubblewrap`
   - Arch Linux: `sudo pacman -S bubblewrap`
   - Optional enhanced syscall filtering: `uv pip install pyseccomp`
-- **Node.js & npm** (optional) - Required for MCP servers that run via npx and for the AG-UI demo UI
-- **[pnpm](https://pnpm.io/installation)** (optional) - Required for the AG-UI demo UI (`ui/`)
+- **Node.js & npm** (optional) - Required for MCP servers that run via npx and for the AG-UI chat UI
+- **[pnpm](https://pnpm.io/installation)** (optional) - Required for the AG-UI chat UI (`ui/`)
   - `npm install -g pnpm` or `corepack enable`
 
 ## Installation
@@ -383,7 +383,7 @@ AG-UI server features:
 - Interrupt-based tool approval (works with `semi-active` mode)
 - Compatible with [CopilotKit](https://www.copilotkit.ai) and any AG-UI client
 
-**Demo UI** (set `protocol: agui` in config — auto-launches CopilotKit UI):
+**Chat UI** (set `protocol: agui` in config — auto-launches CopilotKit UI):
 ```bash
 langrepl -s   # Starts AG-UI server + CopilotKit UI at localhost:3000
 ```

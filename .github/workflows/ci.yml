@@ -50,3 +50,6 @@ jobs:
 
       - name: Run tests
         run: make test
+
+      - name: Verify uvx fresh install resolves
+        run: uvx --from . langrepl --help

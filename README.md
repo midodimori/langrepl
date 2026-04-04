@@ -12,7 +12,7 @@ Interactive terminal CLI for building and running LLM agents. Built with LangCha
 
 https://github.com/user-attachments/assets/f9573310-29dc-4c67-aa1b-cc6b6ab051a2
 
-### AG-UI Server Mode
+### AG-UI Mode
 
 https://github.com/user-attachments/assets/3666d330-154c-4443-902c-8640c66a7d62
 

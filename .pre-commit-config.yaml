@@ -42,3 +42,11 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
+
+      - id: tsc-ui
+        name: tsc (ui)
+        entry: bash -c 'cd ui && npx tsc --noEmit'
+        language: system
+        files: ^ui/
+        types_or: [ts, tsx]
+        pass_filenames: false

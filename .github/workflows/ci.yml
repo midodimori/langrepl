@@ -42,6 +42,14 @@ jobs:
             brew install ripgrep tree fd
           fi
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install UI dependencies
+        run: cd ui && corepack enable && pnpm install --frozen-lockfile
+
       - name: Run pre-commit validation
         run: make pre-commit
 
@@ -53,11 +61,3 @@ jobs:
 
       - name: Verify uvx fresh install resolves
         run: uvx --from . langrepl --help
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Type check UI
-        run: cd ui && corepack enable && pnpm install --frozen-lockfile && pnpm tsc --noEmit

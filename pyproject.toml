@@ -73,7 +73,7 @@ dependencies = [
     'pathspec>=0.12.1,<1.1.0',
     "fastapi>=0.128.0",
     'ag-ui-langgraph~=0.0.28',
-    'uvicorn~=0.34.0',
+    'uvicorn>=0.34,<0.45',
 ]
 
 [project.urls]

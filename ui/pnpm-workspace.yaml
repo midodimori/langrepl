@@ -1,3 +1,4 @@
-ignoredBuiltDependencies:
-  - sharp
-  - unrs-resolver
+allowBuilds:
+  '@scarf/scarf': false
+  sharp: false
+  unrs-resolver: false

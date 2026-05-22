@@ -1,5 +1,6 @@
-# Standard Moonshot API models (api.moonshot.cn or api.moonshot.ai)
-# For Kimi Code API (api.kimi.com/coding/v1), set LLM__MOONSHOT_BASE_URL accordingly
+# Moonshot API (api.moonshot.cn) — Kimi K2.5 models
+# Note: Kimi Code API (api.kimi.com/coding/v1) is restricted to official coding agents only
+# and is NOT supported. Use the standard Moonshot API endpoint instead.
 
 - version: 1.0.0
   model: kimi-k2.5
@@ -22,13 +23,3 @@
   output_cost_per_mtok: 3.0
   extended_reasoning:
     type: enabled
-
-- version: 1.0.0
-  model: kimi-for-coding
-  alias: kimi-for-coding
-  provider: moonshot
-  max_tokens: 8192
-  temperature: 0.6
-  context_window: 256000
-  input_cost_per_mtok: 1.0
-  output_cost_per_mtok: 3.0

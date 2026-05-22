@@ -183,10 +183,8 @@ LLM__ZHIPUAI_API_KEY=your_zhipuai_api_key_here
 
 # Moonshot AI (Kimi)
 LLM__MOONSHOT_API_KEY=your_moonshot_api_key_here
-# Optional: override base URL for Kimi Code API or global endpoint
-# LLM__MOONSHOT_BASE_URL=https://api.moonshot.cn/v1     # China (default)
-# LLM__MOONSHOT_BASE_URL=https://api.moonshot.ai/v1     # Global
-# LLM__MOONSHOT_BASE_URL=https://api.kimi.com/coding/v1 # Kimi Code (subscription)
+# Optional: use global endpoint instead of default China endpoint
+# LLM__MOONSHOT_BASE_URL=https://api.moonshot.ai/v1
 
 # AWS Bedrock (optional, falls back to AWS CLI credentials)
 LLM__AWS_ACCESS_KEY_ID=your_aws_access_key_id

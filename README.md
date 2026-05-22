@@ -56,7 +56,7 @@ https://github.com/user-attachments/assets/3666d330-154c-4443-902c-8640c66a7d62
   sub-agent delegation for complex multi-step tasks
 - **LangGraph Server Mode** - Run agents as API servers with LangGraph Studio integration for visual debugging
 - **AG-UI Server Mode** - Expose agents via the [AG-UI protocol](https://docs.ag-ui.com) (SSE streaming) for frontend integration with [CopilotKit](https://www.copilotkit.ai) and other AG-UI clients
-- **Multi-Provider LLM Support** - OpenAI, Anthropic, Google, AWS Bedrock, Ollama, DeepSeek, ZhipuAI, and local models (LMStudio, Ollama)
+- **Multi-Provider LLM Support** - OpenAI, Anthropic, Google, AWS Bedrock, Ollama, DeepSeek, ZhipuAI, Moonshot AI (Kimi), and local models (LMStudio, Ollama)
 - **Multimodal Image Support** - Send images to vision models via clipboard paste, drag-and-drop, or absolute paths
 - **Extensible Tool System** - File operations, web search, terminal access, grep search, and MCP server integration
 - **[Skill System](https://github.com/anthropics/skills)** - Modular knowledge packages that extend agent capabilities with specialized workflows and domain expertise
@@ -180,6 +180,13 @@ LLM__DEEPSEEK_API_KEY=your_deepseek_api_key_here
 
 # Zhipu AI
 LLM__ZHIPUAI_API_KEY=your_zhipuai_api_key_here
+
+# Moonshot AI (Kimi)
+LLM__MOONSHOT_API_KEY=your_moonshot_api_key_here
+# Optional: override base URL for Kimi Code API or global endpoint
+# LLM__MOONSHOT_BASE_URL=https://api.moonshot.cn/v1     # China (default)
+# LLM__MOONSHOT_BASE_URL=https://api.moonshot.ai/v1     # Global
+# LLM__MOONSHOT_BASE_URL=https://api.kimi.com/coding/v1 # Kimi Code (subscription)
 
 # AWS Bedrock (optional, falls back to AWS CLI credentials)
 LLM__AWS_ACCESS_KEY_ID=your_aws_access_key_id

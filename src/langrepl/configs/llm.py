@@ -26,6 +26,7 @@ class LLMProvider(str, Enum):
     BEDROCK = "bedrock"
     DEEPSEEK = "deepseek"
     ZHIPUAI = "zhipuai"
+    MOONSHOT = "moonshot"
 
 
 class RateConfig(BaseModel):

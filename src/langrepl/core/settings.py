@@ -37,7 +37,7 @@ class LLMSettings(BaseModel):
     )
     moonshot_base_url: str = Field(
         default="https://api.moonshot.cn/v1",
-        description="The Moonshot AI API base URL (supports standard Moonshot API, api.moonshot.ai, or Kimi Code api.kimi.com/coding/v1)",
+        description="The Moonshot AI API base URL (supports standard Moonshot API or api.moonshot.ai)",
     )
     lmstudio_base_url: str = Field(
         default="http://localhost:1234/v1", description="The LMStudio API base URL"

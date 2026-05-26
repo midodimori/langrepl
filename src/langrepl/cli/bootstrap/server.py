@@ -7,8 +7,10 @@ import json
 import os
 import subprocess
 import sys
+import webbrowser
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+from urllib.parse import urlparse, urlunparse
 
 import httpx
 
@@ -25,6 +27,30 @@ if TYPE_CHECKING:
     from langgraph.graph.state import CompiledStateGraph
 
 LANGREPL_ROOT = Path(__file__).resolve().parents[4]
+UNSPECIFIED_HOSTS = {"0.0.0.0", "::"}
+
+
+def _local_langgraph_url(backend_url: str) -> str:
+    """Return a browser-safe local URL for LangGraph Studio and client calls."""
+    parsed = urlparse(backend_url)
+    host = parsed.hostname or "127.0.0.1"
+    if host in UNSPECIFIED_HOSTS:
+        host = "127.0.0.1"
+
+    netloc = host
+    if parsed.port:
+        netloc = f"{netloc}:{parsed.port}"
+    return urlunparse(parsed._replace(netloc=netloc))
+
+
+def _studio_url(server_url: str) -> str:
+    return f"https://smith.langchain.com/studio/?baseUrl={server_url}"
+
+
+def _open_studio(server_url: str) -> None:
+    console.print("Opening Studio in your browser...")
+    console.print(f"URL: {_studio_url(server_url)}")
+    webbrowser.open(_studio_url(server_url))
 
 
 async def get_graph() -> CompiledStateGraph:
@@ -133,7 +159,7 @@ async def _upsert_assistant(
         # Search for existing assistant
         search_response = await client.post(
             f"{server_url}/assistants/search",
-            json={"query": {"name": name}},
+            json={"name": name, "graph_id": config["graph_id"], "limit": 1},
             timeout=10.0,
         )
 
@@ -167,6 +193,49 @@ async def _upsert_assistant(
         console.print("")
 
     return None, False
+
+
+async def _sync_graph_assistant_contexts(
+    client: httpx.AsyncClient, server_url: str, graph_id: str, context: dict
+) -> int:
+    """Update existing graph assistants missing required runtime context."""
+    try:
+        response = await client.post(
+            f"{server_url}/assistants/search",
+            json={"graph_id": graph_id, "limit": 100},
+            timeout=10.0,
+        )
+        response.raise_for_status()
+        assistants = response.json()
+    except httpx.HTTPError as e:
+        console.print_error(f"Failed to search assistants for context sync: {e}")
+        console.print("")
+        return 0
+
+    updated = 0
+    required_context_keys = ("approval_mode", "working_dir")
+    for assistant in assistants:
+        existing_context = assistant.get("context") or {}
+        if all(existing_context.get(key) is not None for key in required_context_keys):
+            continue
+
+        merged_context = {**existing_context, **context}
+        try:
+            response = await client.patch(
+                f"{server_url}/assistants/{assistant['assistant_id']}",
+                json={"context": merged_context},
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            updated += 1
+        except httpx.HTTPError:
+            logger.debug(
+                "Failed to sync assistant context for %s",
+                assistant.get("assistant_id"),
+                exc_info=True,
+            )
+
+    return updated
 
 
 async def _get_or_create_thread(
@@ -208,6 +277,7 @@ async def _send_message(
     assistant_id: str,
     message: str,
     resume: bool,
+    context: dict,
 ) -> tuple[int, str]:
     """Send message to LangGraph server.
 
@@ -229,6 +299,7 @@ async def _send_message(
         payload = {
             "assistant_id": assistant_id,
             "input": {"messages": [{"role": "user", "content": message}]},
+            "context": context,
         }
 
         response = await client.post(
@@ -242,6 +313,35 @@ async def _send_message(
         console.print_error(f"Failed to send message: {e}")
         console.print("")
         return 1, ""
+
+
+def _build_runtime_context(
+    approval_mode: str,
+    working_dir: Path,
+    llm_config: Any,
+) -> dict:
+    return {
+        "approval_mode": approval_mode,
+        "working_dir": str(working_dir),
+        "input_cost_per_mtok": llm_config.input_cost_per_mtok if llm_config else None,
+        "output_cost_per_mtok": (
+            llm_config.output_cost_per_mtok if llm_config else None
+        ),
+    }
+
+
+def _build_assistant_config(
+    assistant_name: str,
+    approval_mode: str,
+    working_dir: Path,
+    llm_config: Any,
+) -> dict:
+    """Build LangGraph assistant payload with runtime context values."""
+    return {
+        "graph_id": "agent",
+        "context": _build_runtime_context(approval_mode, working_dir, llm_config),
+        "name": assistant_name,
+    }
 
 
 async def _start_agui_server(args, server_config) -> int:
@@ -378,6 +478,15 @@ async def handle_server_command(args) -> int:
 
         console.print("Starting LangGraph development server...")
         config_path = working_dir / CONFIG_LANGGRAPH_FILE_NAME
+        server_url = _local_langgraph_url(server_config.backend_url)
+        parsed_server_url = urlparse(server_url)
+        if parsed_server_url.port is None:
+            console.print_error(
+                "LangGraph backend_url must include a port "
+                "(for example: http://127.0.0.1:8000)"
+            )
+            console.print("")
+            return 1
 
         python_bin = Path(sys.executable)
         langgraph_bin = python_bin.parent / "langgraph"
@@ -391,12 +500,20 @@ async def handle_server_command(args) -> int:
             return 1
 
         process = subprocess.Popen(
-            [str(langgraph_bin), "dev", "--config", str(config_path)],
+            [
+                str(langgraph_bin),
+                "dev",
+                "--config",
+                str(config_path),
+                "--no-browser",
+                "--host",
+                parsed_server_url.hostname or "127.0.0.1",
+                "--port",
+                str(parsed_server_url.port),
+            ],
             cwd=working_dir,
             env=env,
         )
-
-        server_url = server_config.backend_url
 
         async with httpx.AsyncClient() as client:
             # Wait for server to be ready
@@ -411,25 +528,26 @@ async def handle_server_command(args) -> int:
 
             # Create or update assistant
             assistant_name = f"{args.agent or agent_config.name} Assistant"
-            assistant_config = {
-                "graph_id": "agent",
-                "config": {
-                    "configurable": {
-                        "approval_mode": args.approval_mode,
-                        "working_dir": str(working_dir),
-                        "input_cost_per_mtok": (
-                            llm_config.input_cost_per_mtok if llm_config else None
-                        ),
-                        "output_cost_per_mtok": (
-                            llm_config.output_cost_per_mtok if llm_config else None
-                        ),
-                    }
-                },
-                "name": assistant_name,
-            }
+            runtime_context = _build_runtime_context(
+                args.approval_mode,
+                working_dir,
+                llm_config,
+            )
+            assistant_config = _build_assistant_config(
+                assistant_name,
+                args.approval_mode,
+                working_dir,
+                llm_config,
+            )
 
             assistant, was_updated = await _upsert_assistant(
                 client, server_url, assistant_name, assistant_config
+            )
+            synced_count = await _sync_graph_assistant_contexts(
+                client,
+                server_url,
+                "agent",
+                runtime_context,
             )
 
             if assistant:
@@ -438,6 +556,11 @@ async def handle_server_command(args) -> int:
                     f"{action} assistant: {assistant['name']} "
                     f"(ID: {assistant['assistant_id']}, Version: {assistant['version']})"
                 )
+            if synced_count:
+                console.print(
+                    f"Synchronized runtime context for {synced_count} assistant(s)"
+                )
+            _open_studio(server_url)
 
             # If message provided, send it
             if args.message and assistant:
@@ -447,6 +570,7 @@ async def handle_server_command(args) -> int:
                     assistant["assistant_id"],
                     args.message,
                     args.resume,
+                    runtime_context,
                 )
                 if exit_code == 0:
                     console.print(f"Message sent to thread: {sent_thread_id}")

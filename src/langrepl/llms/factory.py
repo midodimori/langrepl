@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import json
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 import httpx
 from botocore.config import Config
+from langchain.chat_models import init_chat_model
 from pydantic import SecretStr
 
 from langrepl.configs import LLMConfig, LLMProvider
@@ -15,6 +17,44 @@ if TYPE_CHECKING:
     from langchain_core.language_models.chat_models import BaseChatModel
 
 _LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
+_INIT_CHAT_MODEL_PROVIDERS = {
+    LLMProvider.OPENAI: "openai",
+    LLMProvider.ANTHROPIC: "anthropic",
+    LLMProvider.GOOGLE: "google_genai",
+    LLMProvider.OLLAMA: "ollama",
+    LLMProvider.BEDROCK: "bedrock",
+    LLMProvider.DEEPSEEK: "deepseek",
+}
+_PROTECTED_PROVIDER_OPTION_KEYS = {
+    "api_key",
+    "openai_api_key",
+    "anthropic_api_key",
+    "google_api_key",
+    "deepseek_api_key",
+    "zhipuai_api_key",
+    "aws_access_key_id",
+    "aws_secret_access_key",
+    "aws_session_token",
+    "base_url",
+    "api_base",
+    "endpoint_url",
+    "http_client",
+    "http_async_client",
+    "client",
+    "async_client",
+    "root_client",
+    "root_async_client",
+    "bedrock_client",
+    "client_kwargs",
+    "async_client_kwargs",
+    "sync_client_kwargs",
+    "openai_proxy",
+    "anthropic_proxy",
+    "proxy",
+    "proxies",
+    "config",
+    "rate_limiter",
+}
 
 
 class LLMFactory:
@@ -92,6 +132,11 @@ class LLMFactory:
 
     @staticmethod
     def _get_config_hash(config: LLMConfig) -> int:
+        provider_options = (
+            json.dumps(config.provider_options, sort_keys=True, default=repr)
+            if config.provider_options
+            else None
+        )
         return hash(
             (
                 config.provider,
@@ -100,8 +145,33 @@ class LLMFactory:
                 config.max_tokens,
                 config.streaming,
                 str(config.extended_reasoning) if config.extended_reasoning else None,
+                provider_options,
             )
         )
+
+    @staticmethod
+    def _get_provider_options(config: LLMConfig) -> dict[str, Any]:
+        options = dict(config.provider_options or {})
+
+        if config.provider == LLMProvider.OLLAMA and "response_format" in options:
+            response_format = options.pop("response_format")
+            options.setdefault("format", response_format)
+
+        protected_keys = sorted(
+            set(options).intersection(_PROTECTED_PROVIDER_OPTION_KEYS)
+        )
+        if protected_keys:
+            keys = ", ".join(protected_keys)
+            raise ValueError(
+                f"Provider options for {config.provider.value} include protected keys: {keys}"
+            )
+
+        return options
+
+    def _merge_provider_options(
+        self, config: LLMConfig, kwargs: dict[str, Any]
+    ) -> dict[str, Any]:
+        return kwargs | self._get_provider_options(config)
 
     def create(self, config: LLMConfig) -> BaseChatModel:
         config_hash = self._get_config_hash(config)
@@ -111,12 +181,106 @@ class LLMFactory:
         limiter = self._create_limiter(config)
         llm: BaseChatModel
 
-        if config.provider == LLMProvider.OPENAI:
+        if config.provider in _INIT_CHAT_MODEL_PROVIDERS:
+            kwargs: dict[str, Any] = {
+                "temperature": config.temperature,
+                "rate_limiter": limiter,
+            }
+
+            if config.provider == LLMProvider.OPENAI:
+                http_client, http_async_client = self._get_http_clients()
+                kwargs.update(
+                    {
+                        "api_key": self.llm_settings.openai_api_key,
+                        "max_completion_tokens": config.max_tokens,
+                        "streaming": config.streaming,
+                        "stream_usage": True,
+                        "http_client": http_client,
+                        "http_async_client": http_async_client,
+                    }
+                )
+
+                if config.extended_reasoning:
+                    kwargs["reasoning"] = config.extended_reasoning
+                    kwargs["output_version"] = "responses/v1"
+            elif config.provider == LLMProvider.ANTHROPIC:
+                kwargs.update(
+                    {
+                        "api_key": self.llm_settings.anthropic_api_key,
+                        "max_tokens_to_sample": config.max_tokens,
+                        "streaming": config.streaming,
+                        "timeout": None,
+                        "stop": None,
+                    }
+                )
+
+                if config.extended_reasoning:
+                    kwargs["thinking"] = config.extended_reasoning
+            elif config.provider == LLMProvider.GOOGLE:
+                kwargs.update(
+                    {
+                        "api_key": self.llm_settings.google_api_key,
+                        "max_tokens": config.max_tokens,
+                        "disable_streaming": not config.streaming,
+                    }
+                )
+
+                if config.extended_reasoning:
+                    kwargs.update(config.extended_reasoning)
+            elif config.provider == LLMProvider.OLLAMA:
+                base_url = self.llm_settings.ollama_base_url
+                kwargs.update(
+                    {
+                        "base_url": base_url,
+                        "num_predict": config.max_tokens,
+                        "disable_streaming": not config.streaming,
+                        **self._get_ollama_kwargs(base_url),
+                    }
+                )
+            elif config.provider == LLMProvider.BEDROCK:
+                kwargs.update(
+                    {
+                        "aws_access_key_id": self.llm_settings.aws_access_key_id,
+                        "aws_secret_access_key": self.llm_settings.aws_secret_access_key,
+                        "aws_session_token": self.llm_settings.aws_session_token,
+                        "max_tokens": config.max_tokens,
+                        "streaming": config.streaming,
+                        "config": self._get_bedrock_config(),
+                    }
+                )
+
+                if config.extended_reasoning:
+                    kwargs["model_kwargs"] = {"thinking": config.extended_reasoning}
+            elif config.provider == LLMProvider.DEEPSEEK:
+                http_client, http_async_client = self._get_http_clients()
+                kwargs.update(
+                    {
+                        "api_key": self.llm_settings.deepseek_api_key,
+                        "max_tokens": config.max_tokens,
+                        "streaming": config.streaming,
+                        "http_client": http_client,
+                        "http_async_client": http_async_client,
+                    }
+                )
+
+                if config.extended_reasoning:
+                    kwargs["reasoning"] = config.extended_reasoning
+
+            provider = _INIT_CHAT_MODEL_PROVIDERS[config.provider]
+            llm = init_chat_model(
+                config.model,
+                model_provider=provider,
+                **self._merge_provider_options(config, kwargs),
+            )
+        elif config.provider == LLMProvider.LMSTUDIO:
             from langchain_openai import ChatOpenAI
 
-            http_client, http_async_client = self._get_http_clients()
-            kwargs = {
-                "api_key": self.llm_settings.openai_api_key,
+            base_url = self.llm_settings.lmstudio_base_url
+            provider_options = self._get_provider_options(config)
+            http_client, http_async_client = self._get_http_clients(base_url)
+            direct_kwargs: dict[str, Any] = {
+                "base_url": base_url,
+                "api_key": SecretStr("SOME_KEY"),
                 "model": config.model,
                 "max_completion_tokens": config.max_tokens,
                 "temperature": config.temperature,
@@ -125,112 +289,11 @@ class LLMFactory:
                 "http_client": http_client,
                 "http_async_client": http_async_client,
             }
-
-            if config.extended_reasoning:
-                kwargs["reasoning"] = config.extended_reasoning
-                kwargs["output_version"] = "responses/v1"
-
-            llm = ChatOpenAI(**kwargs)
-        elif config.provider == LLMProvider.ANTHROPIC:
-            from langchain_anthropic import ChatAnthropic
-
-            kwargs = {
-                "api_key": self.llm_settings.anthropic_api_key,
-                "model_name": config.model,
-                "max_tokens_to_sample": config.max_tokens,
-                "temperature": config.temperature,
-                "streaming": config.streaming,
-                "rate_limiter": limiter,
-                "timeout": None,
-                "stop": None,
-            }
-
-            if config.extended_reasoning:
-                kwargs["thinking"] = config.extended_reasoning
-
-            llm = ChatAnthropic(**kwargs)
-        elif config.provider == LLMProvider.GOOGLE:
-            from langchain_google_genai import ChatGoogleGenerativeAI
-
-            kwargs = {
-                "api_key": self.llm_settings.google_api_key.get_secret_value(),
-                "model": config.model,
-                "max_tokens": config.max_tokens,
-                "temperature": config.temperature,
-                "disable_streaming": not config.streaming,
-                "rate_limiter": limiter,
-            }
-
-            if config.extended_reasoning:
-                kwargs.update(config.extended_reasoning)
-
-            llm = ChatGoogleGenerativeAI(**kwargs)
-        elif config.provider == LLMProvider.OLLAMA:
-            from langchain_ollama import ChatOllama
-
-            base_url = self.llm_settings.ollama_base_url
-            llm = ChatOllama(
-                base_url=base_url,
-                model=config.model,
-                num_predict=config.max_tokens,
-                temperature=config.temperature,
-                disable_streaming=not config.streaming,
-                rate_limiter=limiter,
-                **self._get_ollama_kwargs(base_url),
-            )
-        elif config.provider == LLMProvider.LMSTUDIO:
-            from langchain_openai import ChatOpenAI
-
-            base_url = self.llm_settings.lmstudio_base_url
-            http_client, http_async_client = self._get_http_clients(base_url)
-            llm = ChatOpenAI(
-                base_url=base_url,
-                model=config.model,
-                max_completion_tokens=config.max_tokens,
-                temperature=config.temperature,
-                streaming=config.streaming,
-                api_key=SecretStr("SOME_KEY"),
-                rate_limiter=limiter,
-                http_client=http_client,
-                http_async_client=http_async_client,
-            )
-        elif config.provider == LLMProvider.BEDROCK:
-            from langchain_aws import ChatBedrock
-
-            kwargs = {
-                "aws_access_key_id": self.llm_settings.aws_access_key_id,
-                "aws_secret_access_key": self.llm_settings.aws_secret_access_key,
-                "aws_session_token": self.llm_settings.aws_session_token,
-                "model": config.model,
-                "max_tokens": config.max_tokens,
-                "temperature": config.temperature,
-                "streaming": config.streaming,
-                "rate_limiter": limiter,
-                "config": self._get_bedrock_config(),
-            }
-
-            if config.extended_reasoning:
-                kwargs["model_kwargs"] = {"thinking": config.extended_reasoning}
-
-            llm = ChatBedrock(**kwargs)
-        elif config.provider == LLMProvider.DEEPSEEK:
-            from langchain_deepseek import ChatDeepSeek
-
-            http_client, http_async_client = self._get_http_clients()
-            llm = ChatDeepSeek(
-                api_key=self.llm_settings.deepseek_api_key,
-                model=config.model,
-                max_tokens=config.max_tokens,
-                temperature=config.temperature,
-                streaming=config.streaming,
-                rate_limiter=limiter,
-                http_client=http_client,
-                http_async_client=http_async_client,
-            )
+            llm = ChatOpenAI(**(direct_kwargs | provider_options))
         elif config.provider == LLMProvider.ZHIPUAI:
             from langrepl.llms.wrappers.zhipuai import ChatZhipuAI
 
-            kwargs = {
+            zhipuai_kwargs: dict[str, Any] = {
                 "api_key": self.llm_settings.zhipuai_api_key.get_secret_value(),
                 "model": config.model,
                 "max_tokens": config.max_tokens,
@@ -240,15 +303,16 @@ class LLMFactory:
             }
 
             if config.extended_reasoning:
-                kwargs["thinking"] = config.extended_reasoning
+                zhipuai_kwargs["thinking"] = config.extended_reasoning
 
-            llm = ChatZhipuAI(**kwargs)
+            llm = ChatZhipuAI(**self._merge_provider_options(config, zhipuai_kwargs))
         elif config.provider == LLMProvider.MOONSHOT:
             from langrepl.llms.wrappers.moonshot import ChatMoonshotAI
 
             base_url = self.llm_settings.moonshot_base_url
+            provider_options = self._get_provider_options(config)
             http_client, http_async_client = self._get_http_clients(base_url)
-            kwargs = {
+            moonshot_kwargs: dict[str, Any] = {
                 "base_url": base_url,
                 "api_key": self.llm_settings.moonshot_api_key,
                 "model": config.model,
@@ -261,9 +325,9 @@ class LLMFactory:
             }
 
             if config.extended_reasoning:
-                kwargs["extra_body"] = {"thinking": config.extended_reasoning}
+                moonshot_kwargs["extra_body"] = {"thinking": config.extended_reasoning}
 
-            llm = ChatMoonshotAI(**kwargs)
+            llm = ChatMoonshotAI(**(moonshot_kwargs | provider_options))
         else:
             raise ValueError(f"Unknown LLM provider: {config.provider}")
 

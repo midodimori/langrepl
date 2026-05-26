@@ -73,6 +73,10 @@ class LLMConfig(VersionedConfig):
         default=None,
         description="Extended reasoning/thinking configuration (provider-agnostic)",
     )
+    provider_options: dict[str, Any] | None = Field(
+        default=None,
+        description="Provider-specific model constructor options",
+    )
 
     @classmethod
     def get_latest_version(cls) -> str:

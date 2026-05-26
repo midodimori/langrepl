@@ -244,7 +244,7 @@ class LLMFactory:
 
             llm = ChatZhipuAI(**kwargs)
         elif config.provider == LLMProvider.MOONSHOT:
-            from langchain_openai import ChatOpenAI
+            from langrepl.llms.wrappers.moonshot import ChatMoonshotAI
 
             base_url = self.llm_settings.moonshot_base_url
             http_client, http_async_client = self._get_http_clients(base_url)
@@ -261,9 +261,9 @@ class LLMFactory:
             }
 
             if config.extended_reasoning:
-                kwargs["reasoning"] = config.extended_reasoning
+                kwargs["extra_body"] = {"thinking": config.extended_reasoning}
 
-            llm = ChatOpenAI(**kwargs)
+            llm = ChatMoonshotAI(**kwargs)
         else:
             raise ValueError(f"Unknown LLM provider: {config.provider}")
 

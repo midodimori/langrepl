@@ -1,7 +1,3 @@
-# Moonshot API (api.moonshot.cn) — Kimi K2.5 models
-# Note: Kimi Code API (api.kimi.com/coding/v1) is restricted to official coding agents only
-# and is NOT supported. Use the standard Moonshot API endpoint instead.
-
 - version: 1.0.0
   model: kimi-k2.5
   alias: kimi-k2.5
@@ -9,8 +5,10 @@
   max_tokens: 8192
   temperature: 0.6
   context_window: 256000
-  input_cost_per_mtok: 1.0
-  output_cost_per_mtok: 3.0
+  input_cost_per_mtok: 0.60
+  output_cost_per_mtok: 3.00
+  extended_reasoning:
+    type: disabled
 
 - version: 1.0.0
   model: kimi-k2.5
@@ -19,7 +17,7 @@
   max_tokens: 10000
   temperature: 1.0
   context_window: 256000
-  input_cost_per_mtok: 1.0
-  output_cost_per_mtok: 3.0
+  input_cost_per_mtok: 0.60
+  output_cost_per_mtok: 3.00
   extended_reasoning:
     type: enabled

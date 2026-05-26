@@ -16,8 +16,8 @@ from ag_ui.core import (
     ReasoningMessageStartEvent,
 )
 from ag_ui_langgraph import LangGraphAgent
-from ag_ui_langgraph.types import LangGraphEventTypes
-from pydantic import model_validator
+from ag_ui_langgraph.types import LangGraphEventTypes, SchemaKeys
+from pydantic import TypeAdapter, model_validator
 
 
 # Fix ag-ui-langgraph bug: passes role="assistant" but ag-ui-protocol requires "reasoning"
@@ -59,6 +59,62 @@ class LangreplAGUIAgent(LangGraphAgent):
         super().__init__(name=name, graph=graph, description=description, config=config)
         self.working_dir = working_dir
         self.approval_mode = approval_mode
+
+    def clone(self) -> LangreplAGUIAgent:
+        """Create a request-scoped copy while preserving Langrepl context fields."""
+        return type(self)(
+            name=self.name,
+            graph=self.graph,
+            working_dir=self.working_dir,
+            approval_mode=self.approval_mode,
+            description=self.description,
+            config=dict(self.config) if self.config else None,
+        )
+
+    def get_schema_keys(self, config: RunnableConfig) -> SchemaKeys:
+        """Return graph schema keys without instantiating required context models."""
+        try:
+            input_schema = self.graph.get_input_jsonschema(config)
+            output_schema = self.graph.get_output_jsonschema(config)
+            config_schema = self.graph.config_schema().schema()
+
+            input_keys = list(input_schema.get("properties", {}).keys())
+            output_keys = list(output_schema.get("properties", {}).keys())
+            config_keys = list(config_schema.get("properties", {}).keys())
+            context_keys = self._get_context_schema_keys()
+
+            return {
+                "input": [*input_keys, *self.constant_schema_keys],
+                "output": [*output_keys, *self.constant_schema_keys],
+                "config": config_keys,
+                "context": context_keys,
+            }
+        except (AttributeError, TypeError, KeyError, ValueError, NotImplementedError):
+            logger.debug("Failed to inspect graph schema keys", exc_info=True)
+            return {
+                "input": self.constant_schema_keys,
+                "output": self.constant_schema_keys,
+                "config": [],
+                "context": [],
+            }
+
+    def _get_context_schema_keys(self) -> list[str]:
+        context_schema = getattr(self.graph, "context_schema", None)
+        if context_schema is None:
+            return []
+
+        try:
+            if hasattr(context_schema, "model_json_schema"):
+                schema = context_schema.model_json_schema()
+            elif hasattr(context_schema, "schema"):
+                schema = context_schema.schema()
+            else:
+                schema = TypeAdapter(context_schema).json_schema()
+        except (AttributeError, TypeError, KeyError, ValueError, NotImplementedError):
+            logger.debug("Failed to inspect context schema keys", exc_info=True)
+            return []
+
+        return list(schema.get("properties", {}).keys())
 
     async def run(self, input) -> AsyncGenerator[str]:
         """Override to fix ag-ui-langgraph bugs and bridge reasoning to CopilotKit.

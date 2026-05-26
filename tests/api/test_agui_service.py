@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 
 from ag_ui.core import EventType, RawEvent, TextMessageContentEvent
 
+from langrepl.agents.context import AgentContext
 from langrepl.api.service.agui import LangreplAGUIAgent, build_agent_context
 from langrepl.configs import ApprovalMode
 
@@ -67,6 +68,52 @@ class TestLangreplAGUIAgentContextInjection:
         assert kwargs["config"]["configurable"]["thread_id"] == "t1"
         assert kwargs["config"]["configurable"]["custom_key"] == "val"
         assert "__pregel_runtime" in kwargs["config"]["configurable"]
+
+    def test_clone_preserves_langrepl_context(self, temp_dir: Path):
+        mock_graph = MagicMock()
+        agent = LangreplAGUIAgent(
+            name="test",
+            graph=mock_graph,
+            working_dir=temp_dir,
+            approval_mode=ApprovalMode.AGGRESSIVE,
+            description="desc",
+            config={"configurable": {"thread_id": "base"}},
+        )
+
+        clone = agent.clone()
+
+        assert clone is not agent
+        assert clone.name == "test"
+        assert clone.graph is mock_graph
+        assert clone.working_dir == temp_dir
+        assert clone.approval_mode == ApprovalMode.AGGRESSIVE
+        assert clone.description == "desc"
+        assert clone.config == {"configurable": {"thread_id": "base"}}
+
+    def test_schema_keys_inspects_context_without_instantiation(self, temp_dir: Path):
+        mock_graph = MagicMock()
+        mock_graph.get_input_jsonschema.return_value = {
+            "properties": {"messages": {}, "foo": {}}
+        }
+        mock_graph.get_output_jsonschema.return_value = {"properties": {"bar": {}}}
+        mock_graph.config_schema.return_value.schema.return_value = {
+            "properties": {"configurable": {}}
+        }
+        mock_graph.context_schema = AgentContext
+
+        agent = LangreplAGUIAgent(
+            name="test",
+            graph=mock_graph,
+            working_dir=temp_dir,
+        )
+
+        keys = agent.get_schema_keys(config={})
+
+        assert "foo" in keys["input"]
+        assert "bar" in keys["output"]
+        assert "configurable" in keys["config"]
+        assert "approval_mode" in keys["context"]
+        assert "working_dir" in keys["context"]
 
 
 class TestLangreplAGUIAgentDispatchEvent:

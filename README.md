@@ -21,8 +21,8 @@ https://github.com/user-attachments/assets/3666d330-154c-4443-902c-8640c66a7d62
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
-  - [From PyPI](#from-pypi)
   - [From GitHub](#from-github)
+  - [From PyPI](#from-pypi)
   - [From Source](#from-source)
   - [Environment Variables](#environment-variables)
   - [CLI Flags](#cli-flags)
@@ -97,38 +97,52 @@ https://github.com/user-attachments/assets/3666d330-154c-4443-902c-8640c66a7d62
 The `.langrepl` config directory is created in your **working directory** (or use `-w` to specify a location).
 Aliases: `langrepl` or `lg`
 
-### From PyPI
+Use `--python 3.13` with `uvx` and `uv tool install` so uv builds the isolated tool environment with a supported Python version.
+
+### From GitHub
+
+Recommended when you want the latest fixes from `main` before they are published to PyPI.
 
 **Quick try (no installation):**
+
 ```bash
-uvx langrepl
-uvx langrepl -w /path  # specify working dir
+uvx --python 3.13 --from git+https://github.com/midodimori/langrepl langrepl
+uvx --python 3.13 --from git+https://github.com/midodimori/langrepl langrepl -w /path
 ```
 
 **Install globally:**
+
 ```bash
-uv tool install langrepl
+uv tool install --python 3.13 git+https://github.com/midodimori/langrepl
 ```
 
 Then run from any directory:
+
 ```bash
 langrepl              # or: lg
 langrepl -w /path     # specify working directory
 ```
 
-> **Upgrading:** Run `uv tool upgrade langrepl` (if installed globally) or `uvx langrepl@latest` (for ephemeral runs) to get the latest version.
+> **Upgrading:** Re-run `uv tool install --force --python 3.13 git+https://github.com/midodimori/langrepl`.
 
-### From GitHub
+### From PyPI
+
+Use this for the latest published release.
 
 **Quick try (no installation):**
+
 ```bash
-uvx --from git+https://github.com/midodimori/langrepl langrepl
+uvx --python 3.13 langrepl@latest
+uvx --python 3.13 langrepl@latest -w /path  # specify working dir
 ```
 
 **Install globally:**
+
 ```bash
-uv tool install git+https://github.com/midodimori/langrepl
+uv tool install --python 3.13 langrepl
 ```
+
+> **Upgrading:** Run `uv tool upgrade --python 3.13 langrepl` if installed globally, or use `uvx --python 3.13 langrepl@latest` for ephemeral runs.
 
 ### From Source
 
@@ -140,8 +154,9 @@ uv run langrepl     # run locally without global install
 ```
 
 To install globally from source:
+
 ```bash
-uv tool install --editable .
+uv tool install --python 3.13 --editable .
 ```
 
 Then run from any directory (same as above).

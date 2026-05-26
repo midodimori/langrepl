@@ -96,6 +96,7 @@ class TestLLMFactoryCreate:
             (LLMProvider.OPENAI, "openai_api_key", "ChatOpenAI"),
             (LLMProvider.ANTHROPIC, "anthropic_api_key", "ChatAnthropic"),
             (LLMProvider.GOOGLE, "google_api_key", "ChatGoogleGenerativeAI"),
+            (LLMProvider.MOONSHOT, "moonshot_api_key", "ChatMoonshotAI"),
         ],
     )
     def test_create_model(

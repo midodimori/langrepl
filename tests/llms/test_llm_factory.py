@@ -97,6 +97,9 @@ class TestLLMFactoryCreate:
             (LLMProvider.ANTHROPIC, "anthropic_api_key", "ChatAnthropic"),
             (LLMProvider.GOOGLE, "google_api_key", "ChatGoogleGenerativeAI"),
             (LLMProvider.MOONSHOT, "moonshot_api_key", "ChatMoonshotAI"),
+            (LLMProvider.OLLAMA, None, "ChatOllama"),
+            (LLMProvider.DEEPSEEK, "deepseek_api_key", "ChatDeepSeek"),
+            (LLMProvider.LMSTUDIO, None, "ChatOpenAI"),
         ],
     )
     def test_create_model(
@@ -107,14 +110,108 @@ class TestLLMFactoryCreate:
         api_key_field,
         expected_class,
     ):
-        settings = mock_llm_settings.model_copy(
-            update={api_key_field: SecretStr("test-key")}
-        )
+        update = {api_key_field: SecretStr("test-key")} if api_key_field else {}
+        settings = mock_llm_settings.model_copy(update=update)
         config = mock_llm_config.model_copy(update={"provider": provider})
 
         model = LLMFactory(settings).create(config)
 
         assert model.__class__.__name__ == expected_class
+
+    def test_create_openai_sets_stream_usage(self, mock_llm_settings, mock_llm_config):
+        config = mock_llm_config.model_copy(
+            update={"provider": LLMProvider.OPENAI, "model": "gpt-4o-mini"}
+        )
+
+        model = LLMFactory(mock_llm_settings).create(config)
+
+        assert model.__class__.__name__ == "ChatOpenAI"
+        assert getattr(model, "stream_usage") is True
+
+    def test_custom_openai_compatible_provider_does_not_set_stream_usage(
+        self, mock_llm_settings, mock_llm_config
+    ):
+        config = mock_llm_config.model_copy(
+            update={"provider": LLMProvider.LMSTUDIO, "model": "local-model"}
+        )
+
+        model = LLMFactory(mock_llm_settings).create(config)
+
+        assert model.__class__.__name__ == "ChatOpenAI"
+        assert getattr(model, "stream_usage") is None
+
+    def test_provider_options_are_passed_to_google(
+        self, mock_llm_settings, mock_llm_config
+    ):
+        config = mock_llm_config.model_copy(
+            update={
+                "provider": LLMProvider.GOOGLE,
+                "model": "gemini-2.5-flash",
+                "provider_options": {"api_version": "v1"},
+            }
+        )
+
+        model = LLMFactory(mock_llm_settings).create(config)
+
+        assert model.__class__.__name__ == "ChatGoogleGenerativeAI"
+        assert getattr(model, "api_version") == "v1"
+
+    def test_provider_options_are_passed_to_ollama(
+        self, mock_llm_settings, mock_llm_config
+    ):
+        config = mock_llm_config.model_copy(
+            update={
+                "provider": LLMProvider.OLLAMA,
+                "model": "llama3.2",
+                "provider_options": {"response_format": "json", "logprobs": True},
+            }
+        )
+
+        model = LLMFactory(mock_llm_settings).create(config)
+
+        assert model.__class__.__name__ == "ChatOllama"
+        assert getattr(model, "format") == "json"
+        assert getattr(model, "logprobs") is True
+
+    def test_protected_provider_options_raise_error(
+        self, mock_llm_settings, mock_llm_config
+    ):
+        config = mock_llm_config.model_copy(
+            update={
+                "provider": LLMProvider.OPENAI,
+                "model": "gpt-4o-mini",
+                "provider_options": {"api_key": "bad"},
+            }
+        )
+
+        with pytest.raises(ValueError, match="protected keys: api_key"):
+            LLMFactory(mock_llm_settings).create(config)
+
+    def test_provider_options_are_part_of_cache_identity(
+        self, mock_llm_settings, mock_llm_config
+    ):
+        factory = LLMFactory(mock_llm_settings)
+        config_v1 = mock_llm_config.model_copy(
+            update={
+                "provider": LLMProvider.GOOGLE,
+                "model": "gemini-2.5-flash",
+                "provider_options": {"api_version": "v1"},
+            }
+        )
+        config_beta = mock_llm_config.model_copy(
+            update={
+                "provider": LLMProvider.GOOGLE,
+                "model": "gemini-2.5-flash",
+                "provider_options": {"api_version": "v1beta"},
+            }
+        )
+
+        model_v1 = factory.create(config_v1)
+        model_v1_again = factory.create(config_v1)
+        model_beta = factory.create(config_beta)
+
+        assert model_v1 is model_v1_again
+        assert model_v1 is not model_beta
 
     def test_unknown_provider_raises_error(self, mock_llm_settings, mock_llm_config):
         config = mock_llm_config.model_copy(update={"provider": LLMProvider.OPENAI})

@@ -2,6 +2,36 @@
 
 <!-- version list -->
 
+## v1.12.1 (2026-05-26)
+
+### Bug Fixes
+
+- Pass LangGraph server runtime context (#214)
+  ([#214](https://github.com/midodimori/langrepl/pull/214),
+  [`264afde`](https://github.com/midodimori/langrepl/commit/264afde714c2ca681e4ece1c03f99f0374aae1bd))
+
+- Support older langgraph checkpoint serializer
+  ([`bc65dcc`](https://github.com/midodimori/langrepl/commit/bc65dcc33e363824aecdf474f71aa78277a5317d))
+
+### Chores
+
+- **deps**: Bump mypy from 1.20.0 to 2.1.0 (#205)
+  ([#205](https://github.com/midodimori/langrepl/pull/205),
+  [`192f283`](https://github.com/midodimori/langrepl/commit/192f2832b942ba61664016de447bb2adabd7cb6d))
+
+- **deps**: Bump the production-deps group with 4 updates (#204)
+  ([#204](https://github.com/midodimori/langrepl/pull/204),
+  [`e867605`](https://github.com/midodimori/langrepl/commit/e867605f243a698823f4450998eb47ff159a5fe7))
+
+- **deps**: Bump types-pyyaml from 6.0.12.20260408 to 6.0.12.20260518 (#206)
+  ([#206](https://github.com/midodimori/langrepl/pull/206),
+  [`aa2cace`](https://github.com/midodimori/langrepl/commit/aa2caceb49ab551d49eeaf142f283c5eca2fad36))
+
+- **deps**: Update boto3-stubs[bedrock-runtime] requirement (#209)
+  ([#209](https://github.com/midodimori/langrepl/pull/209),
+  [`8e6485a`](https://github.com/midodimori/langrepl/commit/8e6485a4625c3de6c67f3c7d69b8172cc1c2f986))
+
+
 ## v1.12.0 (2026-05-26)
 
 ### Bug Fixes

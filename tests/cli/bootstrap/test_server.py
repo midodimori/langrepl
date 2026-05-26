@@ -7,7 +7,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from langrepl.cli.bootstrap.server import (
+    _local_langgraph_url,
+    _send_message,
     _set_assistant_version,
+    _sync_graph_assistant_contexts,
     _upsert_assistant,
     _wait_for_server_ready,
     generate_langgraph_json,
@@ -65,6 +68,7 @@ def patch_server_dependencies(
             return_value=mock_subprocess,
         ) as mock_popen,
         patch("langrepl.cli.bootstrap.server.httpx.AsyncClient") as mock_client_cls,
+        patch("langrepl.cli.bootstrap.server._open_studio") as mock_open_studio,
     ):
         mock_client_cls.return_value.__aenter__ = AsyncMock(
             return_value=mock_http_client
@@ -79,6 +83,7 @@ def patch_server_dependencies(
             "client_cls": mock_client_cls,
             "client": mock_http_client,
             "process": mock_subprocess,
+            "open_studio": mock_open_studio,
         }
 
 
@@ -144,6 +149,24 @@ class TestGenerateLanggraphJson:
 
         assert config_dir.exists()
         assert config_dir.is_dir()
+
+
+class TestLocalLangGraphUrl:
+    """Tests for local LangGraph URL resolution."""
+
+    def test_rewrites_unspecified_ipv4_host(self):
+        assert _local_langgraph_url("http://0.0.0.0:8000") == ("http://127.0.0.1:8000")
+
+    def test_preserves_missing_port(self):
+        assert _local_langgraph_url("http://0.0.0.0") == "http://127.0.0.1"
+
+    def test_preserves_loopback_host(self):
+        assert _local_langgraph_url("http://127.0.0.1:2024") == (
+            "http://127.0.0.1:2024"
+        )
+
+    def test_preserves_explicit_bind_host(self):
+        assert _local_langgraph_url("http://localhost:8000") == "http://localhost:8000"
 
 
 class TestGetGraph:
@@ -277,12 +300,48 @@ class TestUpsertAssistant:
         mock_client.post = mock_post
 
         assistant, was_updated = await _upsert_assistant(
-            mock_client, "http://localhost:8000", "Test Assistant", {}
+            mock_client,
+            "http://localhost:8000",
+            "Test Assistant",
+            {"graph_id": "agent"},
         )
 
         assert assistant is not None
         assert was_updated is False
         assert assistant["assistant_id"] == "new-id"
+
+    @pytest.mark.asyncio
+    @patch(
+        "langrepl.cli.bootstrap.server._set_assistant_version", new_callable=AsyncMock
+    )
+    async def test_upsert_assistant_searches_by_name_and_graph(self, _mock_set_version):
+        """Test that assistant search uses the current API payload shape."""
+        mock_client = AsyncMock()
+        mock_search_response = MagicMock()
+        mock_search_response.status_code = 200
+        mock_search_response.json = MagicMock(return_value=[])
+        mock_create_response = MagicMock()
+        mock_create_response.status_code = 200
+        mock_create_response.json = MagicMock(
+            return_value={"assistant_id": "new-id", "version": 1}
+        )
+        mock_client.post = AsyncMock(
+            side_effect=[mock_search_response, mock_create_response]
+        )
+
+        await _upsert_assistant(
+            mock_client,
+            "http://localhost:8000",
+            "Test Assistant",
+            {"graph_id": "agent"},
+        )
+
+        search_call = mock_client.post.call_args_list[0]
+        assert search_call.kwargs["json"] == {
+            "name": "Test Assistant",
+            "graph_id": "agent",
+            "limit": 1,
+        }
 
     @pytest.mark.asyncio
     async def test_upsert_assistant_updates_existing_assistant(self):
@@ -305,7 +364,10 @@ class TestUpsertAssistant:
         mock_client.patch = AsyncMock(return_value=mock_update_response)
 
         assistant, was_updated = await _upsert_assistant(
-            mock_client, "http://localhost:8000", "Test Assistant", {}
+            mock_client,
+            "http://localhost:8000",
+            "Test Assistant",
+            {"graph_id": "agent"},
         )
 
         assert assistant is not None
@@ -325,15 +387,115 @@ class TestUpsertAssistant:
         mock_client.post = mock_post
 
         assistant, was_updated = await _upsert_assistant(
-            mock_client, "http://localhost:8000", "Test Assistant", {}
+            mock_client,
+            "http://localhost:8000",
+            "Test Assistant",
+            {"graph_id": "agent"},
         )
 
         assert assistant is None
         assert was_updated is False
 
 
+class TestSyncGraphAssistantContexts:
+    """Tests for _sync_graph_assistant_contexts."""
+
+    @pytest.mark.asyncio
+    async def test_syncs_assistants_missing_context(self):
+        mock_client = AsyncMock()
+        search_response = MagicMock()
+        search_response.raise_for_status = MagicMock()
+        search_response.json.return_value = [
+            {
+                "assistant_id": "default-id",
+                "context": {},
+            },
+            {
+                "assistant_id": "configured-id",
+                "context": {
+                    "approval_mode": "semi-active",
+                    "working_dir": "/tmp/project",
+                },
+            },
+        ]
+        patch_response = MagicMock()
+        patch_response.raise_for_status = MagicMock()
+        mock_client.post = AsyncMock(return_value=search_response)
+        mock_client.patch = AsyncMock(return_value=patch_response)
+        context = {"approval_mode": "semi-active", "working_dir": "/tmp/project"}
+
+        count = await _sync_graph_assistant_contexts(
+            mock_client, "http://localhost:8000", "agent", context
+        )
+
+        assert count == 1
+        mock_client.post.assert_awaited_once_with(
+            "http://localhost:8000/assistants/search",
+            json={"graph_id": "agent", "limit": 100},
+            timeout=10.0,
+        )
+        mock_client.patch.assert_awaited_once_with(
+            "http://localhost:8000/assistants/default-id",
+            json={"context": context},
+            timeout=10.0,
+        )
+
+    @pytest.mark.asyncio
+    async def test_sync_merges_existing_context(self):
+        mock_client = AsyncMock()
+        search_response = MagicMock()
+        search_response.raise_for_status = MagicMock()
+        search_response.json.return_value = [
+            {
+                "assistant_id": "default-id",
+                "context": {"custom": "value"},
+            },
+        ]
+        patch_response = MagicMock()
+        patch_response.raise_for_status = MagicMock()
+        mock_client.post = AsyncMock(return_value=search_response)
+        mock_client.patch = AsyncMock(return_value=patch_response)
+        context = {"approval_mode": "semi-active", "working_dir": "/tmp/project"}
+
+        count = await _sync_graph_assistant_contexts(
+            mock_client, "http://localhost:8000", "agent", context
+        )
+
+        assert count == 1
+        mock_client.patch.assert_awaited_once_with(
+            "http://localhost:8000/assistants/default-id",
+            json={"context": {"custom": "value", **context}},
+            timeout=10.0,
+        )
+
+
 class TestHandleServerCommand:
     """Tests for handle_server_command function."""
+
+    @pytest.mark.asyncio
+    async def test_send_message_passes_runtime_context(self):
+        """Test one-shot server sends include context for context_schema."""
+        mock_client = AsyncMock()
+        thread_response = MagicMock()
+        thread_response.json.return_value = {"thread_id": "thread-1"}
+        run_response = MagicMock()
+        run_response.raise_for_status = MagicMock()
+        mock_client.post = AsyncMock(side_effect=[thread_response, run_response])
+        context = {"approval_mode": "semi-active", "working_dir": "/tmp/project"}
+
+        exit_code, thread_id = await _send_message(
+            mock_client,
+            "http://localhost:8000",
+            "assistant-1",
+            "hello",
+            False,
+            context,
+        )
+
+        assert exit_code == 0
+        assert thread_id == "thread-1"
+        run_call = mock_client.post.call_args_list[1]
+        assert run_call.kwargs["json"]["context"] == context
 
     @pytest.mark.asyncio
     async def test_handle_server_command_generates_config(
@@ -352,12 +514,33 @@ class TestHandleServerCommand:
         self, mock_app_args, patch_server_dependencies
     ):
         """Test that handle_server_command starts langgraph dev subprocess."""
+        registry = patch_server_dependencies["initializer"].get_registry.return_value
+        registry.load_server.return_value.backend_url = "http://0.0.0.0:8000"
+
         await handle_server_command(mock_app_args)
 
         patch_server_dependencies["popen"].assert_called_once()
         call_args = patch_server_dependencies["popen"].call_args[0][0]
         assert any("langgraph" in str(arg) for arg in call_args)
         assert "dev" in call_args
+        assert "--no-browser" in call_args
+        assert "--host" in call_args
+        assert "--port" in call_args
+        assert call_args[call_args.index("--host") + 1] == "127.0.0.1"
+        assert call_args[call_args.index("--port") + 1] == "8000"
+
+    @pytest.mark.asyncio
+    async def test_handle_server_command_requires_backend_port(
+        self, mock_app_args, patch_server_dependencies
+    ):
+        """Test that server mode fails fast when backend_url has no port."""
+        registry = patch_server_dependencies["initializer"].get_registry.return_value
+        registry.load_server.return_value.backend_url = "http://0.0.0.0"
+
+        result = await handle_server_command(mock_app_args)
+
+        assert result == 1
+        patch_server_dependencies["popen"].assert_not_called()
 
     @pytest.mark.asyncio
     async def test_handle_server_command_sets_env_variables(

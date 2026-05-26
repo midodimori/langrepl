@@ -6,10 +6,12 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
+import aiosqlite
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 from langrepl.checkpointer.base import BaseCheckpointer, HumanMessageEntry
+from langrepl.checkpointer.serde import create_checkpoint_serializer
 from langrepl.core.logging import get_logger
 
 if TYPE_CHECKING:
@@ -363,9 +365,11 @@ class AsyncSqliteCheckpointer:
         )
 
         try:
-            async with IndexedAsyncSqliteSaver.from_conn_string(
-                connection_string
-            ) as saver:
+            async with aiosqlite.connect(connection_string) as conn:
+                saver = IndexedAsyncSqliteSaver(
+                    conn,
+                    serde=create_checkpoint_serializer(),
+                )
                 await saver.setup()
                 logger.debug("Indexed SQLite checkpointer created successfully")
                 yield saver  # type: ignore[misc]

@@ -2,6 +2,145 @@
 
 <!-- version list -->
 
+## v1.12.0 (2026-05-26)
+
+### Bug Fixes
+
+- Pin pnpm build policy for ci
+  ([`a042d3d`](https://github.com/midodimori/langrepl/commit/a042d3d1126afecb4ba9b7d9f013e9c2932c55f0))
+
+- Use local tsc binary in pre-commit, install ui deps before pre-commit in CI
+  ([`902418d`](https://github.com/midodimori/langrepl/commit/902418daac5a1f5478268c988111bf592cf0c2ec))
+
+### Chores
+
+- **deps**: Bump @hono/node-server from 1.19.12 to 1.19.13 in /ui (#160)
+  ([#160](https://github.com/midodimori/langrepl/pull/160),
+  [`066210f`](https://github.com/midodimori/langrepl/commit/066210fa814ce14026f3fd4f6822aab17a2141d0))
+
+- **deps**: Bump actions/setup-node in the github-actions group (#154)
+  ([#154](https://github.com/midodimori/langrepl/pull/154),
+  [`e55d6c6`](https://github.com/midodimori/langrepl/commit/e55d6c6b2faa24a9566fd4cf6416513888224c43))
+
+- **deps**: Bump cryptography from 46.0.6 to 46.0.7 (#161)
+  ([#161](https://github.com/midodimori/langrepl/pull/161),
+  [`91980ba`](https://github.com/midodimori/langrepl/commit/91980ba41b4701cd400dddd193c828fb663662b9))
+
+- **deps**: Bump gitpython from 3.1.45 to 3.1.50 (#190)
+  ([#190](https://github.com/midodimori/langrepl/pull/190),
+  [`53a7441`](https://github.com/midodimori/langrepl/commit/53a7441a9de5dc335e3369633afd69d308b474c0))
+
+- **deps**: Bump hono from 4.12.9 to 4.12.12 in /ui (#159)
+  ([#159](https://github.com/midodimori/langrepl/pull/159),
+  [`dd0bff4`](https://github.com/midodimori/langrepl/commit/dd0bff4f7cf151d9f98792586fc6638f3e8c7972))
+
+- **deps**: Bump idna from 3.11 to 3.15 (#202)
+  ([#202](https://github.com/midodimori/langrepl/pull/202),
+  [`b68bd61`](https://github.com/midodimori/langrepl/commit/b68bd61a6e9af2cab862d9fbb19570b0e82a826b))
+
+- **deps**: Bump langchain-core from 1.2.23 to 1.2.28 (#162)
+  ([#162](https://github.com/midodimori/langrepl/pull/162),
+  [`7187b52`](https://github.com/midodimori/langrepl/commit/7187b52db9c6ed57161de42867c492b314870f39))
+
+- **deps**: Bump langchain-core from 1.2.31 to 1.3.3 (#188)
+  ([#188](https://github.com/midodimori/langrepl/pull/188),
+  [`44537d3`](https://github.com/midodimori/langrepl/commit/44537d353e19f6ef10e6262cc070cd2d6a46ff15))
+
+- **deps**: Bump langchain-openai from 1.1.12 to 1.1.14 (#173)
+  ([#173](https://github.com/midodimori/langrepl/pull/173),
+  [`59f1914`](https://github.com/midodimori/langrepl/commit/59f1914956902c572e4ea2b246a9c3c6c5fa9681))
+
+- **deps**: Bump langchain-text-splitters from 1.1.0 to 1.1.2 (#174)
+  ([#174](https://github.com/midodimori/langrepl/pull/174),
+  [`a055a45`](https://github.com/midodimori/langrepl/commit/a055a456bb7723209419768cc506d6f5eea92f35))
+
+- **deps**: Bump langsmith from 0.3.87 to 0.5.15 in /ui (#200)
+  ([#200](https://github.com/midodimori/langrepl/pull/200),
+  [`9ea507b`](https://github.com/midodimori/langrepl/commit/9ea507b4768b648ae2631cafa8cbeaf67339be41))
+
+- **deps**: Bump lxml from 6.0.2 to 6.1.0 (#178)
+  ([#178](https://github.com/midodimori/langrepl/pull/178),
+  [`11bd3aa`](https://github.com/midodimori/langrepl/commit/11bd3aa1f54af8845a5b3f19ce886eae703b89f4))
+
+- **deps**: Bump mypy from 1.19.1 to 1.20.0 in the dev-deps group (#157)
+  ([#157](https://github.com/midodimori/langrepl/pull/157),
+  [`e3cc979`](https://github.com/midodimori/langrepl/commit/e3cc97922a1c0a746e352de3dd95f004960de6b4))
+
+- **deps**: Bump next from 16.2.1 to 16.2.3 in /ui (#164)
+  ([#164](https://github.com/midodimori/langrepl/pull/164),
+  [`93a1dcd`](https://github.com/midodimori/langrepl/commit/93a1dcd33d3710cd29d18ef6257b16fafd5ffbb7))
+
+- **deps**: Bump next from 16.2.3 to 16.2.6 in /ui (#196)
+  ([#196](https://github.com/midodimori/langrepl/pull/196),
+  [`672c43e`](https://github.com/midodimori/langrepl/commit/672c43e5ea132a01ef5fed1397d90694a3514ccb))
+
+- **deps**: Bump pytest from 9.0.2 to 9.0.3 (#170)
+  ([#170](https://github.com/midodimori/langrepl/pull/170),
+  [`6c1e9ad`](https://github.com/midodimori/langrepl/commit/6c1e9ade1c4f52113f5c869f02e6c44ae32d8f51))
+
+- **deps**: Bump python-multipart from 0.0.24 to 0.0.26 (#171)
+  ([#171](https://github.com/midodimori/langrepl/pull/171),
+  [`98ff591`](https://github.com/midodimori/langrepl/commit/98ff5912311f44f2188feaeaf04014728dd56125))
+
+- **deps**: Bump python-multipart from 0.0.26 to 0.0.27 (#186)
+  ([#186](https://github.com/midodimori/langrepl/pull/186),
+  [`23ffd3c`](https://github.com/midodimori/langrepl/commit/23ffd3c3f618e352c1f09cf1fc7b08682d20ce8f))
+
+- **deps**: Bump the dev-deps group across 1 directory with 2 updates (#198)
+  ([#198](https://github.com/midodimori/langrepl/pull/198),
+  [`14e6f10`](https://github.com/midodimori/langrepl/commit/14e6f10bb27bc670dab148e7b3373df85df82929))
+
+- **deps**: Bump the langchain group across 1 directory with 6 updates (#201)
+  ([#201](https://github.com/midodimori/langrepl/pull/201),
+  [`29b677c`](https://github.com/midodimori/langrepl/commit/29b677cf4b2141d46f17494224e9486af1e87e67))
+
+- **deps**: Bump the production-deps group across 1 directory with 10 updates (#193)
+  ([#193](https://github.com/midodimori/langrepl/pull/193),
+  [`257886f`](https://github.com/midodimori/langrepl/commit/257886fcdd530996c86d9071fbacf46af3246b58))
+
+- **deps**: Bump the production-deps group with 3 updates (#156)
+  ([#156](https://github.com/midodimori/langrepl/pull/156),
+  [`eb46c20`](https://github.com/midodimori/langrepl/commit/eb46c20e2aaeb65ae7dd178afd377af94169b5c3))
+
+- **deps**: Bump types-aiofiles from 25.1.0.20251011 to 25.1.0.20260409 (#169)
+  ([#169](https://github.com/midodimori/langrepl/pull/169),
+  [`259bcd8`](https://github.com/midodimori/langrepl/commit/259bcd81d282e3f99a14d6be83dcd46d2ff062a3))
+
+- **deps**: Bump types-aiofiles from 25.1.0.20260409 to 25.1.0.20260518 (#207)
+  ([#207](https://github.com/midodimori/langrepl/pull/207),
+  [`16b85b8`](https://github.com/midodimori/langrepl/commit/16b85b8bc365a80cfaa05acf6695d3ef66e3aaba))
+
+- **deps**: Bump types-jsonschema (#158) ([#158](https://github.com/midodimori/langrepl/pull/158),
+  [`a7b3e51`](https://github.com/midodimori/langrepl/commit/a7b3e51b156ec15ce457f16f2f7ddc8bb47f0d46))
+
+- **deps**: Bump types-jsonschema (#167) ([#167](https://github.com/midodimori/langrepl/pull/167),
+  [`72781ab`](https://github.com/midodimori/langrepl/commit/72781abfc7d60a6514312d9501ed580c8d0d5f5f))
+
+- **deps**: Bump types-jsonschema (#208) ([#208](https://github.com/midodimori/langrepl/pull/208),
+  [`e80a513`](https://github.com/midodimori/langrepl/commit/e80a513a39a25ec9cfc8b75a0213f96762f7ae65))
+
+- **deps**: Bump types-pyyaml from 6.0.12.20250915 to 6.0.12.20260408 (#168)
+  ([#168](https://github.com/midodimori/langrepl/pull/168),
+  [`ca69e3f`](https://github.com/midodimori/langrepl/commit/ca69e3f1882677a27c0b44d25c6e85726fdedd87))
+
+- **deps**: Bump urllib3 from 2.6.3 to 2.7.0 (#194)
+  ([#194](https://github.com/midodimori/langrepl/pull/194),
+  [`61809bc`](https://github.com/midodimori/langrepl/commit/61809bc23398bfcb7cdcb9df3a3b135ae6facaa6))
+
+### Continuous Integration
+
+- Add TypeScript type check for ui/ in pre-commit and CI
+  ([`de7d382`](https://github.com/midodimori/langrepl/commit/de7d38256c855dabcf15d69b8192148b44ee5816))
+
+### Features
+
+- Add Moonshot AI (Kimi) support (#210) ([#210](https://github.com/midodimori/langrepl/pull/210),
+  [`a310ac0`](https://github.com/midodimori/langrepl/commit/a310ac08338f24a0b59a448db586285901eb7619))
+
+- Update library integrations (#213) ([#213](https://github.com/midodimori/langrepl/pull/213),
+  [`19b4fa8`](https://github.com/midodimori/langrepl/commit/19b4fa88ec6eeab6a52e2390f8b4c2c8e2d1e430))
+
+
 ## v1.11.2 (2026-04-04)
 
 ### Bug Fixes

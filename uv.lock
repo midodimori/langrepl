@@ -7,19 +7,29 @@ resolution-markers = [
 ]
 
 [[package]]
+name = "ag-ui-a2ui-toolkit"
+version = "0.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f6/6b/ed6e0beb464e1bb86b5ee0f9918fd5e46839e33c238a93700faac728f607/ag_ui_a2ui_toolkit-0.0.1.tar.gz", hash = "sha256:82cf57e363a3967b4564369e9e329900b65899aac685f7cea1dac1263f5b898d", size = 7304, upload-time = "2026-05-29T16:37:35.207Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1a/6f/f0f25fd95ecea0bcede67396f4ab1182ebd1aa0491d9b8262af60c51e4b4/ag_ui_a2ui_toolkit-0.0.1-py3-none-any.whl", hash = "sha256:5d79376d39ef8f3e33b709364f67ef30f2dace5bedd83be5fdcdd9f019cc0472", size = 8360, upload-time = "2026-05-29T16:37:33.911Z" },
+]
+
+[[package]]
 name = "ag-ui-langgraph"
-version = "0.0.36"
+version = "0.0.37"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "ag-ui-a2ui-toolkit" },
     { name = "ag-ui-protocol" },
     { name = "langchain" },
     { name = "langchain-core" },
     { name = "langgraph" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b7/a7/e989dcd18357ff16d20ec9656b8a58dceff34056a38b81ff910422de88bb/ag_ui_langgraph-0.0.36.tar.gz", hash = "sha256:5419e7d9ad23beefbae7c06001a1380d72468886df8878a63379385f85c678fd", size = 302457, upload-time = "2026-05-22T22:06:50.718Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ac/49/292f832908860760dd97fe4c0e0471db5e78cdcbeae4cf58ea1a751b8548/ag_ui_langgraph-0.0.37.tar.gz", hash = "sha256:d5708caa69ac2da18d5aa255ae6109238a8bcba4a9720f906ac3c9222aacb5ce", size = 310133, upload-time = "2026-05-29T16:27:16.762Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cb/46/35191021e38c6a08bd0746d6c8990c8a82c3d5b7e05ba21e71345df9871f/ag_ui_langgraph-0.0.36-py3-none-any.whl", hash = "sha256:ed0b39e0b54e6dc60dec1f64e048a2fef593728dde490e69ebbbbb6e6ae2ca0b", size = 28859, upload-time = "2026-05-22T22:06:49.652Z" },
+    { url = "https://files.pythonhosted.org/packages/48/88/1dcb82e4a1aeaa2a935dd09392d3b42d8a3bba751f41649e5180f45d7d54/ag_ui_langgraph-0.0.37-py3-none-any.whl", hash = "sha256:6cd27d350dcd2dbf624f129873a41fa7fd96238cc014b515f0c4f0618d31dcca", size = 32051, upload-time = "2026-05-29T16:27:17.982Z" },
 ]
 
 [[package]]
@@ -2708,11 +2718,11 @@ wheels = [
 
 [[package]]
 name = "python-multipart"
-version = "0.0.29"
+version = "0.0.30"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/4e/fe/70bd71a6738b09a0bdf6480ca6436b167469ca4578b2a0efbe390b4b0e70/python_multipart-0.0.29.tar.gz", hash = "sha256:643e93849196645e2dbdd81a0f8829a23123ad7f797a84a364c6fb3563f18904", size = 45678, upload-time = "2026-05-17T17:29:47.654Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4b/82/c8cd43a6e0719bf5a3b034f6726dd701f75829c08944c83d4b95d02ed0e8/python_multipart-0.0.30.tar.gz", hash = "sha256:0edfe0475c1f46ddd3ff7785a626f6118af32bdcf359bb21260367313bb32118", size = 46316, upload-time = "2026-05-31T19:24:55.198Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/cb/769cfc37177252872a45a71f3fbdde9d51b471a3f3c14bfe95dde3407386/python_multipart-0.0.29-py3-none-any.whl", hash = "sha256:2ddcc971cef266225f54f552d8fa10bcfbb1f14446caec199060daac59ff2d69", size = 29640, upload-time = "2026-05-17T17:29:45.69Z" },
+    { url = "https://files.pythonhosted.org/packages/1c/fd/0318007beb234790993d3ec5afd051d1dbceb733e81e3afe2b981ece3f37/python_multipart-0.0.30-py3-none-any.whl", hash = "sha256:830964def8c90607ac5daa00514e3987815865713ade8d20febc9177ac0c3c5b", size = 29730, upload-time = "2026-05-31T19:24:53.814Z" },
 ]
 
 [[package]]

@@ -63,8 +63,8 @@ dependencies = [
     'types-pyyaml~=6.0.12.20250915',
     'types-aiofiles~=25.1.0.20251011',
     'pygments-cache~=0.1.3',
-    'trafilatura~=2.0.0',
-    'json-repair>=0.54.3,<0.60.0',
+    'trafilatura>=2.0,<2.2',
+    'json-repair>=0.54.3,<0.61.0',
     'jsonschema>=4.25.1,<4.27.0',
     'types-jsonschema>=4.25.1.20251009,<4.26.1.0',
     'markdown-it-py>=4.0,<4.3',
@@ -73,7 +73,7 @@ dependencies = [
     'pathspec>=0.12.1,<1.2.0',
     "fastapi>=0.128.0",
     'ag-ui-langgraph~=0.0.28',
-    'uvicorn>=0.34,<0.49',
+    'uvicorn>=0.34,<0.50',
 ]
 
 [project.urls]

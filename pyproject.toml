@@ -128,11 +128,11 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
-    'autoflake~=2.3.1',
+    'autoflake>=2.3.1,<2.5.0',
     'black>=25.12,<26.6',
     'boto3-stubs[bedrock-runtime]>=1.42.19,<1.44.0',
     'isort>=7.0,<8.1',
-    'mypy>=1.19.1,<2.2.0',
+    'mypy>=1.19.1,<2.4.0',
     'pre-commit>=4.5.1,<4.7.0',
     'pytest>=9.0.2,<9.2.0',
     'python-semantic-release~=10.5.3',
